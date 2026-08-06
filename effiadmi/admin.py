@@ -5,8 +5,6 @@ from .models import *
 @admin.register(Clientes)
 class ClientesAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'correo', 'telefono', 'direccion')
-<<<<<<< HEAD
-=======
 
 @admin.register(Usuario)
 class UsuarioAdmin(admin.ModelAdmin):
@@ -30,4 +28,3 @@ class UsuarioAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('fecha_registro',)
 
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)

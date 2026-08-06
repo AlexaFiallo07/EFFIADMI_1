@@ -1,59 +1,5 @@
 {% extends 'base.html' %}
 
-<<<<<<< HEAD
-{% block titulo %}Crear Producto{% endblock %}
-
-{% block contenido %}
-<div class="container" style="max-width: 800px; margin: 0 auto;">
-    <h1 style="margin-bottom: var(--spacing-lg);">Crear Nuevo Producto</h1>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}" style="margin-bottom: var(--spacing-lg);">
-                {{ message }}
-                <button class="alert-close" onclick="this.parentElement.style.display='none';">&times;</button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-    <div class="card">
-        <form method="post" action="">
-            {% csrf_token %}
-
-            <div class="card-body">
-                <div class="form-group">
-                    <label for="nombre" class="form-label">Nombre del Producto</label>
-                    <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Ingresa el nombre" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="sku" class="form-label">SKU</label>
-                    <input type="text" id="sku" name="sku" class="form-control" placeholder="SKU001" required>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
-                    <div class="form-group">
-                        <label for="categoria" class="form-label">Categoría</label>
-                        <input type="text" id="categoria" name="categoria" class="form-control" placeholder="Electrónica" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="precio" class="form-label">Precio</label>
-                        <input type="number" id="precio" name="precio" class="form-control" placeholder="299.99" step="0.01" required>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
-                    <div class="form-group">
-                        <label for="stock" class="form-label">Stock Inicial</label>
-                        <input type="number" id="stock" name="stock" class="form-control" placeholder="100" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="proveedor" class="form-label">Proveedor</label>
-                        <input type="text" id="proveedor" name="proveedor" class="form-control" placeholder="Nombre del proveedor" required>
-                    </div>
-=======
 {% block titulo %}Nuevo Producto{% endblock %}
 
 {% block contenido %}
@@ -77,22 +23,10 @@
                         class="form-control"
                         required
                     >
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
                 </div>
 
                 <div class="form-group">
                     <label for="descripcion" class="form-label">Descripción</label>
-<<<<<<< HEAD
-                    <textarea id="descripcion" name="descripcion" class="form-control" rows="4" placeholder="Descripción del producto..."></textarea>
-                </div>
-            </div>
-
-            <div class="card-footer">
-                <button type="submit" class="btn btn-primary">Crear Producto</button>
-                <a href="{% url 'effiadmi:productos' %}" class="btn btn-outline">Cancelar</a>
-            </div>
-        </form>
-=======
                     <textarea
                         id="descripcion"
                         name="descripcion"
@@ -156,7 +90,6 @@
                 </div>
             </form>
         </div>
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
     </div>
 </div>
 {% endblock %}

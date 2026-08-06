@@ -30,13 +30,10 @@
                             <td>{{ cliente.direccion }}</td>
                             <td>
                                 <a href="{% url 'effiadmi:editar_cliente' cliente.id %}" class="btn btn-outline btn-sm">Editar</a>
-<<<<<<< HEAD
-=======
                                 <form method="POST" action="{% url 'effiadmi:eliminar_cliente' cliente.id %}" style="display: inline;">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('¿Está seguro?')">Eliminar</button>
                                 </form>
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
                             </td>
                         </tr>
                     {% empty %}

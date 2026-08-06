@@ -4,28 +4,11 @@
 
 {% block contenido %}
 <div class="container" style="max-width: 1200px; margin: 0 auto;">
-<<<<<<< HEAD
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl);">
-        <h1>Gestión de Facturas</h1>
-        <a href="{% url 'effiadmi:crear_factura' %}" class="btn btn-primary">+ Nueva Factura</a>
-    </div>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-                <button class="alert-close" onclick="this.parentElement.style.display='none';">&times;</button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-=======
     <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
         <h1>Gestion de Facturas</h1>
         <a href="{% url 'effiadmi:crear_factura' %}" class="btn btn-primary">+ Nueva Factura</a>
     </div>
 
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
     <div class="card">
         <table class="table">
             <thead>
@@ -34,49 +17,10 @@
                     <th>Cliente</th>
                     <th>Fecha</th>
                     <th>Total</th>
-<<<<<<< HEAD
-                    <th>Estado</th>
-=======
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-<<<<<<< HEAD
-                <tr>
-                    <td>#001</td>
-                    <td>Empresa XYZ</td>
-                    <td>2026-06-08</td>
-                    <td>$5,250.00</td>
-                    <td><span class="badge badge-success">Pagada</span></td>
-                    <td>
-                        <a href="#" class="btn btn-ghost btn-sm">Ver</a>
-                        <a href="#" class="btn btn-ghost btn-sm">Editar</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td>#002</td>
-                    <td>Empresa ABC</td>
-                    <td>2026-06-07</td>
-                    <td>$3,150.00</td>
-                    <td><span class="badge badge-warning">Pendiente</span></td>
-                    <td>
-                        <a href="#" class="btn btn-ghost btn-sm">Ver</a>
-                        <a href="#" class="btn btn-ghost btn-sm">Editar</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td>#003</td>
-                    <td>Empresa DEF</td>
-                    <td>2026-06-06</td>
-                    <td>$8,900.00</td>
-                    <td><span class="badge badge-error">Vencida</span></td>
-                    <td>
-                        <a href="#" class="btn btn-ghost btn-sm">Ver</a>
-                        <a href="#" class="btn btn-ghost btn-sm">Editar</a>
-                    </td>
-                </tr>
-=======
                 {% for factura in facturas %}
                     <tr>
                         <td>#{{ factura.id }}</td>
@@ -97,13 +41,8 @@
                         <td colspan="5" style="text-align: center; padding: var(--spacing-xl);">No hay facturas registradas.</td>
                     </tr>
                 {% endfor %}
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
             </tbody>
         </table>
     </div>
 </div>
 {% endblock %}
-<<<<<<< HEAD
-
-=======
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)

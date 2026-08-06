@@ -143,11 +143,7 @@
                 <img src="{% static 'img/logoeffiadmi_1.png' %}" alt="EFFIADMI" class="brand-logo">
                 <span>EFFIADMI</span>
             </a>
-<<<<<<< HEAD
-</div>,
-=======
 </div>
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
         
         <nav class="sidebar-menu">
             {% if request.session.logueado %}
@@ -157,23 +153,6 @@
                 <a href="{% url 'effiadmi:inicio' %}" class="menu-link {% if request.resolver_match.url_name == 'inicio' %}active{% endif %}">
                     <span class="material-symbols-outlined">dashboard</span> Dashboard
                 </a>
-<<<<<<< HEAD
-                <a href="{% url 'effiadmi:inventario' %}" class="menu-link {% if request.resolver_match.url_name == 'inventario' %}active{% endif %}">
-                    <span class="material-symbols-outlined">inventory_2</span> Inventario
-                </a>
-
-                <a href="{% url 'effiadmi:productos' %}" clas="menu"
-                <a href="{% url 'effiadmi:pedidos' %}" class="menu-link {% if request.resolver_match.url_name == 'pedidos' %}active{% endif %}">
-                    <span class="material-symbols-outlined">shopping_cart</span> Pedidos
-                </a>
-                <a href="{% url 'effiadmi:clientes' %}" class="menu-link {% if request.resolver_match.url_name == 'clientes' %}active{% endif %}">
-                    <span class="material-symbols-outlined">group</span> Clientes
-                </a>
-                <a href="{% url 'effiadmi:proveedores' %}" class="menu-link {% if request.resolver_match.url_name == 'proveedores' %}active{% endif %}">
-                    <span class="material-symbols-outlined">local_shipping</span> Proveedores
-                </a>
-                <a href="{% url 'effiadmi:facturas' %}" class="menu-link {% if request.resolver_match.url_name == 'facturas' %}active{% endif %}">
-=======
                 <a href="{% url 'effiadmi:lista_inventario' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_inventario' %}active{% endif %}">
                     <span class="material-symbols-outlined">inventory_2</span> Inventario
                 </a>
@@ -192,7 +171,6 @@
                     <span class="material-symbols-outlined">local_shipping</span> Proveedores
                 </a>
                 <a href="{% url 'effiadmi:lista_facturas' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_facturas' %}active{% endif %}">
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
                     <span class="material-symbols-outlined">description</span> Facturación
                 </a>
                 <a href="{% url 'effiadmi:reportes' %}" class="menu-link {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
@@ -201,11 +179,7 @@
                 <a href="#" class="menu-link">
                     <span class="material-symbols-outlined">psychology</span> Estadísticas IA
                 </a>
-<<<<<<< HEAD
-                <a href="{% url 'effiadmi:notificaciones' %}" class="menu-link {% if request.resolver_match.url_name == 'notificaciones' %}active{% endif %}">
-=======
                 <a href="{% url 'effiadmi:lista_notificaciones' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_notificaciones' %}active{% endif %}">
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
                     <span class="material-symbols-outlined">notifications</span> Notificaciones
                 </a>
             {% else %}
@@ -247,8 +221,4 @@
 {% endblock %}
 
 </body>
-<<<<<<< HEAD
 </html>
-=======
-</html>
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)

@@ -4,106 +4,23 @@
 
 {% block contenido %}
 <div class="container" style="max-width: 1200px; margin: 0 auto;">
-<<<<<<< HEAD
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl);">
-        <h1>Órdenes de Pedido</h1>
-        <a href="{% url 'effiadmi:crear_pedido' %}" class="btn btn-primary">+ Nuevo Pedido</a>
-    </div>
-
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
-        <div class="card">
-            <div class="card-body">
-                <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-sm);">Total de Pedidos</p>
-                <p style="font-size: var(--font-size-2xl); font-weight: 700; color: var(--color-primary);">24</p>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-body">
-                <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-sm);">Pendientes</p>
-                <p style="font-size: var(--font-size-2xl); font-weight: 700; color: var(--color-warning);">5</p>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-body">
-                <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-sm);">Completados</p>
-                <p style="font-size: var(--font-size-2xl); font-weight: 700; color: var(--color-success);">19</p>
-            </div>
-        </div>
-    </div>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}" style="margin-bottom: var(--spacing-lg);">
-                {{ message }}
-                <button class="alert-close" onclick="this.parentElement.style.display='none';">&times;</button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Pedidos Recientes</h3>
-        </div>
-=======
     <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
         <h1>Ordenes de Pedido</h1>
         <a href="{% url 'effiadmi:crear_pedido' %}" class="btn btn-primary">+ Nuevo Pedido</a>
     </div>
 
     <div class="card">
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
         <table class="table">
             <thead>
                 <tr>
                     <th>#Pedido</th>
                     <th>Cliente</th>
                     <th>Fecha</th>
-<<<<<<< HEAD
-                    <th>Cantidad</th>
                     <th>Total</th>
-                    <th>Estado</th>
-=======
-                    <th>Total</th>
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-<<<<<<< HEAD
-                <tr>
-                    <td>PED-001</td>
-                    <td>Juan Pérez</td>
-                    <td>2026-06-08</td>
-                    <td>3</td>
-                    <td>$1,500.00</td>
-                    <td><span class="badge badge-success">Completado</span></td>
-                    <td>
-                        <a href="#" class="btn btn-ghost btn-sm">Ver</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td>PED-002</td>
-                    <td>María García</td>
-                    <td>2026-06-08</td>
-                    <td>2</td>
-                    <td>$950.00</td>
-                    <td><span class="badge badge-primary">En Proceso</span></td>
-                    <td>
-                        <a href="#" class="btn btn-ghost btn-sm">Ver</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td>PED-003</td>
-                    <td>Carlos López</td>
-                    <td>2026-06-07</td>
-                    <td>5</td>
-                    <td>$2,250.00</td>
-                    <td><span class="badge badge-warning">Pendiente</span></td>
-                    <td>
-                        <a href="#" class="btn btn-ghost btn-sm">Ver</a>
-                    </td>
-                </tr>
-=======
                 {% for pedido in pedidos %}
                     <tr>
                         <td>PED-{{ pedido.id }}</td>
@@ -124,7 +41,6 @@
                         <td colspan="5" style="text-align: center; padding: var(--spacing-xl);">No hay pedidos registrados.</td>
                     </tr>
                 {% endfor %}
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
             </tbody>
         </table>
     </div>

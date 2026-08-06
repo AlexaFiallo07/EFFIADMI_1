@@ -4,96 +4,6 @@
 
 {% block contenido %}
 <div class="container" style="max-width: 1200px; margin: 0 auto;">
-<<<<<<< HEAD
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl);">
-        <h1>Catálogo de Productos</h1>
-        <a href="{% url 'effiadmi:crear_producto' %}" class="btn btn-primary">+ Nuevo Producto</a>
-    </div>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}" style="margin-bottom: var(--spacing-lg);">
-                {{ message }}
-                <button class="alert-close" onclick="this.parentElement.style.display='none';">&times;</button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-    <div class="products-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--spacing-lg);">
-        
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Producto 1</h3>
-            </div>
-            <div class="card-body">
-                <p style="margin-bottom: var(--spacing-sm);">
-                    <strong>SKU:</strong> SKU001
-                </p>
-                <p style="margin-bottom: var(--spacing-sm);">
-                    <strong>Categoría:</strong> Electrónica
-                </p>
-                <p style="margin-bottom: var(--spacing-sm);">
-                    <strong>Precio:</strong> <span style="color: var(--color-primary); font-weight: 600; font-size: var(--font-size-lg);">$299.99</span>
-                </p>
-                <p style="margin-bottom: var(--spacing-md);">
-                    <strong>Stock:</strong> <span class="badge badge-success">En stock (45)</span>
-                </p>
-            </div>
-            <div class="card-footer">
-                <a href="#" class="btn btn-primary btn-sm">Ver</a>
-                <a href="#" class="btn btn-outline btn-sm">Editar</a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Producto 2</h3>
-            </div>
-            <div class="card-body">
-                <p style="margin-bottom: var(--spacing-sm);">
-                    <strong>SKU:</strong> SKU002
-                </p>
-                <p style="margin-bottom: var(--spacing-sm);">
-                    <strong>Categoría:</strong> Software
-                </p>
-                <p style="margin-bottom: var(--spacing-sm);">
-                    <strong>Precio:</strong> <span style="color: var(--color-primary); font-weight: 600; font-size: var(--font-size-lg);">$599.99</span>
-                </p>
-                <p style="margin-bottom: var(--spacing-md);">
-                    <strong>Stock:</strong> <span class="badge badge-warning">Bajo stock (5)</span>
-                </p>
-            </div>
-            <div class="card-footer">
-                <a href="#" class="btn btn-primary btn-sm">Ver</a>
-                <a href="#" class="btn btn-outline btn-sm">Editar</a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Producto 3</h3>
-            </div>
-            <div class="card-body">
-                <p style="margin-bottom: var(--spacing-sm);">
-                    <strong>SKU:</strong> SKU003
-                </p>
-                <p style="margin-bottom: var(--spacing-sm);">
-                    <strong>Categoría:</strong> Servicios
-                </p>
-                <p style="margin-bottom: var(--spacing-sm);">
-                    <strong>Precio:</strong> <span style="color: var(--color-primary); font-weight: 600; font-size: var(--font-size-lg);">$1,299.99</span>
-                </p>
-                <p style="margin-bottom: var(--spacing-md);">
-                    <strong>Stock:</strong> <span class="badge badge-error">Sin stock</span>
-                </p>
-            </div>
-            <div class="card-footer">
-                <a href="#" class="btn btn-primary btn-sm">Ver</a>
-                <a href="#" class="btn btn-outline btn-sm">Editar</a>
-            </div>
-        </div>
-
-=======
     <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
         <h1>Listado de Productos</h1>
         <a href="{% url 'effiadmi:crear_producto' %}" class="btn btn-primary">+ Nuevo Producto</a>
@@ -138,7 +48,6 @@
                 </tbody>
             </table>
         </div>
->>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
     </div>
 </div>
 {% endblock %}
