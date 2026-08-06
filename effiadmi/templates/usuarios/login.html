@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Iniciar sesión{% endblock %}
+
+{% block contenido %}
+<section class="login-page">
+    <div class="login-panel">
+        <h2>Iniciar sesión</h2>
+        <p>Introduce tus credenciales para acceder al sistema EFFIADMI.</p>
+        <form method="post" action="">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username" class="form-label">Correo electrónico</label>
+                <input type="text" name="username" id="username" class="form-control" placeholder="usuario@ejemplo.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Contraseña</label>
+                <input type="password" name="password" id="password" class="form-control" placeholder="Tu contraseña" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg">Iniciar Sesión</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

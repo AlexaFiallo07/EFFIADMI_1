@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Mi Perfil{% endblock %}
+
+{% block contenido %}
+<div class="container" style="max-width: 800px; margin: 0 auto;">
+    <h1 style="margin-bottom: var(--spacing-lg);">Mi Perfil</h1>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" style="margin-bottom: var(--spacing-lg);">
+                {{ message }}
+                <button class="alert-close" onclick="this.parentElement.style.display='none';">&times;</button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Información de Usuario</h3>
+        </div>
+        <div class="card-body">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                <div>
+                    <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-xs);">Nombre de Usuario</p>
+                    <p style="font-weight: 600; font-size: var(--font-size-lg);">{{ request.session.logueado.nombre }}</p>
+                </div>
+                <div>
+                    <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-xs);">Cargo</p>
+                    <p style="font-weight: 600; font-size: var(--font-size-lg);">
+                        <span class="badge badge-primary">{{ request.session.logueado.rol }}</span>
+                    </p>
+                </div>
+            </div>
+
+            <div style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-lg);">
+                <h4 style="margin-bottom: var(--spacing-md);">Seguridad</h4>
+                <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">Estado de la sesión: <span class="badge badge-success">Activo</span></p>
+                <p style="color: var(--color-text-secondary);">Último acceso: {{ request.session.logueado.id }}</p>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-primary">Editar Perfil</button>
+            <a href="{% url 'effiadmi:logout' %}" class="btn btn-outline">Cerrar Sesión</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
