@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Detalle Inventario{% endblock %}
+
+{% block contenido %}
+<div class="container" style="max-width: 760px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <h1>{{ item.nombre_producto }}</h1>
+        <a href="{% url 'effiadmi:lista_inventario' %}" class="btn btn-outline">Volver</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="form-group">
+                <label class="form-label">Nombre Producto</label>
+                <p>{{ item.nombre_producto }}</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Stock Actual</label>
+                <p>{{ item.stock_actual }}</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Stock Mínimo</label>
+                <p>{{ item.stock_minimo }}</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Precio Venta</label>
+                <p>${{ item.precio_venta }}</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Precio Compra</label>
+                <p>${{ item.precio_compra }}</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Descripción</label>
+                <p>{{ item.descripcion }}</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Fecha Creación</label>
+                <p>{{ item.fecha_creacion|date:"d/m/Y H:i" }}</p>
+            </div>
+        </div>
+        <div class="card-footer">
+            <a href="{% url 'effiadmi:editar_inventario' item.id %}" class="btn btn-primary">Editar</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

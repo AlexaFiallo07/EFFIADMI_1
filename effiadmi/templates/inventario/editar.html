@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Editar Inventario{% endblock %}
+
+{% block contenido %}
+<div class="container" style="max-width: 720px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <h1>Editar Inventario</h1>
+        <a href="{% url 'effiadmi:lista_inventario' %}" class="btn btn-outline">Volver</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="nombre_producto" class="form-label">Nombre Producto</label>
+                    <input
+                        type="text"
+                        id="nombre_producto"
+                        name="nombre_producto"
+                        class="form-control"
+                        value="{{ item.nombre_producto }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="stock_actual" class="form-label">Stock Actual</label>
+                    <input
+                        type="number"
+                        id="stock_actual"
+                        name="stock_actual"
+                        class="form-control"
+                        value="{{ item.stock_actual }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="stock_minimo" class="form-label">Stock Mínimo</label>
+                    <input
+                        type="number"
+                        id="stock_minimo"
+                        name="stock_minimo"
+                        class="form-control"
+                        value="{{ item.stock_minimo }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="precio_venta" class="form-label">Precio Venta</label>
+                    <input
+                        type="number"
+                        id="precio_venta"
+                        name="precio_venta"
+                        class="form-control"
+                        step="0.01"
+                        value="{{ item.precio_venta }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="precio_compra" class="form-label">Precio Compra</label>
+                    <input
+                        type="number"
+                        id="precio_compra"
+                        name="precio_compra"
+                        class="form-control"
+                        step="0.01"
+                        value="{{ item.precio_compra }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="descripcion" class="form-label">Descripción</label>
+                    <textarea
+                        id="descripcion"
+                        name="descripcion"
+                        class="form-control"
+                        rows="4"
+                        required
+                    >{{ item.descripcion }}</textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+                    <a href="{% url 'effiadmi:lista_inventario' %}" class="btn btn-outline">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

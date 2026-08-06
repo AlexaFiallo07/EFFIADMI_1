@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Nuevo Usuario{% endblock %}
+
+{% block contenido %}
+<div class="container" style="max-width: 720px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <h1>Nuevo Usuario</h1>
+        <a href="{% url 'effiadmi:lista_usuarios' %}" class="btn btn-outline">Volver</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="nombre_usuario" class="form-label">Nombre Usuario</label>
+                    <input
+                        type="text"
+                        id="nombre_usuario"
+                        name="nombre_usuario"
+                        class="form-control"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="apellido_usuario" class="form-label">Apellido Usuario</label>
+                    <input
+                        type="text"
+                        id="apellido_usuario"
+                        name="apellido_usuario"
+                        class="form-control"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="email" class="form-label">Email</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        class="form-control"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="contraseña" class="form-label">Contraseña</label>
+                    <input
+                        type="password"
+                        id="contraseña"
+                        name="contraseña"
+                        class="form-control"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="cargo" class="form-label">Cargo</label>
+                    <select id="cargo" name="cargo" class="form-control" required>
+                        <option value="">Selecciona un cargo</option>
+                        <option value="Admin">Administrador</option>
+                        <option value="Operador">Operador</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+                    <a href="{% url 'effiadmi:lista_usuarios' %}" class="btn btn-outline">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

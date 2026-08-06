@@ -3,6 +3,7 @@
 {% block titulo %}Mi Perfil{% endblock %}
 
 {% block contenido %}
+<<<<<<< HEAD
 <div class="container" style="max-width: 800px; margin: 0 auto;">
     <h1 style="margin-bottom: var(--spacing-lg);">Mi Perfil</h1>
 
@@ -43,6 +44,59 @@
             <button class="btn btn-primary">Editar Perfil</button>
             <a href="{% url 'effiadmi:logout' %}" class="btn btn-outline">Cerrar Sesión</a>
         </div>
+=======
+<div class="container" style="max-width: 820px; margin: 0 auto;">
+    <h1 style="margin-bottom: var(--spacing-lg);">Mi Perfil</h1>
+
+    <div class="card">
+        <form method="post">
+            {% csrf_token %}
+            <div class="card-header">
+                <h3 class="card-title">Informacion de Usuario</h3>
+            </div>
+
+            <div class="card-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                    <div class="form-group">
+                        <label for="nombre_usuario" class="form-label">Nombre</label>
+                        <input type="text" id="nombre_usuario" name="nombre_usuario" class="form-control" value="{{ usuario.nombre_usuario }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="apellido_usuario" class="form-label">Apellido</label>
+                        <input type="text" id="apellido_usuario" name="apellido_usuario" class="form-control" value="{{ usuario.apellido_usuario }}" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                    <div class="form-group">
+                        <label for="email" class="form-label">Correo</label>
+                        <input type="email" id="email" name="email" class="form-control" value="{{ usuario.email }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cargo" class="form-label">Cargo</label>
+                        <select id="cargo" name="cargo" class="form-control" required>
+                            <option value="Admin" {% if usuario.cargo == "Admin" %}selected{% endif %}>Administrador</option>
+                            <option value="Operador" {% if usuario.cargo == "Operador" %}selected{% endif %}>Operador</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-lg);">
+                    <div class="form-group">
+                        <label for="contrasena" class="form-label">Nueva contrasena</label>
+                        <input type="password" id="contrasena" name="contrasena" class="form-control" placeholder="Dejar en blanco para conservar la actual">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <a href="{% url 'effiadmi:logout' %}" class="btn btn-outline">Cerrar Sesion</a>
+            </div>
+        </form>
+>>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
     </div>
 </div>
 {% endblock %}

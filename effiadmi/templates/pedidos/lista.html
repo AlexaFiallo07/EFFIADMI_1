@@ -4,6 +4,7 @@
 
 {% block contenido %}
 <div class="container" style="max-width: 1200px; margin: 0 auto;">
+<<<<<<< HEAD
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl);">
         <h1>Órdenes de Pedido</h1>
         <a href="{% url 'effiadmi:crear_pedido' %}" class="btn btn-primary">+ Nuevo Pedido</a>
@@ -43,19 +44,32 @@
         <div class="card-header">
             <h3 class="card-title">Pedidos Recientes</h3>
         </div>
+=======
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <h1>Ordenes de Pedido</h1>
+        <a href="{% url 'effiadmi:crear_pedido' %}" class="btn btn-primary">+ Nuevo Pedido</a>
+    </div>
+
+    <div class="card">
+>>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
         <table class="table">
             <thead>
                 <tr>
                     <th>#Pedido</th>
                     <th>Cliente</th>
                     <th>Fecha</th>
+<<<<<<< HEAD
                     <th>Cantidad</th>
                     <th>Total</th>
                     <th>Estado</th>
+=======
+                    <th>Total</th>
+>>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
+<<<<<<< HEAD
                 <tr>
                     <td>PED-001</td>
                     <td>Juan Pérez</td>
@@ -89,6 +103,28 @@
                         <a href="#" class="btn btn-ghost btn-sm">Ver</a>
                     </td>
                 </tr>
+=======
+                {% for pedido in pedidos %}
+                    <tr>
+                        <td>PED-{{ pedido.id }}</td>
+                        <td>{{ pedido.cliente.nombre }}</td>
+                        <td>{{ pedido.fecha_pedido|date:"Y-m-d H:i" }}</td>
+                        <td>${{ pedido.total }}</td>
+                        <td>
+                            <a href="{% url 'effiadmi:detalle_pedido' pedido.id %}" class="btn btn-ghost btn-sm">Ver</a>
+                            <a href="{% url 'effiadmi:editar_pedido' pedido.id %}" class="btn btn-ghost btn-sm">Editar</a>
+                            <form method="post" action="{% url 'effiadmi:eliminar_pedido' pedido.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-ghost btn-sm" onclick="return confirm('Eliminar este pedido?');">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: var(--spacing-xl);">No hay pedidos registrados.</td>
+                    </tr>
+                {% endfor %}
+>>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
             </tbody>
         </table>
     </div>

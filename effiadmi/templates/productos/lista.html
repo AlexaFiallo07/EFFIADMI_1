@@ -4,6 +4,7 @@
 
 {% block contenido %}
 <div class="container" style="max-width: 1200px; margin: 0 auto;">
+<<<<<<< HEAD
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl);">
         <h1>Catálogo de Productos</h1>
         <a href="{% url 'effiadmi:crear_producto' %}" class="btn btn-primary">+ Nuevo Producto</a>
@@ -92,6 +93,52 @@
             </div>
         </div>
 
+=======
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <h1>Listado de Productos</h1>
+        <a href="{% url 'effiadmi:crear_producto' %}" class="btn btn-primary">+ Nuevo Producto</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Descripción</th>
+                        <th>Stock Actual</th>
+                        <th>Stock Mínimo</th>
+                        <th>Precio Venta</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for producto in productos %}
+                        <tr>
+                            <td>{{ producto.nombre_producto }}</td>
+                            <td>{{ producto.descripcion|truncatewords:5 }}</td>
+                            <td>{{ producto.stock_actual }}</td>
+                            <td>{{ producto.stock_minimo }}</td>
+                            <td>${{ producto.precio_venta }}</td>
+                            <td>
+                                <a href="{% url 'effiadmi:editar_producto' producto.id %}" class="btn btn-outline btn-sm">Editar</a>
+                                <form method="POST" action="{% url 'effiadmi:eliminar_producto' producto.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('¿Está seguro?')">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">
+                                No hay productos registrados.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+>>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
     </div>
 </div>
 {% endblock %}

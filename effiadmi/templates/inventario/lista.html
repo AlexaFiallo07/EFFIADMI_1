@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Inventario{% endblock %}
+
+{% block contenido %}
+<div class="container" style="max-width: 1200px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <h1>Listado de Inventario</h1>
+        <a href="{% url 'effiadmi:crear_inventario' %}" class="btn btn-primary">+ Nuevo Inventario</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Stock Actual</th>
+                        <th>Stock Mínimo</th>
+                        <th>Precio Venta</th>
+                        <th>Precio Compra</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in inventario %}
+                        <tr>
+                            <td>{{ item.nombre_producto }}</td>
+                            <td>{{ item.stock_actual }}</td>
+                            <td>{{ item.stock_minimo }}</td>
+                            <td>${{ item.precio_venta }}</td>
+                            <td>${{ item.precio_compra }}</td>
+                            <td>
+                                <a href="{% url 'effiadmi:editar_inventario' item.id %}" class="btn btn-outline btn-sm">Editar</a>
+                                <form method="POST" action="{% url 'effiadmi:eliminar_inventario' item.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('¿Está seguro?')">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">
+                                No hay productos en inventario.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

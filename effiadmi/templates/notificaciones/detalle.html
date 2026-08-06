@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Detalle Notificación{% endblock %}
+
+{% block contenido %}
+<div class="container" style="max-width: 720px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <h1>Detalle de Notificación</h1>
+        <a href="{% url 'effiadmi:lista_notificaciones' %}" class="btn btn-outline">Volver</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="form-group">
+                <label class="form-label">Mensaje</label>
+                <p style="padding: var(--spacing-md); background-color: #f8fafc; border-radius: 8px;">
+                    {{ notificacion.mensaje }}
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Fecha de Creación</label>
+                <p>{{ notificacion.fecha_creacion|date:"d/m/Y H:i" }}</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Estado</label>
+                <p>
+                    {% if notificacion.leido %}
+                        <span class="badge badge-success">Leído</span>
+                    {% else %}
+                        <span class="badge badge-warning">No leído</span>
+                    {% endif %}
+                </p>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+                <a href="{% url 'effiadmi:lista_notificaciones' %}" class="btn btn-outline">Volver</a>
+                <form method="POST" action="{% url 'effiadmi:eliminar_notificacion' notificacion.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline" onclick="return confirm('¿Está seguro?')">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

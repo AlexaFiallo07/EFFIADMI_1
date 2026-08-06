@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Notificaciones{% endblock %}
+
+{% block contenido %}
+<div class="container" style="max-width: 1200px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <h1>Listado de Notificaciones</h1>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Mensaje</th>
+                        <th>Fecha Creación</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for notif in notificaciones %}
+                        <tr>
+                            <td>{{ notif.mensaje|truncatewords:10 }}</td>
+                            <td>{{ notif.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if notif.leido %}
+                                    <span class="badge badge-success">Leído</span>
+                                {% else %}
+                                    <span class="badge badge-warning">No leído</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'effiadmi:detalle_notificacion' notif.id %}" class="btn btn-outline btn-sm">Ver</a>
+                                <form method="POST" action="{% url 'effiadmi:eliminar_notificacion' notif.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('¿Está seguro?')">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: var(--spacing-xl);">
+                                No hay notificaciones.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

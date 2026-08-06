@@ -1,11 +1,19 @@
 {% extends 'base.html' %}
 
+<<<<<<< HEAD
 {% block titulo %}{% if datos %}Editar Cliente{% else %}Nuevo Cliente{% endif %}{% endblock %}
+=======
+{% block titulo %}{% if cliente %}Editar Cliente{% else %}Nuevo Cliente{% endif %}{% endblock %}
+>>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
 
 {% block contenido %}
 <div class="container" style="max-width: 720px; margin: 0 auto;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<<<<<<< HEAD
         <h1>{% if datos %}Editar Cliente{% else %}Nuevo Cliente{% endif %}</h1>
+=======
+        <h1>{% if cliente %}Editar Cliente{% else %}Nuevo Cliente{% endif %}</h1>
+>>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
         <a href="{% url 'effiadmi:lista_clientes' %}" class="btn btn-outline">Volver</a>
     </div>
 
@@ -21,7 +29,11 @@
                         id="nombre"
                         name="nombre"
                         class="form-control"
+<<<<<<< HEAD
                         value="{{ datos.nombre|default:'' }}"
+=======
+                        value="{{ cliente.nombre|default:'' }}"
+>>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
                         required
                     >
                 </div>
@@ -33,7 +45,11 @@
                         id="correo"
                         name="correo"
                         class="form-control"
+<<<<<<< HEAD
                         value="{{ datos.correo|default:'' }}"
+=======
+                        value="{{ cliente.correo|default:'' }}"
+>>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
                         required
                     >
                 </div>
@@ -45,7 +61,11 @@
                         id="telefono"
                         name="telefono"
                         class="form-control"
+<<<<<<< HEAD
                         value="{{ datos.telefono|default:'' }}"
+=======
+                        value="{{ cliente.telefono|default:'' }}"
+>>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
                         required
                     >
                 </div>
@@ -57,7 +77,11 @@
                         id="direccion"
                         name="direccion"
                         class="form-control"
+<<<<<<< HEAD
                         value="{{ datos.direccion|default:'' }}"
+=======
+                        value="{{ cliente.direccion|default:'' }}"
+>>>>>>> b9abaf4 (Carpeta api creada y descarga de librerias)
                         required
                     >
                 </div>
