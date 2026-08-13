@@ -3,7 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from .config import settings
 
-client = AsyncIOMotorClient(settings.MONGODB_URI)
+client = AsyncIOMotorClient(settings.MONGODB_URI, serverSelectionTimeoutMS=5000)
 db = client[settings.DATABASE_NAME]
 
 

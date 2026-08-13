@@ -32,7 +32,10 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    await create_indexes()
+    try:
+        await create_indexes()
+    except Exception as error:
+        print("ADVERTENCIA: no se pudo conectar a MongoDB:", error)
     print("API EFFIADMI iniciada correctamente")
 
 
