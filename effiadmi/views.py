@@ -1,7 +1,9 @@
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db import IntegrityError
-from .models import Clientes, Usuario, facturas, pedidos, Inventario, productos, proveedores, notificaciones
+from django.db.models import Sum
+from .models import Clientes, Usuario, facturas, pedidos, Inventario, productos, proveedores, notificaciones, movimientos
+from .servicio_ia import consultar_asistente_effiadmi
 import functools
 
 
@@ -693,6 +695,69 @@ def eliminar_notificacion(request, id):
 def reportes_view(request):
     try:
         return render(request, "reportes/index.html")
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:inicio")
+
+
+# ==================== ESTADISTICAS IA ====================
+
+@autorizacion()
+def estadisticas_ia(request):
+    try:
+        total_productos = productos.objects.count()
+        total_proveedores = proveedores.objects.count()
+        total_usuarios = Usuario.objects.count()
+        total_clientes = Clientes.objects.count()
+
+        unidades_totales = 0
+        valor_inventario = 0
+        productos_bajos = []
+        for producto in productos.objects.all():
+            unidades_totales += producto.stock_actual
+            valor_inventario += float(producto.precio_compra) * producto.stock_actual
+            if producto.stock_actual < producto.stock_minimo:
+                productos_bajos.append(producto)
+
+        ventas_por_producto = (
+            movimientos.objects
+            .filter(tipo='salida')
+            .values('producto')
+            .annotate(total=Sum('cantidad'))
+            .order_by('-total')
+        )
+        producto_mas_vendido = None
+        if ventas_por_producto:
+            mejor = ventas_por_producto.first()
+            producto_obj = productos.objects.filter(id=mejor['producto']).first()
+            if producto_obj:
+                producto_mas_vendido = {
+                    'nombre': producto_obj.nombre_producto,
+                    'unidades': mejor['total'],
+                }
+
+        contexto = {
+            'total_productos': total_productos,
+            'total_proveedores': total_proveedores,
+            'total_usuarios': total_usuarios,
+            'total_clientes': total_clientes,
+            'unidades_totales': unidades_totales,
+            'valor_inventario': valor_inventario,
+            'productos_bajos': productos_bajos,
+            'producto_mas_vendido': producto_mas_vendido,
+            'entradas': movimientos.objects.filter(tipo='entrada').count(),
+            'salidas': movimientos.objects.filter(tipo='salida').count(),
+        }
+
+        if request.method == "POST":
+            pregunta = request.POST.get("pregunta", "").strip()
+            if pregunta:
+                contexto['respuesta_ia'] = consultar_asistente_effiadmi(pregunta)
+                contexto['pregunta'] = pregunta
+            else:
+                messages.warning(request, "Escribe una pregunta para el asistente IA.")
+
+        return render(request, "dashboard/estadisticas.html", contexto)
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")

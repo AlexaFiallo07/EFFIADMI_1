@@ -62,4 +62,7 @@ urlpatterns = [
     
     # ==================== REPORTES ====================
     path('reportes/', views.reportes_view, name='reportes'),
+
+    # ==================== ESTADISTICAS IA ====================
+    path('estadisticas/', views.estadisticas_ia, name='estadisticas_ia'),
 ]
