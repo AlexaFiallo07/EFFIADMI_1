@@ -856,16 +856,6 @@ def eliminar_notificacion(request, id):
         return redirect("effiadmi:lista_notificaciones")
 
 
-# ==================== REPORTES ====================
-
-@autorizacion()
-def reportes_view(request):
-    try:
-        return render(request, "reportes/index.html")
-    except Exception as e:
-        messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:inicio")
-
 
 # ==================== ESTADISTICAS IA ====================
 
