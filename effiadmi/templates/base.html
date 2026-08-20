@@ -176,7 +176,7 @@
                 <a href="{% url 'effiadmi:reportes' %}" class="menu-link {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
                     <span class="material-symbols-outlined">bar_chart</span> Reportes
                 </a>
-                <a href="#" class="menu-link">
+                <a href="{% url 'effiadmi:estadisticas_ia' %}" class="menu-link {% if request.resolver_match.url_name == 'estadisticas_ia' %}active{% endif %}">
                     <span class="material-symbols-outlined">psychology</span> Estadísticas IA
                 </a>
                 <a href="{% url 'effiadmi:lista_notificaciones' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_notificaciones' %}active{% endif %}">

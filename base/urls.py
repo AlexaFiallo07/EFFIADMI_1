@@ -20,5 +20,6 @@ from effiadmi import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/', include('effiadmi.api_urls')),
     path('', include('effiadmi.urls')),
 ]
