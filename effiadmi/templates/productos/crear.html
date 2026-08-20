@@ -15,73 +15,50 @@
                 {% csrf_token %}
 
                 <div class="form-group">
-                    <label for="nombre_producto" class="form-label">Nombre Producto</label>
-                    <input
-                        type="text"
-                        id="nombre_producto"
-                        name="nombre_producto"
-                        class="form-control"
-                        required
-                    >
+                    <label for="sku" class="form-label">SKU</label>
+                    <input type="text" id="sku" name="sku" class="form-control" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="descripcion" class="form-label">Descripción</label>
-                    <textarea
-                        id="descripcion"
-                        name="descripcion"
-                        class="form-control"
-                        rows="4"
-                        required
-                    ></textarea>
+                    <label for="nombre" class="form-label">Nombre</label>
+                    <input type="text" id="nombre" name="nombre" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="descripcion" class="form-label">Descripcion</label>
+                    <textarea id="descripcion" name="descripcion" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="categoria" class="form-label">Categoria</label>
+                    <input type="text" id="categoria" name="categoria" class="form-control">
                 </div>
 
                 <div class="form-group">
                     <label for="precio_venta" class="form-label">Precio Venta</label>
-                    <input
-                        type="number"
-                        id="precio_venta"
-                        name="precio_venta"
-                        class="form-control"
-                        step="0.01"
-                        required
-                    >
+                    <input type="number" id="precio_venta" name="precio_venta" class="form-control" step="0.01" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="precio_compra" class="form-label">Precio Compra</label>
-                    <input
-                        type="number"
-                        id="precio_compra"
-                        name="precio_compra"
-                        class="form-control"
-                        step="0.01"
-                        required
-                    >
+                    <label for="sucursal" class="form-label">Sucursal</label>
+                    <select id="sucursal" name="sucursal" class="form-control">
+                        <option value="">-- Seleccionar sucursal --</option>
+                        {% for sucursal in sucursales %}
+                            <option value="{{ sucursal.id }}" {% if sucursal.es_principal %}selected{% endif %}>
+                                {{ sucursal.nombre }} {% if sucursal.es_principal %}(Principal){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
 
                 <div class="form-group">
-                    <label for="stock_actual" class="form-label">Stock Actual</label>
-                    <input
-                        type="number"
-                        id="stock_actual"
-                        name="stock_actual"
-                        class="form-control"
-                        value="0"
-                        required
-                    >
+                    <label for="stock_inicial" class="form-label">Stock Inicial</label>
+                    <input type="number" id="stock_inicial" name="stock_inicial" class="form-control" value="0">
                 </div>
 
                 <div class="form-group">
-                    <label for="stock_minimo" class="form-label">Stock Mínimo</label>
-                    <input
-                        type="number"
-                        id="stock_minimo"
-                        name="stock_minimo"
-                        class="form-control"
-                        value="5"
-                        required
-                    >
+                    <label for="stock_minimo" class="form-label">Stock Minimo</label>
+                    <input type="number" id="stock_minimo" name="stock_minimo" class="form-control" value="5">
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
