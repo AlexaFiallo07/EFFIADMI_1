@@ -16,6 +16,11 @@ router.register('inventario', api_views.InventarioViewSet)
 router.register('movimientos', api_views.MovimientoViewSet)
 router.register('dashboard', api_views.DashboardViewSet, basename='dashboard')
 
+# Nuevos endpoints: Branch, Product, Inventory
+router.register('sucursales', api_views.BranchViewSet)
+router.register('catalogo-productos', api_views.ProductViewSet)
+router.register('stock', api_views.InventoryViewSet)
+
 urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
