@@ -1,115 +1,32 @@
 from django.db import models
-
-# Create your models here.
-class Clientes(models.Model):
-    nombre = models.CharField(max_length=100)
-    correo = models.EmailField()
-    telefono = models.CharField(max_length=20)
-    direccion = models.CharField(max_length=200)
-
-    def __str__(self):
-        return self.nombre
-    
-class Inventario(models.Model):
-    nombre_producto = models.CharField(max_length=100)
-    stock_actual = models.IntegerField(default=0)
-    stock_minimo = models.IntegerField(default=5)
-    precio_venta = models.DecimalField(max_digits=10, decimal_places=2)
-    precio_compra = models.DecimalField(max_digits=10, decimal_places=2)
-    descripcion = models.TextField()
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.nombre_producto
-    
-class Usuario(models.Model):
-    nombre_usuario = models.CharField(max_length=100)
-    apellido_usuario = models.CharField(max_length=100)
-    email = models.EmailField()
-    contraseña = models.CharField(max_length=100)
-
-    fecha_registro = models.DateTimeField(help_text="yyyy-mm-dd hh:mm:ss", auto_now_add=True)
-
-    CARGOS = (
-        ("Admin", "ADMINISTRADOR"),
-        ("Operador", "OPERADOR"),
-    )
-    cargo = models.CharField(max_length=20, choices=CARGOS, default="Operador")
-
-    def __str__(self):
-        return f"{self.nombre_usuario} {self.apellido_usuario}"
-
-class facturas(models.Model):
-    cliente = models.ForeignKey(Clientes, on_delete=models.CASCADE)
-    fecha_emision = models.DateTimeField(auto_now_add=True)
-    total = models.DecimalField(max_digits=10, decimal_places=2)
-
-    def __str__(self):
-        return f"Factura {self.id} - Cliente: {self.cliente.nombre}"
-    
-class notificaciones(models.Model):
-    mensaje = models.TextField()
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    leido = models.BooleanField(default=False)
-
-    def __str__(self):
-        return f"Notificación {self.id} - Leído: {self.leido}"
-    
-class pedidos(models.Model):
-    cliente = models.ForeignKey(Clientes, on_delete=models.CASCADE)
-    fecha_pedido = models.DateTimeField(auto_now_add=True)
-    total = models.DecimalField(max_digits=10, decimal_places=2)
-
-    def __str__(self):
-        return f"Pedido {self.id} - Cliente: {self.cliente.nombre}"
-    
-class productos(models.Model):
-    nombre_producto = models.CharField(max_length=100)
-    descripcion = models.TextField()
-    precio_venta = models.DecimalField(max_digits=10, decimal_places=2)
-    precio_compra = models.DecimalField(max_digits=10, decimal_places=2)
-    stock_actual = models.IntegerField(default=0)
-    stock_minimo = models.IntegerField(default=5)
-
-    def __str__(self):
-        return self.nombre_producto
-
-class movimientos(models.Model):
-    producto = models.ForeignKey(productos, on_delete=models.CASCADE, related_name='movimientos')
-    TIPOS = (
-        ("entrada", "ENTRADA"),
-        ("salida", "SALIDA"),
-        ("ajuste", "AJUSTE"),
-    )
-    tipo = models.CharField(max_length=20, choices=TIPOS)
-    cantidad = models.IntegerField()
-    descripcion = models.TextField(blank=True, default="")
-    fecha = models.DateTimeField(auto_now_add=True)
-    usuario = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True)
-
-    def __str__(self):
-        return f"{self.tipo} - {self.producto.nombre_producto} x{self.cantidad}"
-
-class proveedores(models.Model):
-    nombre_proveedor = models.CharField(max_length=100)
-    correo = models.EmailField()
-    telefono = models.CharField(max_length=20)
-    direccion = models.CharField(max_length=200)
-
-    def __str__(self):
-        return self.nombre_proveedor
-
-class reportes(models.Model):
-    titulo = models.CharField(max_length=100)
-    contenido = models.TextField()
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.titulo
+from django.contrib.auth.models import User
 
 
 # ============================================================
-# Nuevos modelos: Branch, Product, Inventory, InventoryLog
+# Perfil de usuario extendido (usa auth.User de Django)
+# ============================================================
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    telefono = models.CharField(max_length=20, blank=True, default="")
+    direccion = models.CharField(max_length=200, blank=True, default="")
+
+    CARGOS = [
+        ("admin", "Administrador"),
+        ("operador", "Operador"),
+    ]
+    cargo = models.CharField(max_length=20, choices=CARGOS, default="operador")
+
+    class Meta:
+        verbose_name = "Perfil de Usuario"
+        verbose_name_plural = "Perfiles de Usuarios"
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} ({self.cargo})"
+
+
+# ============================================================
+# Sucursales
 # ============================================================
 
 class Branch(models.Model):
@@ -125,11 +42,15 @@ class Branch(models.Model):
         return self.nombre
 
 
+# ============================================================
+# Productos (catálogo general)
+# ============================================================
+
 class Product(models.Model):
     sku = models.CharField(max_length=50, unique=True, db_index=True)
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, default="")
-    categoria = models.CharField(max_length=100, blank=True, default="")
+    categoria = models.CharField(max_length=100, blank=True, default="", db_index=True)
     precio_venta = models.DecimalField(max_digits=12, decimal_places=2)
 
     class Meta:
@@ -140,6 +61,10 @@ class Product(models.Model):
     def __str__(self):
         return f"[{self.sku}] {self.nombre}"
 
+
+# ============================================================
+# Inventario (existencias por sucursal)
+# ============================================================
 
 class Inventory(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="inventories")
@@ -156,6 +81,10 @@ class Inventory(models.Model):
         return f"{self.product.nombre} - {self.branch.nombre}: {self.cantidad_disponible}"
 
 
+# ============================================================
+# Kardex / Historial de movimientos de inventario
+# ============================================================
+
 class InventoryLog(models.Model):
     ENTRADA = "ENTRADA"
     SALIDA = "SALIDA"
@@ -171,13 +100,193 @@ class InventoryLog(models.Model):
     cantidad = models.IntegerField()
     cantidad_resultante = models.IntegerField()
     motivo = models.TextField(blank=True, default="")
-    usuario = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     fecha = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Movimiento de Inventario"
         verbose_name_plural = "Movimientos de Inventario"
         ordering = ["-fecha"]
+        indexes = [
+            models.Index(fields=["-fecha"]),
+            models.Index(fields=["tipo_movimiento"]),
+        ]
 
     def __str__(self):
         return f"{self.tipo_movimiento} x{self.cantidad} -> {self.inventory}"
+
+
+# ============================================================
+# Clientes
+# ============================================================
+
+class Cliente(models.Model):
+    nombre = models.CharField(max_length=100)
+    correo = models.EmailField(unique=True, db_index=True)
+    telefono = models.CharField(max_length=20)
+    direccion = models.CharField(max_length=200)
+
+    class Meta:
+        verbose_name = "Cliente"
+        verbose_name_plural = "Clientes"
+
+    def __str__(self):
+        return self.nombre
+
+
+# ============================================================
+# Proveedores
+# ============================================================
+
+class Proveedor(models.Model):
+    nombre = models.CharField(max_length=100)
+    correo = models.EmailField(unique=True, db_index=True)
+    telefono = models.CharField(max_length=20)
+    direccion = models.CharField(max_length=200)
+
+    class Meta:
+        verbose_name = "Proveedor"
+        verbose_name_plural = "Proveedores"
+
+    def __str__(self):
+        return self.nombre
+
+
+# ============================================================
+# Relación Proveedor - Producto
+# ============================================================
+
+class ProveedorProducto(models.Model):
+    proveedor = models.ForeignKey(Proveedor, on_delete=models.CASCADE, related_name="productos")
+    producto = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="proveedores")
+    precio_compra = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        verbose_name = "Proveedor-Producto"
+        verbose_name_plural = "Proveedor-Productos"
+        unique_together = ("proveedor", "producto")
+
+    def __str__(self):
+        return f"{self.proveedor.nombre} -> {self.producto.nombre}"
+
+
+# ============================================================
+# Facturas
+# ============================================================
+
+class Factura(models.Model):
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="facturas")
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    fecha_emision = models.DateTimeField(auto_now_add=True)
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = "Factura"
+        verbose_name_plural = "Facturas"
+        ordering = ["-fecha_emision"]
+
+    def __str__(self):
+        return f"Factura {self.id} - {self.cliente.nombre}"
+
+
+class FacturaDetalle(models.Model):
+    factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name="detalles")
+    producto = models.ForeignKey(Product, on_delete=models.CASCADE)
+    cantidad = models.PositiveIntegerField()
+    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        verbose_name = "Detalle de Factura"
+        verbose_name_plural = "Detalles de Factura"
+
+    def __str__(self):
+        return f"{self.producto.nombre} x{self.cantidad}"
+
+    def save(self, *args, **kwargs):
+        self.subtotal = self.cantidad * self.precio_unitario
+        super().save(*args, **kwargs)
+
+
+# ============================================================
+# Pedidos
+# ============================================================
+
+class Pedido(models.Model):
+    ESTADO_CHOICES = [
+        ("pendiente", "Pendiente"),
+        ("en_proceso", "En Proceso"),
+        ("entregado", "Entregado"),
+        ("cancelado", "Cancelado"),
+    ]
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="pedidos")
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    fecha_pedido = models.DateTimeField(auto_now_add=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default="pendiente")
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = "Pedido"
+        verbose_name_plural = "Pedidos"
+        ordering = ["-fecha_pedido"]
+
+    def __str__(self):
+        return f"Pedido {self.id} - {self.cliente.nombre} ({self.estado})"
+
+
+class PedidoDetalle(models.Model):
+    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name="detalles")
+    producto = models.ForeignKey(Product, on_delete=models.CASCADE)
+    cantidad = models.PositiveIntegerField()
+    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        verbose_name = "Detalle de Pedido"
+        verbose_name_plural = "Detalles de Pedido"
+
+    def __str__(self):
+        return f"{self.producto.nombre} x{self.cantidad}"
+
+    def save(self, *args, **kwargs):
+        self.subtotal = self.cantidad * self.precio_unitario
+        super().save(*args, **kwargs)
+
+
+# ============================================================
+# Notificaciones (por usuario)
+# ============================================================
+
+class Notificacion(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notificaciones")
+    mensaje = models.TextField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    leido = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Notificacion"
+        verbose_name_plural = "Notificaciones"
+        ordering = ["-fecha_creacion"]
+
+    def __str__(self):
+        return f"Notificacion {self.id} - {self.usuario.username}"
+
+
+# ============================================================
+# Historial de chat con IA
+# ============================================================
+
+class ChatHistorial(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="chat_historial")
+    mensaje = models.TextField()
+    respuesta = models.TextField()
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Chat con IA"
+        verbose_name_plural = "Chats con IA"
+        ordering = ["-fecha"]
+
+    def __str__(self):
+        return f"Chat {self.usuario.username} - {self.fecha}"

@@ -1,71 +1,104 @@
 from django.contrib import admin
-from .models import *
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
+from .models import (
+    UserProfile, Branch, Product, Inventory, InventoryLog,
+    Cliente, Proveedor, ProveedorProducto,
+    Factura, FacturaDetalle, Pedido, PedidoDetalle,
+    Notificacion, ChatHistorial,
+)
 
-# Register your models here.
-@admin.register(Clientes)
-class ClientesAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'correo', 'telefono', 'direccion')
 
-@admin.register(Usuario)
-class UsuarioAdmin(admin.ModelAdmin):
-    list_display = ('nombre_usuario', 'apellido_usuario', 'email', 'cargo', 'fecha_registro')
-    list_filter = ('cargo', 'fecha_registro')
-    search_fields = ('nombre_usuario', 'apellido_usuario', 'email')
-    fieldsets = (
-        ('Información Personal', {
-            'fields': ('nombre_usuario', 'apellido_usuario', 'email')
-        }),
-        ('Seguridad', {
-            'fields': ('contraseña',)
-        }),
-        ('Cargo', {
-            'fields': ('cargo',)
-        }),
-        ('Registro', {
-            'fields': ('fecha_registro',),
-            'classes': ('collapse',)
-        }),
-    )
-    readonly_fields = ('fecha_registro',)
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
 
-@admin.register(Inventario)
-class InventarioAdmin(admin.ModelAdmin):
-    list_display = ('nombre_producto', 'stock_actual', 'stock_minimo', 'precio_venta', 'fecha_creacion')
-    list_filter = ('fecha_creacion',)
-    search_fields = ('nombre_producto',)
 
-@admin.register(facturas)
-class FacturasAdmin(admin.ModelAdmin):
-    list_display = ('id', 'cliente', 'fecha_emision', 'total')
+class CustomUserAdmin(UserAdmin):
+    inlines = [UserProfileInline]
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
+    search_fields = ('username', 'email', 'first_name', 'last_name')
+
+
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)
+
+
+@admin.register(Branch)
+class BranchAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'direccion', 'es_principal')
+    list_filter = ('es_principal',)
+
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = ('sku', 'nombre', 'categoria', 'precio_venta')
+    list_filter = ('categoria',)
+    search_fields = ('sku', 'nombre')
+
+
+@admin.register(Inventory)
+class InventoryAdmin(admin.ModelAdmin):
+    list_display = ('product', 'branch', 'cantidad_disponible', 'stock_minimo')
+    list_filter = ('branch',)
+
+
+@admin.register(InventoryLog)
+class InventoryLogAdmin(admin.ModelAdmin):
+    list_display = ('inventory', 'tipo_movimiento', 'cantidad', 'cantidad_resultante', 'usuario', 'fecha')
+    list_filter = ('tipo_movimiento', 'fecha')
+    search_fields = ('motivo',)
+
+
+@admin.register(Cliente)
+class ClienteAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'correo', 'telefono')
+    search_fields = ('nombre', 'correo')
+
+
+@admin.register(Proveedor)
+class ProveedorAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'correo', 'telefono')
+    search_fields = ('nombre', 'correo')
+
+
+@admin.register(ProveedorProducto)
+class ProveedorProductoAdmin(admin.ModelAdmin):
+    list_display = ('proveedor', 'producto', 'precio_compra')
+    list_filter = ('proveedor',)
+
+
+@admin.register(Factura)
+class FacturaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'cliente', 'usuario', 'total', 'fecha_emision')
     list_filter = ('fecha_emision',)
     search_fields = ('cliente__nombre',)
 
-@admin.register(notificaciones)
-class NotificacionesAdmin(admin.ModelAdmin):
-    list_display = ('id', 'mensaje', 'fecha_creacion', 'leido')
-    list_filter = ('leido', 'fecha_creacion')
-    search_fields = ('mensaje',)
 
-@admin.register(pedidos)
-class PedidosAdmin(admin.ModelAdmin):
-    list_display = ('id', 'cliente', 'fecha_pedido', 'total')
-    list_filter = ('fecha_pedido',)
+@admin.register(FacturaDetalle)
+class FacturaDetalleAdmin(admin.ModelAdmin):
+    list_display = ('factura', 'producto', 'cantidad', 'precio_unitario', 'subtotal')
+
+
+@admin.register(Pedido)
+class PedidoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'cliente', 'usuario', 'estado', 'total', 'fecha_pedido')
+    list_filter = ('estado', 'fecha_pedido')
     search_fields = ('cliente__nombre',)
 
-@admin.register(productos)
-class ProductosAdmin(admin.ModelAdmin):
-    list_display = ('nombre_producto', 'precio_venta', 'precio_compra', 'stock_actual')
-    list_filter = ('stock_actual',)
-    search_fields = ('nombre_producto',)
 
-@admin.register(proveedores)
-class ProveedoresAdmin(admin.ModelAdmin):
-    list_display = ('nombre_proveedor', 'correo', 'telefono', 'direccion')
-    search_fields = ('nombre_proveedor', 'correo')
+@admin.register(PedidoDetalle)
+class PedidoDetalleAdmin(admin.ModelAdmin):
+    list_display = ('pedido', 'producto', 'cantidad', 'precio_unitario', 'subtotal')
 
-@admin.register(reportes)
-class ReportesAdmin(admin.ModelAdmin):
-    list_display = ('titulo', 'fecha_creacion')
-    list_filter = ('fecha_creacion',)
-    search_fields = ('titulo',)
 
+@admin.register(Notificacion)
+class NotificacionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'usuario', 'mensaje', 'leido', 'fecha_creacion')
+    list_filter = ('leido', 'fecha_creacion')
+
+
+@admin.register(ChatHistorial)
+class ChatHistorialAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'fecha')
+    list_filter = ('fecha',)

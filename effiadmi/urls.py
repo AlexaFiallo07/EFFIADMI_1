@@ -17,17 +17,16 @@ urlpatterns = [
     path('clientes/<int:id>/editar/', views.editar_cliente, name='editar_cliente'),
     path('clientes/<int:id>/eliminar/', views.eliminar_cliente, name='eliminar_cliente'),
     
-    # ==================== INVENTARIO ====================
-    path('inventario/', views.lista_inventario, name='lista_inventario'),
-    path('inventario/crear/', views.crear_inventario, name='crear_inventario'),
-    path('inventario/<int:id>/editar/', views.editar_inventario, name='editar_inventario'),
-    path('inventario/<int:id>/eliminar/', views.eliminar_inventario, name='eliminar_inventario'),
-    
     # ==================== PRODUCTOS ====================
     path('productos/', views.lista_productos, name='lista_productos'),
     path('productos/crear/', views.crear_producto, name='crear_producto'),
     path('productos/<int:id>/editar/', views.editar_producto, name='editar_producto'),
     path('productos/<int:id>/eliminar/', views.eliminar_producto, name='eliminar_producto'),
+    
+    # ==================== INVENTARIO ====================
+    path('inventario/', views.lista_inventario, name='lista_inventario'),
+    path('inventario/<int:id>/', views.detalle_inventario, name='detalle_inventario'),
+    path('inventario/<int:id>/movimiento/', views.registrar_movimiento, name='registrar_movimiento'),
     
     # ==================== FACTURAS ====================
     path('facturas/', views.lista_facturas, name='lista_facturas'),
@@ -65,4 +64,7 @@ urlpatterns = [
 
     # ==================== ESTADISTICAS IA ====================
     path('estadisticas/', views.estadisticas_ia, name='estadisticas_ia'),
+
+    # ==================== CHAT IA ====================
+    path('chat/', views.chat_ia, name='chat_ia'),
 ]
