@@ -14,27 +14,27 @@
             <table class="table">
                 <thead>
                     <tr>
+                        <th>SKU</th>
                         <th>Producto</th>
-                        <th>Descripción</th>
-                        <th>Stock Actual</th>
-                        <th>Stock Mínimo</th>
+                        <th>Categoria</th>
                         <th>Precio Venta</th>
+                        <th>Stock Total</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for producto in productos %}
+                    {% for item in productos %}
                         <tr>
-                            <td>{{ producto.nombre_producto }}</td>
-                            <td>{{ producto.descripcion|truncatewords:5 }}</td>
-                            <td>{{ producto.stock_actual }}</td>
-                            <td>{{ producto.stock_minimo }}</td>
-                            <td>${{ producto.precio_venta }}</td>
+                            <td>{{ item.producto.sku }}</td>
+                            <td>{{ item.producto.nombre }}</td>
+                            <td>{{ item.producto.categoria|default:"-" }}</td>
+                            <td>${{ item.producto.precio_venta }}</td>
+                            <td>{{ item.stock }}</td>
                             <td>
-                                <a href="{% url 'effiadmi:editar_producto' producto.id %}" class="btn btn-outline btn-sm">Editar</a>
-                                <form method="POST" action="{% url 'effiadmi:eliminar_producto' producto.id %}" style="display: inline;">
+                                <a href="{% url 'effiadmi:editar_producto' item.producto.id %}" class="btn btn-outline btn-sm">Editar</a>
+                                <form method="POST" action="{% url 'effiadmi:eliminar_producto' item.producto.id %}" style="display: inline;">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('¿Está seguro?')">Eliminar</button>
+                                    <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Seguro que deseas eliminar este producto?')">Eliminar</button>
                                 </form>
                             </td>
                         </tr>

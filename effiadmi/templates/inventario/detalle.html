@@ -5,49 +5,105 @@
 {% block contenido %}
 <div class="container" style="max-width: 760px; margin: 0 auto;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
-        <h1>{{ item.nombre_producto }}</h1>
+        <h1>{{ inventario.product.nombre }}</h1>
         <a href="{% url 'effiadmi:lista_inventario' %}" class="btn btn-outline">Volver</a>
     </div>
 
     <div class="card">
         <div class="card-body">
             <div class="form-group">
-                <label class="form-label">Nombre Producto</label>
-                <p>{{ item.nombre_producto }}</p>
+                <label class="form-label">SKU</label>
+                <p>{{ inventario.product.sku }}</p>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Stock Actual</label>
-                <p>{{ item.stock_actual }}</p>
+                <label class="form-label">Sucursal</label>
+                <p>{{ inventario.branch.nombre }}</p>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Stock Mínimo</label>
-                <p>{{ item.stock_minimo }}</p>
+                <label class="form-label">Categoria</label>
+                <p>{{ inventario.product.categoria|default:"-" }}</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Stock Disponible</label>
+                <p>
+                    {% if inventario.cantidad_disponible <= inventario.stock_minimo %}
+                        <span style="color: #ef4444; font-weight: bold;">{{ inventario.cantidad_disponible }}</span>
+                        <span style="color: #ef4444;">(Bajo minimo)</span>
+                    {% else %}
+                        {{ inventario.cantidad_disponible }}
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Stock Minimo</label>
+                <p>{{ inventario.stock_minimo }}</p>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Precio Venta</label>
-                <p>${{ item.precio_venta }}</p>
+                <p>${{ inventario.product.precio_venta }}</p>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Precio Compra</label>
-                <p>${{ item.precio_compra }}</p>
+                <label class="form-label">Descripcion</label>
+                <p>{{ inventario.product.descripcion|default:"-" }}</p>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Descripción</label>
-                <p>{{ item.descripcion }}</p>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Fecha Creación</label>
-                <p>{{ item.fecha_creacion|date:"d/m/Y H:i" }}</p>
+                <label class="form-label">Fecha Creacion</label>
+                <p>{{ inventario.fecha_creacion|date:"d/m/Y H:i" }}</p>
             </div>
         </div>
-        <div class="card-footer">
-            <a href="{% url 'effiadmi:editar_inventario' item.id %}" class="btn btn-primary">Editar</a>
+    </div>
+
+    <div class="card" style="margin-top: var(--spacing-lg);">
+        <div class="card-header">
+            <h2>Movimientos Recientes</h2>
+            <a href="{% url 'effiadmi:registrar_movimiento' inventario.id %}" class="btn btn-primary btn-sm">+ Nuevo Movimiento</a>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Cantidad</th>
+                        <th>Resultante</th>
+                        <th>Motivo</th>
+                        <th>Usuario</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mov in movimientos %}
+                        <tr>
+                            <td>{{ mov.fecha|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if mov.tipo_movimiento == "ENTRADA" %}
+                                    <span style="color: #22c55e; font-weight: bold;">Entrada</span>
+                                {% elif mov.tipo_movimiento == "SALIDA" %}
+                                    <span style="color: #ef4444; font-weight: bold;">Salida</span>
+                                {% else %}
+                                    <span style="color: #f59e0b; font-weight: bold;">Ajuste</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ mov.cantidad }}</td>
+                            <td>{{ mov.cantidad_resultante }}</td>
+                            <td>{{ mov.motivo|default:"-" }}</td>
+                            <td>{{ mov.usuario.username|default:"Sistema" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: var(--spacing-lg);">
+                                No hay movimientos registrados.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

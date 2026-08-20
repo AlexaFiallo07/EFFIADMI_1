@@ -5,8 +5,40 @@
 {% block contenido %}
 <div class="container" style="max-width: 1200px; margin: 0 auto;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
-        <h1>Listado de Inventario</h1>
-        <a href="{% url 'effiadmi:crear_inventario' %}" class="btn btn-primary">+ Nuevo Inventario</a>
+        <h1>Inventario</h1>
+        <a href="{% url 'effiadmi:lista_productos' %}" class="btn btn-primary">+ Nuevo Producto</a>
+    </div>
+
+    <div class="card" style="margin-bottom: var(--spacing-lg);">
+        <div class="card-body">
+            <form method="GET" style="display: flex; gap: var(--spacing-md); flex-wrap: wrap; align-items: flex-end;">
+                <div class="form-group" style="flex: 1; min-width: 200px;">
+                    <label class="form-label">Sucursal</label>
+                    <select name="sucursal" class="form-control">
+                        <option value="">Todas</option>
+                        {% for sucursal in sucursales %}
+                            <option value="{{ sucursal.id }}" {% if sucursal_seleccionada == sucursal.id|stringformat:"d" %}selected{% endif %}>
+                                {{ sucursal.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 200px;">
+                    <label class="form-label">Categoria</label>
+                    <select name="categoria" class="form-control">
+                        <option value="">Todas</option>
+                        {% for cat in categorias %}
+                            <option value="{{ cat }}" {% if categoria_seleccionada == cat %}selected{% endif %}>
+                                {{ cat }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div class="card">
@@ -14,33 +46,38 @@
             <table class="table">
                 <thead>
                     <tr>
+                        <th>SKU</th>
                         <th>Producto</th>
-                        <th>Stock Actual</th>
-                        <th>Stock Mínimo</th>
-                        <th>Precio Venta</th>
-                        <th>Precio Compra</th>
+                        <th>Categoria</th>
+                        <th>Sucursal</th>
+                        <th>Stock Disponible</th>
+                        <th>Stock Minimo</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in inventario %}
                         <tr>
-                            <td>{{ item.nombre_producto }}</td>
-                            <td>{{ item.stock_actual }}</td>
-                            <td>{{ item.stock_minimo }}</td>
-                            <td>${{ item.precio_venta }}</td>
-                            <td>${{ item.precio_compra }}</td>
+                            <td>{{ item.product.sku }}</td>
+                            <td>{{ item.product.nombre }}</td>
+                            <td>{{ item.product.categoria|default:"-" }}</td>
+                            <td>{{ item.branch.nombre }}</td>
                             <td>
-                                <a href="{% url 'effiadmi:editar_inventario' item.id %}" class="btn btn-outline btn-sm">Editar</a>
-                                <form method="POST" action="{% url 'effiadmi:eliminar_inventario' item.id %}" style="display: inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('¿Está seguro?')">Eliminar</button>
-                                </form>
+                                {% if item.cantidad_disponible <= item.stock_minimo %}
+                                    <span style="color: #ef4444; font-weight: bold;">{{ item.cantidad_disponible }}</span>
+                                {% else %}
+                                    {{ item.cantidad_disponible }}
+                                {% endif %}
+                            </td>
+                            <td>{{ item.stock_minimo }}</td>
+                            <td>
+                                <a href="{% url 'effiadmi:detalle_inventario' item.id %}" class="btn btn-outline btn-sm">Detalle</a>
+                                <a href="{% url 'effiadmi:registrar_movimiento' item.id %}" class="btn btn-outline btn-sm">Movimiento</a>
                             </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">
+                            <td colspan="7" style="text-align: center; padding: var(--spacing-xl);">
                                 No hay productos en inventario.
                             </td>
                         </tr>

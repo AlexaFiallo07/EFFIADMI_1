@@ -88,7 +88,7 @@
             {% if productos_bajos %}
                 {% for producto in productos_bajos %}
                 <div class="system-alert-row warn-alert" style="margin-bottom: 10px;">
-                    <strong>{{ producto.nombre_producto }}</strong> — stock actual {{ producto.stock_actual }} / mínimo {{ producto.stock_minimo }}
+                    <strong>{{ producto.product.nombre }}</strong> — stock actual {{ producto.cantidad_disponible }} / mínimo {{ producto.stock_minimo }}
                 </div>
                 {% endfor %}
             {% else %}

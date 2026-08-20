@@ -225,7 +225,22 @@ def eliminar_cliente(request, id):
 def lista_productos(request):
     try:
         productos_registrados = Product.objects.all().order_by("-id")
-        return render(request, "productos/lista.html", {"productos": productos_registrados})
+
+        stock_map = {}
+        for inv in Inventory.objects.select_related("branch").all():
+            pid = inv.product.id
+            if pid not in stock_map:
+                stock_map[pid] = 0
+            stock_map[pid] += inv.cantidad_disponible
+
+        productos_con_stock = []
+        for p in productos_registrados:
+            productos_con_stock.append({
+                "producto": p,
+                "stock": stock_map.get(p.id, 0),
+            })
+
+        return render(request, "productos/lista.html", {"productos": productos_con_stock})
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
