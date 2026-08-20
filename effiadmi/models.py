@@ -99,14 +99,6 @@ class proveedores(models.Model):
     def __str__(self):
         return self.nombre_proveedor
 
-class reportes(models.Model):
-    titulo = models.CharField(max_length=100)
-    contenido = models.TextField()
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.titulo
-
 
 # ============================================================
 # Nuevos modelos: Branch, Product, Inventory, InventoryLog

@@ -63,9 +63,5 @@ class ProveedoresAdmin(admin.ModelAdmin):
     list_display = ('nombre_proveedor', 'correo', 'telefono', 'direccion')
     search_fields = ('nombre_proveedor', 'correo')
 
-@admin.register(reportes)
-class ReportesAdmin(admin.ModelAdmin):
-    list_display = ('titulo', 'fecha_creacion')
-    list_filter = ('fecha_creacion',)
-    search_fields = ('titulo',)
+
 
