@@ -1,81 +1,38 @@
+from django.contrib.auth.models import User
 from rest_framework import serializers
 
 from .models import (
     Branch,
-    Clientes,
-    Inventario,
+    Cliente,
+    ChatHistorial,
+    Factura,
+    FacturaDetalle,
     Inventory,
     InventoryLog,
+    Notificacion,
+    Pedido,
+    PedidoDetalle,
     Product,
-    Usuario,
-    facturas,
-    notificaciones,
-    pedidos,
-    productos,
-    proveedores,
-    movimientos,
+    Proveedor,
+    ProveedorProducto,
+    UserProfile,
 )
 
 
-class ProductoSerializer(serializers.ModelSerializer):
+class UserProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source="user.username", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+
     class Meta:
-        model = productos
-        fields = '__all__'
+        model = UserProfile
+        fields = [
+            "id", "user", "username", "email", "first_name", "last_name",
+            "telefono", "direccion", "cargo",
+        ]
+        read_only_fields = ["user"]
 
-
-class ProveedorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = proveedores
-        fields = '__all__'
-
-
-class ClienteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Clientes
-        fields = '__all__'
-
-
-class UsuarioSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Usuario
-        fields = ['id', 'nombre_usuario', 'apellido_usuario', 'email', 'cargo', 'fecha_registro']
-        read_only_fields = ['fecha_registro']
-
-
-class FacturaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = facturas
-        fields = '__all__'
-
-
-class PedidoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = pedidos
-        fields = '__all__'
-
-
-class NotificacionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = notificaciones
-        fields = '__all__'
-
-
-class InventarioSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Inventario
-        fields = '__all__'
-
-
-class MovimientoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = movimientos
-        fields = ['id', 'producto', 'tipo', 'cantidad', 'descripcion', 'fecha', 'usuario']
-        read_only_fields = ['fecha']
-
-
-# ============================================================
-# Serializers: Branch, Product, Inventory, InventoryLog
-# ============================================================
 
 class BranchSerializer(serializers.ModelSerializer):
     class Meta:
@@ -165,7 +122,97 @@ class StockAdjustSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     sucursal_id = serializers.IntegerField()
     tipo_movimiento = serializers.ChoiceField(
-        choices=InventoryLog.TIPO_MOVIMIENTO_CHOICES
+        choices=InventoryLog.TIPO_MOVIMIENTO_CHOICES,
     )
     cantidad = serializers.IntegerField(min_value=1)
     motivo = serializers.CharField(required=False, default="")
+
+
+class ClienteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cliente
+        fields = "__all__"
+
+
+class ProveedorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Proveedor
+        fields = "__all__"
+
+
+class ProveedorProductoSerializer(serializers.ModelSerializer):
+    proveedor_nombre = serializers.CharField(source="proveedor.nombre", read_only=True)
+    producto_nombre = serializers.CharField(source="producto.nombre", read_only=True)
+
+    class Meta:
+        model = ProveedorProducto
+        fields = [
+            "id", "proveedor", "producto", "precio_compra",
+            "proveedor_nombre", "producto_nombre",
+        ]
+
+
+class FacturaDetalleSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source="producto.nombre", read_only=True)
+
+    class Meta:
+        model = FacturaDetalle
+        fields = [
+            "id", "producto", "producto_nombre", "cantidad",
+            "precio_unitario", "subtotal",
+        ]
+        read_only_fields = ["subtotal"]
+
+
+class FacturaSerializer(serializers.ModelSerializer):
+    detalles = FacturaDetalleSerializer(many=True, read_only=True)
+    cliente_nombre = serializers.CharField(source="cliente.nombre", read_only=True)
+    usuario_username = serializers.CharField(source="usuario.username", read_only=True, default="")
+
+    class Meta:
+        model = Factura
+        fields = [
+            "id", "cliente", "cliente_nombre", "usuario", "usuario_username",
+            "fecha_emision", "total", "detalles",
+        ]
+        read_only_fields = ["fecha_emision", "total"]
+
+
+class PedidoDetalleSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source="producto.nombre", read_only=True)
+
+    class Meta:
+        model = PedidoDetalle
+        fields = [
+            "id", "producto", "producto_nombre", "cantidad",
+            "precio_unitario", "subtotal",
+        ]
+        read_only_fields = ["subtotal"]
+
+
+class PedidoSerializer(serializers.ModelSerializer):
+    detalles = PedidoDetalleSerializer(many=True, read_only=True)
+    cliente_nombre = serializers.CharField(source="cliente.nombre", read_only=True)
+    usuario_username = serializers.CharField(source="usuario.username", read_only=True, default="")
+
+    class Meta:
+        model = Pedido
+        fields = [
+            "id", "cliente", "cliente_nombre", "usuario", "usuario_username",
+            "fecha_pedido", "estado", "total", "detalles",
+        ]
+        read_only_fields = ["fecha_pedido", "total"]
+
+
+class NotificacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notificacion
+        fields = "__all__"
+        read_only_fields = ["fecha_creacion"]
+
+
+class ChatHistorialSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChatHistorial
+        fields = "__all__"
+        read_only_fields = ["fecha"]
