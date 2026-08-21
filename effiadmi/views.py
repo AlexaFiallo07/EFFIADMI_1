@@ -165,7 +165,10 @@ def perfil(request):
         messages.success(request, "¡Perfil actualizado exitosamente!")
         return redirect("effiadmi:perfil")
 
-    return render(request, "usuarios/perfil.html", {"usuario": user, "perfil": perfil})
+    ctx = {"usuario": user, "perfil": perfil}
+    if perfil.cargo == "admin":
+        ctx["usuarios"] = User.objects.select_related("profile").all().order_by("-id")
+    return render(request, "usuarios/perfil.html", ctx)
 
 
 # ==================== CLIENTES ====================

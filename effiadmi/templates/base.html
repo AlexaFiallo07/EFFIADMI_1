@@ -179,9 +179,6 @@
                 <a href="{% url 'effiadmi:lista_notificaciones' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_notificaciones' %}active{% endif %}">
                     <span class="material-symbols-outlined">notifications</span> Notificaciones
                 </a>
-                <a href="{% url 'effiadmi:lista_usuarios' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_usuarios' or request.resolver_match.url_name == 'crear_usuario' or request.resolver_match.url_name == 'editar_usuario' %}active{% endif %}">
-                    <span class="material-symbols-outlined">manage_accounts</span> Usuarios
-                </a>
                 <a href="{% url 'effiadmi:chat_ia' %}" class="menu-link {% if request.resolver_match.url_name == 'chat_ia' %}active{% endif %}">
                     <span class="material-symbols-outlined">smart_toy</span> Chat IA
                 </a>
