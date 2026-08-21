@@ -102,7 +102,7 @@ def inicio(request):
         return render(request, "dashboard/index.html")
 
 
-@autorizacion()
+@autorizacion(roles=["admin, operador"])
 def perfil(request):
     user = User.objects.get(pk=request.session.get("logueado", {}).get("id"))
     perfil, _ = UserProfile.objects.get_or_create(user=user)
@@ -127,7 +127,7 @@ def perfil(request):
 
 # ==================== CLIENTES ====================
 
-@autorizacion()
+@autorizacion(roles=["admin, operador"])
 def lista_clientes(request):
     try:
         clientes_registrados = Cliente.objects.all().order_by("-id")
@@ -137,7 +137,7 @@ def lista_clientes(request):
         return redirect("effiadmi:inicio")
 
 
-@autorizacion()
+@autorizacion(roles=["admin, operador"])
 def crear_cliente(request):
     if request.method == "POST":
         try:
@@ -168,7 +168,7 @@ def crear_cliente(request):
     return render(request, "clientes/formulario_clientes.html")
 
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def editar_cliente(request, id):
     try:
         cliente = get_object_or_404(Cliente, pk=id)
@@ -188,7 +188,7 @@ def editar_cliente(request, id):
         return redirect("effiadmi:lista_clientes")
 
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def eliminar_cliente(request, id):
     try:
         cliente = get_object_or_404(Cliente, pk=id)
@@ -203,7 +203,7 @@ def eliminar_cliente(request, id):
 
 # ==================== PRODUCTOS ====================
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def lista_productos(request):
     try:
         productos_registrados = Product.objects.all().order_by("-id")
@@ -227,8 +227,7 @@ def lista_productos(request):
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
 
-
-@autorizacion()
+@autorizacion(roles=["admin"])
 def crear_producto(request):
     sucursales = Branch.objects.all()
 
@@ -295,7 +294,7 @@ def crear_producto(request):
     return render(request, "productos/crear.html", {"sucursales": sucursales})
 
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def editar_producto(request, id):
     try:
         producto = get_object_or_404(Product, pk=id)
@@ -317,7 +316,7 @@ def editar_producto(request, id):
         return redirect("effiadmi:lista_productos")
 
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def eliminar_producto(request, id):
     try:
         producto = get_object_or_404(Product, pk=id)
@@ -332,7 +331,7 @@ def eliminar_producto(request, id):
 
 # ==================== INVENTARIO ====================
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def lista_inventario(request):
     try:
         sucursal_id = request.GET.get("sucursal")
@@ -363,7 +362,7 @@ def lista_inventario(request):
         return redirect("effiadmi:inicio")
 
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def detalle_inventario(request, id):
     try:
         inventario = get_object_or_404(
@@ -381,7 +380,7 @@ def detalle_inventario(request, id):
         return redirect("effiadmi:lista_inventario")
 
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def registrar_movimiento(request, id):
     try:
         inventario = get_object_or_404(
@@ -432,7 +431,7 @@ def registrar_movimiento(request, id):
 
 # ==================== FACTURAS ====================
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def lista_facturas(request):
     try:
         facturas_registradas = Factura.objects.select_related("cliente").all().order_by("-id")
@@ -442,7 +441,7 @@ def lista_facturas(request):
         return redirect("effiadmi:inicio")
 
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def crear_factura(request):
     try:
         clientes_registrados = Cliente.objects.all().order_by("nombre")
@@ -490,7 +489,7 @@ def crear_factura(request):
         return redirect("effiadmi:lista_facturas")
 
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def detalle_factura(request, id):
     try:
         factura = get_object_or_404(
@@ -503,7 +502,7 @@ def detalle_factura(request, id):
         return redirect("effiadmi:lista_facturas")
 
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def editar_factura(request, id):
     try:
         factura = get_object_or_404(Factura, pk=id)
@@ -522,7 +521,7 @@ def editar_factura(request, id):
         return redirect("effiadmi:lista_facturas")
 
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def eliminar_factura(request, id):
     try:
         factura = get_object_or_404(Factura, pk=id)
@@ -537,7 +536,7 @@ def eliminar_factura(request, id):
 
 # ==================== PEDIDOS ====================
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def lista_pedidos(request):
     try:
         pedidos_registrados = Pedido.objects.select_related("cliente").all().order_by("-id")
@@ -547,7 +546,7 @@ def lista_pedidos(request):
         return redirect("effiadmi:inicio")
 
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def crear_pedido(request):
     try:
         clientes_registrados = Cliente.objects.all().order_by("nombre")
@@ -595,8 +594,7 @@ def crear_pedido(request):
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_pedidos")
 
-
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def detalle_pedido(request, id):
     try:
         pedido = get_object_or_404(
@@ -609,7 +607,7 @@ def detalle_pedido(request, id):
         return redirect("effiadmi:lista_pedidos")
 
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def editar_pedido(request, id):
     try:
         pedido = get_object_or_404(Pedido, pk=id)
@@ -629,7 +627,7 @@ def editar_pedido(request, id):
         return redirect("effiadmi:lista_pedidos")
 
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def eliminar_pedido(request, id):
     try:
         pedido = get_object_or_404(Pedido, pk=id)
@@ -738,7 +736,7 @@ def eliminar_usuario(request, id):
 
 # ==================== PROVEEDORES ====================
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def lista_proveedores(request):
     try:
         proveedores_registrados = Proveedor.objects.all().order_by("-id")
@@ -748,7 +746,7 @@ def lista_proveedores(request):
         return redirect("effiadmi:inicio")
 
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def crear_proveedor(request):
     if request.method == "POST":
         try:
@@ -779,7 +777,7 @@ def crear_proveedor(request):
     return render(request, "proveedores/crear.html")
 
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def editar_proveedor(request, id):
     try:
         proveedor = get_object_or_404(Proveedor, pk=id)
@@ -799,7 +797,7 @@ def editar_proveedor(request, id):
         return redirect("effiadmi:lista_proveedores")
 
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def eliminar_proveedor(request, id):
     try:
         proveedor = get_object_or_404(Proveedor, pk=id)
@@ -814,7 +812,7 @@ def eliminar_proveedor(request, id):
 
 # ==================== NOTIFICACIONES ====================
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def lista_notificaciones(request):
     try:
         usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
@@ -825,7 +823,7 @@ def lista_notificaciones(request):
         return redirect("effiadmi:inicio")
 
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def detalle_notificacion(request, id):
     try:
         notif = get_object_or_404(Notificacion, pk=id)
@@ -840,7 +838,7 @@ def detalle_notificacion(request, id):
         return redirect("effiadmi:lista_notificaciones")
 
 
-@autorizacion()
+@autorizacion(roles=["admin", "operador"])
 def eliminar_notificacion(request, id):
     try:
         notif = get_object_or_404(Notificacion, pk=id)
@@ -856,7 +854,7 @@ def eliminar_notificacion(request, id):
 
 # ==================== ESTADISTICAS IA ====================
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def estadisticas_ia(request):
     try:
         total_productos = Product.objects.count()
@@ -917,7 +915,7 @@ def estadisticas_ia(request):
 
 # ==================== CHAT IA ====================
 
-@autorizacion()
+@autorizacion(roles=["admin"])
 def chat_ia(request):
     try:
         usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
