@@ -58,9 +58,6 @@ urlpatterns = [
     path('notificaciones/', views.lista_notificaciones, name='lista_notificaciones'),
     path('notificaciones/<int:id>/', views.detalle_notificacion, name='detalle_notificacion'),
     path('notificaciones/<int:id>/eliminar/', views.eliminar_notificacion, name='eliminar_notificacion'),
-    
-    # ==================== REPORTES ====================
-    path('reportes/', views.reportes_view, name='reportes'),
 
     # ==================== ESTADISTICAS IA ====================
     path('estadisticas/', views.estadisticas_ia, name='estadisticas_ia'),
