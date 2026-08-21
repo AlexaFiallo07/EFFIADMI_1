@@ -18,27 +18,37 @@
                         <th>Correo</th>
                         <th>Telefono</th>
                         <th>Direccion</th>
+                        <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for proveedor in proveedores %}
                         <tr>
-                            <td>{{ proveedor.nombre_proveedor }}</td>
+                            <td>{{ proveedor.nombre }}</td>
                             <td>{{ proveedor.correo }}</td>
                             <td>{{ proveedor.telefono }}</td>
                             <td>{{ proveedor.direccion }}</td>
                             <td>
+                                {% if proveedor.activo %}
+                                    <span style="color: #10b981; font-weight: 600;">Activo</span>
+                                {% else %}
+                                    <span style="color: #ef4444; font-weight: 600;">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>
                                 <a href="{% url 'effiadmi:editar_proveedor' proveedor.id %}" class="btn btn-outline btn-sm">Editar</a>
-                                <form method="POST" action="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" style="display: inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('¿Está seguro?')">Eliminar</button>
-                                </form>
+                                {% if proveedor.activo %}
+                                    <form method="POST" action="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Desactivar este proveedor?')">Desactivar</button>
+                                    </form>
+                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="5" style="text-align: center; padding: var(--spacing-xl);">
+                            <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">
                                 No hay proveedores registrados.
                             </td>
                         </tr>

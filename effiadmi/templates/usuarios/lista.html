@@ -15,32 +15,38 @@
                 <thead>
                     <tr>
                         <th>Nombre</th>
-                        <th>Apellido</th>
                         <th>Email</th>
                         <th>Cargo</th>
-                        <th>Fecha Registro</th>
+                        <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for usuario in usuarios %}
                         <tr>
-                            <td>{{ usuario.nombre_usuario }}</td>
-                            <td>{{ usuario.apellido_usuario }}</td>
+                            <td>{{ usuario.first_name }} {{ usuario.last_name }}</td>
                             <td>{{ usuario.email }}</td>
-                            <td>{{ usuario.cargo }}</td>
-                            <td>{{ usuario.fecha_registro|date:"d/m/Y H:i" }}</td>
+                            <td>{% if usuario.profile %}{{ usuario.profile.get_cargo_display }}{% else %}-{% endif %}</td>
+                            <td>
+                                {% if usuario.is_active %}
+                                    <span style="color: #10b981; font-weight: 600;">Activo</span>
+                                {% else %}
+                                    <span style="color: #ef4444; font-weight: 600;">Inactivo</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <a href="{% url 'effiadmi:editar_usuario' usuario.id %}" class="btn btn-outline btn-sm">Editar</a>
-                                <form method="POST" action="{% url 'effiadmi:eliminar_usuario' usuario.id %}" style="display: inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('¿Está seguro?')">Eliminar</button>
-                                </form>
+                                {% if usuario.is_active %}
+                                    <form method="POST" action="{% url 'effiadmi:eliminar_usuario' usuario.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Desactivar este usuario?')">Desactivar</button>
+                                    </form>
+                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">
+                            <td colspan="5" style="text-align: center; padding: var(--spacing-xl);">
                                 No hay usuarios registrados.
                             </td>
                         </tr>

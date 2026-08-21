@@ -3,7 +3,7 @@
 {% block titulo %}Detalle Factura{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 760px; margin: 0 auto;">
+<div class="container" style="max-width: 900px; margin: 0 auto;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
         <h1>Factura #{{ factura.id }}</h1>
         <a href="{% url 'effiadmi:lista_facturas' %}" class="btn btn-outline">Volver</a>
@@ -11,14 +11,57 @@
 
     <div class="card">
         <div class="card-body">
-            <p><strong>Cliente:</strong> {{ factura.cliente.nombre }}</p>
-            <p><strong>Correo:</strong> {{ factura.cliente.correo }}</p>
-            <p><strong>Telefono:</strong> {{ factura.cliente.telefono }}</p>
-            <p><strong>Fecha:</strong> {{ factura.fecha_emision|date:"Y-m-d H:i" }}</p>
-            <p><strong>Total:</strong> ${{ factura.total }}</p>
-        </div>
-        <div class="card-footer">
-            <a href="{% url 'effiadmi:editar_factura' factura.id %}" class="btn btn-primary">Editar</a>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
+                <div>
+                    <p><strong>Cliente:</strong> {{ factura.cliente.nombre }}</p>
+                    <p><strong>Correo:</strong> {{ factura.cliente.correo }}</p>
+                    <p><strong>Telefono:</strong> {{ factura.cliente.telefono }}</p>
+                </div>
+                <div>
+                    <p><strong>Fecha:</strong> {{ factura.fecha_emision|date:"Y-m-d H:i" }}</p>
+                    <p><strong>Usuario:</strong> {% if factura.usuario %}{{ factura.usuario.first_name|default:factura.usuario.username }}{% else %}Sistema{% endif %}</p>
+                    <p><strong>Pedido:</strong>
+                        {% if factura.pedido %}
+                            <a href="{% url 'effiadmi:detalle_pedido' factura.pedido.id %}">PED-{{ factura.pedido.id }}</a>
+                        {% else %}-{% endif %}
+                    </p>
+                    <p><strong>Estado:</strong>
+                        {% if factura.estado == "emitida" %}
+                            <span style="color: #10b981; font-weight: 600;">Emitida</span>
+                        {% elif factura.estado == "anulada" %}
+                            <span style="color: #ef4444; font-weight: 600;">Anulada</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div style="margin-top: var(--spacing-lg); border-top: 1px solid #e2e8f0; padding-top: var(--spacing-lg);">
+                <h3 style="font-size: 16px; margin-bottom: 12px;">Productos</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th>Precio</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for det in detalles %}
+                            <tr>
+                                <td>{{ det.producto.nombre }}</td>
+                                <td>{{ det.cantidad }}</td>
+                                <td>${{ det.precio_unitario }}</td>
+                                <td>${{ det.subtotal }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div style="text-align: right; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                    <span style="font-size: 14px; color: #64748b;">Total:</span>
+                    <strong style="font-size: 20px; margin-left: 8px;">${{ factura.total }}</strong>
+                </div>
+            </div>
         </div>
     </div>
 </div>

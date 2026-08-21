@@ -17,6 +17,7 @@
                     <th>Cliente</th>
                     <th>Fecha</th>
                     <th>Total</th>
+                    <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -28,17 +29,27 @@
                         <td>{{ pedido.fecha_pedido|date:"Y-m-d H:i" }}</td>
                         <td>${{ pedido.total }}</td>
                         <td>
+                            {% if pedido.estado == "pendiente" %}
+                                <span style="color: #eab308; font-weight: 600;">Pendiente</span>
+                            {% elif pedido.estado == "confirmado" %}
+                                <span style="color: #10b981; font-weight: 600;">Confirmado</span>
+                            {% elif pedido.estado == "cancelado" %}
+                                <span style="color: #ef4444; font-weight: 600;">Cancelado</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             <a href="{% url 'effiadmi:detalle_pedido' pedido.id %}" class="btn btn-ghost btn-sm">Ver</a>
-                            <a href="{% url 'effiadmi:editar_pedido' pedido.id %}" class="btn btn-ghost btn-sm">Editar</a>
-                            <form method="post" action="{% url 'effiadmi:eliminar_pedido' pedido.id %}" style="display: inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-ghost btn-sm" onclick="return confirm('Eliminar este pedido?');">Eliminar</button>
-                            </form>
+                            {% if pedido.estado == "pendiente" %}
+                                <form method="post" action="{% url 'effiadmi:eliminar_pedido' pedido.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-ghost btn-sm" onclick="return confirm('Eliminar este pedido?');">Eliminar</button>
+                                </form>
+                            {% endif %}
                         </td>
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="5" style="text-align: center; padding: var(--spacing-xl);">No hay pedidos registrados.</td>
+                        <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">No hay pedidos registrados.</td>
                     </tr>
                 {% endfor %}
             </tbody>

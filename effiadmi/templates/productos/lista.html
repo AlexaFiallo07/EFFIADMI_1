@@ -19,6 +19,7 @@
                         <th>Categoria</th>
                         <th>Precio Venta</th>
                         <th>Stock Total</th>
+                        <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -31,16 +32,25 @@
                             <td>${{ item.producto.precio_venta }}</td>
                             <td>{{ item.stock }}</td>
                             <td>
-                                <a href="{% url 'effiadmi:editar_producto' item.producto.id %}" class="btn btn-outline btn-sm">Editar</a>
-                                <form method="POST" action="{% url 'effiadmi:eliminar_producto' item.producto.id %}" style="display: inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Seguro que deseas eliminar este producto?')">Eliminar</button>
-                                </form>
+                                {% if item.producto.activo %}
+                                    <span style="color: #10b981; font-weight: 600;">Activo</span>
+                                {% else %}
+                                    <span style="color: #ef4444; font-weight: 600;">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.producto.activo %}
+                                    <a href="{% url 'effiadmi:editar_producto' item.producto.id %}" class="btn btn-outline btn-sm">Editar</a>
+                                    <form method="POST" action="{% url 'effiadmi:eliminar_producto' item.producto.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Desactivar este producto?')">Desactivar</button>
+                                    </form>
+                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">
+                            <td colspan="7" style="text-align: center; padding: var(--spacing-xl);">
                                 No hay productos registrados.
                             </td>
                         </tr>

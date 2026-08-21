@@ -33,12 +33,15 @@ urlpatterns = [
     path('facturas/crear/', views.crear_factura, name='crear_factura'),
     path('facturas/<int:id>/', views.detalle_factura, name='detalle_factura'),
     path('facturas/<int:id>/editar/', views.editar_factura, name='editar_factura'),
+    path('facturas/<int:id>/anular/', views.anular_factura, name='anular_factura'),
     path('facturas/<int:id>/eliminar/', views.eliminar_factura, name='eliminar_factura'),
     
     # ==================== PEDIDOS ====================
     path('pedidos/', views.lista_pedidos, name='lista_pedidos'),
     path('pedidos/crear/', views.crear_pedido, name='crear_pedido'),
     path('pedidos/<int:id>/', views.detalle_pedido, name='detalle_pedido'),
+    path('pedidos/<int:id>/confirmar/', views.confirmar_pedido, name='confirmar_pedido'),
+    path('pedidos/<int:id>/cancelar/', views.cancelar_pedido, name='cancelar_pedido'),
     path('pedidos/<int:id>/editar/', views.editar_pedido, name='editar_pedido'),
     path('pedidos/<int:id>/eliminar/', views.eliminar_pedido, name='eliminar_pedido'),
     

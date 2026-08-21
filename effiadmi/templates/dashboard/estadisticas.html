@@ -114,6 +114,54 @@
     </div>
 </div>
 
+<div style="margin-top: 32px;">
+    <div class="dashboard-panel-card">
+        <h3 class="panel-card-title">Reportes</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+
+            <div style="background: #f8fafc; border-radius: 10px; padding: 20px; border: 1px solid #e2e8f0;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <span class="material-symbols-outlined" style="color: #3b82f6;">inventory</span>
+                    <h4 style="margin: 0; font-size: 15px; color: #1e293b;">Inventario General</h4>
+                </div>
+                <table style="width: 100%; font-size: 13px; color: #475569;">
+                    <tr><td style="padding: 4px 0;">Productos registrados:</td><td style="text-align: right; font-weight: 600;">{{ total_productos }}</td></tr>
+                    <tr><td style="padding: 4px 0;">Unidades totales:</td><td style="text-align: right; font-weight: 600;">{{ unidades_totales }}</td></tr>
+                    <tr><td style="padding: 4px 0;">Valor total inventario:</td><td style="text-align: right; font-weight: 600;">${{ valor_inventario|floatformat:0 }}</td></tr>
+                    <tr><td style="padding: 4px 0;">Productos bajo stock:</td><td style="text-align: right; font-weight: 600; color: {% if productos_bajos %}#b45309{% else %}#10b981{% endif %};">{{ productos_bajos|length }}</td></tr>
+                </table>
+            </div>
+
+            <div style="background: #f8fafc; border-radius: 10px; padding: 20px; border: 1px solid #e2e8f0;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <span class="material-symbols-outlined" style="color: #10b981;">point_of_sale</span>
+                    <h4 style="margin: 0; font-size: 15px; color: #1e293b;">Facturacion</h4>
+                </div>
+                <table style="width: 100%; font-size: 13px; color: #475569;">
+                    <tr><td style="padding: 4px 0;">Facturas emitidas:</td><td style="text-align: right; font-weight: 600;">{{ total_facturas }}</td></tr>
+                    <tr><td style="padding: 4px 0;">Mas vendido:</td><td style="text-align: right; font-weight: 600;">{% if producto_mas_vendido %}{{ producto_mas_vendido.nombre }}{% else %}-{% endif %}</td></tr>
+                    <tr><td style="padding: 4px 0;">Unidades vendidas:</td><td style="text-align: right; font-weight: 600;">{% if producto_mas_vendido %}{{ producto_mas_vendido.unidades }}{% else %}0{% endif %}</td></tr>
+                    <tr><td style="padding: 4px 0;">Entradas registradas:</td><td style="text-align: right; font-weight: 600;">{{ entradas }}</td></tr>
+                    <tr><td style="padding: 4px 0;">Salidas registradas:</td><td style="text-align: right; font-weight: 600;">{{ salidas }}</td></tr>
+                </table>
+            </div>
+
+            <div style="background: #f8fafc; border-radius: 10px; padding: 20px; border: 1px solid #e2e8f0;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <span class="material-symbols-outlined" style="color: #a855f7;">group</span>
+                    <h4 style="margin: 0; font-size: 15px; color: #1e293b;">Contactos</h4>
+                </div>
+                <table style="width: 100%; font-size: 13px; color: #475569;">
+                    <tr><td style="padding: 4px 0;">Clientes registrados:</td><td style="text-align: right; font-weight: 600;">{{ total_clientes }}</td></tr>
+                    <tr><td style="padding: 4px 0;">Proveedores registrados:</td><td style="text-align: right; font-weight: 600;">{{ total_proveedores }}</td></tr>
+                    <tr><td style="padding: 4px 0;">Usuarios activos:</td><td style="text-align: right; font-weight: 600;">{{ total_usuarios }}</td></tr>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
 <style>
     .kpi-card-custom {
         background: white;
