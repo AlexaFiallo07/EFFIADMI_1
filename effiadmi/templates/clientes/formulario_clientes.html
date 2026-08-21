@@ -10,64 +10,44 @@
     </div>
 
     <div class="card">
-        <div class="card-body">
-            <form method="POST">
-                {% csrf_token %}
-
+        <form method="POST">
+            {% csrf_token %}
+            <div class="card-body">
                 <div class="form-group">
                     <label for="nombre" class="form-label">Nombre</label>
-                    <input
-                        type="text"
-                        id="nombre"
-                        name="nombre"
-                        class="form-control"
-                        value="{{ cliente.nombre|default:'' }}"
-                        required
-                    >
+                    <input type="text" id="nombre" name="nombre" class="form-control" value="{{ cliente.nombre|default:'' }}" required>
                 </div>
-
                 <div class="form-group">
                     <label for="correo" class="form-label">Correo</label>
-                    <input
-                        type="email"
-                        id="correo"
-                        name="correo"
-                        class="form-control"
-                        value="{{ cliente.correo|default:'' }}"
-                        required
-                    >
+                    <input type="email" id="correo" name="correo" class="form-control" value="{{ cliente.correo|default:'' }}" required>
                 </div>
-
                 <div class="form-group">
                     <label for="telefono" class="form-label">Telefono</label>
-                    <input
-                        type="text"
-                        id="telefono"
-                        name="telefono"
-                        class="form-control"
-                        value="{{ cliente.telefono|default:'' }}"
-                        required
-                    >
+                    <input type="text" id="telefono" name="telefono" class="form-control" value="{{ cliente.telefono|default:'' }}" required>
                 </div>
-
                 <div class="form-group">
                     <label for="direccion" class="form-label">Direccion</label>
-                    <input
-                        type="text"
-                        id="direccion"
-                        name="direccion"
-                        class="form-control"
-                        value="{{ cliente.direccion|default:'' }}"
-                        required
-                    >
+                    <input type="text" id="direccion" name="direccion" class="form-control" value="{{ cliente.direccion|default:'' }}" required>
                 </div>
-
-                <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    {% if cliente %}
+                        {% if cliente.activo %}
+                            <a href="{% url 'effiadmi:eliminar_cliente' cliente.id %}" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); document.getElementById('formDesactivar').submit();">Desactivar</a>
+                            <form id="formDesactivar" method="POST" action="{% url 'effiadmi:eliminar_cliente' cliente.id %}" style="display: none;">{% csrf_token %}</form>
+                        {% else %}
+                            <a href="{% url 'effiadmi:eliminar_cliente' cliente.id %}" class="btn btn-outline" style="color: #10b981; border-color: #10b981;" onclick="event.preventDefault(); document.getElementById('formActivar').submit();">Activar</a>
+                            <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_cliente' cliente.id %}" style="display: none;">{% csrf_token %}</form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div style="display: flex; gap: var(--spacing-md);">
                     <a href="{% url 'effiadmi:lista_clientes' %}" class="btn btn-outline">Cancelar</a>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}

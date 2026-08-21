@@ -38,12 +38,6 @@
                             </td>
                             <td>
                                 <a href="{% url 'effiadmi:editar_cliente' cliente.id %}" class="btn btn-outline btn-sm">Editar</a>
-                                {% if cliente.activo %}
-                                    <form method="POST" action="{% url 'effiadmi:eliminar_cliente' cliente.id %}" style="display: inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Desactivar este cliente?')">Desactivar</button>
-                                    </form>
-                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}

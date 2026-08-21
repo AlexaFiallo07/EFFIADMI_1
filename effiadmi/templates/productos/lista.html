@@ -39,13 +39,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if item.producto.activo %}
-                                    <a href="{% url 'effiadmi:editar_producto' item.producto.id %}" class="btn btn-outline btn-sm">Editar</a>
-                                    <form method="POST" action="{% url 'effiadmi:eliminar_producto' item.producto.id %}" style="display: inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Desactivar este producto?')">Desactivar</button>
-                                    </form>
-                                {% endif %}
+                                <a href="{% url 'effiadmi:editar_producto' item.producto.id %}" class="btn btn-outline btn-sm">Editar</a>
                             </td>
                         </tr>
                     {% empty %}

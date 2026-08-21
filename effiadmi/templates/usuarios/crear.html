@@ -6,7 +6,7 @@
 <div class="container" style="max-width: 720px; margin: 0 auto;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
         <h1>Nuevo Usuario</h1>
-        <a href="{% url 'effiadmi:lista_usuarios' %}" class="btn btn-outline">Volver</a>
+        <a href="{% url 'effiadmi:perfil' %}" class="btn btn-outline">Volver</a>
     </div>
 
     <div class="card">
@@ -69,7 +69,7 @@
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
-                    <a href="{% url 'effiadmi:lista_usuarios' %}" class="btn btn-outline">Cancelar</a>
+                    <a href="{% url 'effiadmi:perfil' %}" class="btn btn-outline">Cancelar</a>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>

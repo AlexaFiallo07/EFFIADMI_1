@@ -85,12 +85,6 @@
                             </td>
                             <td>
                                 <a href="{% url 'effiadmi:editar_usuario' u.id %}" class="btn btn-outline btn-sm">Editar</a>
-                                {% if u.is_active and u.id != usuario.id %}
-                                    <form method="POST" action="{% url 'effiadmi:eliminar_usuario' u.id %}" style="display: inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Desactivar este usuario?')">Desactivar</button>
-                                    </form>
-                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}

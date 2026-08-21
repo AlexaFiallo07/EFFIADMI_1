@@ -10,64 +10,42 @@
     </div>
 
     <div class="card">
-        <div class="card-body">
-            <form method="POST">
-                {% csrf_token %}
-
+        <form method="POST">
+            {% csrf_token %}
+            <div class="card-body">
                 <div class="form-group">
                     <label for="nombre_proveedor" class="form-label">Nombre Proveedor</label>
-                    <input
-                        type="text"
-                        id="nombre_proveedor"
-                        name="nombre_proveedor"
-                        class="form-control"
-                        value="{{ proveedor.nombre }}"
-                        required
-                    >
+                    <input type="text" id="nombre_proveedor" name="nombre_proveedor" class="form-control" value="{{ proveedor.nombre }}" required>
                 </div>
-
                 <div class="form-group">
                     <label for="correo" class="form-label">Correo</label>
-                    <input
-                        type="email"
-                        id="correo"
-                        name="correo"
-                        class="form-control"
-                        value="{{ proveedor.correo }}"
-                        required
-                    >
+                    <input type="email" id="correo" name="correo" class="form-control" value="{{ proveedor.correo }}" required>
                 </div>
-
                 <div class="form-group">
                     <label for="telefono" class="form-label">Telefono</label>
-                    <input
-                        type="text"
-                        id="telefono"
-                        name="telefono"
-                        class="form-control"
-                        value="{{ proveedor.telefono }}"
-                        required
-                    >
+                    <input type="text" id="telefono" name="telefono" class="form-control" value="{{ proveedor.telefono }}" required>
                 </div>
-
                 <div class="form-group">
                     <label for="direccion" class="form-label">Direccion</label>
-                    <input
-                        type="text"
-                        id="direccion"
-                        name="direccion"
-                        class="form-control"
-                        value="{{ proveedor.direccion }}"
-                        required
-                    >
+                    <input type="text" id="direccion" name="direccion" class="form-control" value="{{ proveedor.direccion }}" required>
                 </div>
-
-                <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    {% if proveedor.activo %}
+                        <a href="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); document.getElementById('formDesactivar').submit();">Desactivar</a>
+                        <form id="formDesactivar" method="POST" action="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" style="display: none;">{% csrf_token %}</form>
+                    {% else %}
+                        <a href="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" class="btn btn-outline" style="color: #10b981; border-color: #10b981;" onclick="event.preventDefault(); document.getElementById('formActivar').submit();">Activar</a>
+                        <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" style="display: none;">{% csrf_token %}</form>
+                    {% endif %}
+                </div>
+                <div style="display: flex; gap: var(--spacing-md);">
                     <a href="{% url 'effiadmi:lista_proveedores' %}" class="btn btn-outline">Cancelar</a>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
