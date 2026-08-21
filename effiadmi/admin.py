@@ -102,3 +102,4 @@ class NotificacionAdmin(admin.ModelAdmin):
 class ChatHistorialAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'fecha')
     list_filter = ('fecha',)
+    
