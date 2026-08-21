@@ -16,13 +16,13 @@
             <div class="card-body">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
                     <div class="form-group">
-                        <label for="nombre_usuario" class="form-label">Nombre</label>
-                        <input type="text" id="nombre_usuario" name="nombre_usuario" class="form-control" value="{{ usuario.nombre_usuario }}" required>
+                        <label for="nombre" class="form-label">Nombre</label>
+                        <input type="text" id="nombre" name="nombre" class="form-control" value="{{ usuario.first_name }}" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="apellido_usuario" class="form-label">Apellido</label>
-                        <input type="text" id="apellido_usuario" name="apellido_usuario" class="form-control" value="{{ usuario.apellido_usuario }}" required>
+                        <label for="apellido" class="form-label">Apellido</label>
+                        <input type="text" id="apellido" name="apellido" class="form-control" value="{{ usuario.last_name }}" required>
                     </div>
                 </div>
 
@@ -33,18 +33,20 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="cargo" class="form-label">Cargo</label>
-                        <select id="cargo" name="cargo" class="form-control" required>
-                            <option value="Admin" {% if usuario.cargo == "Admin" %}selected{% endif %}>Administrador</option>
-                            <option value="Operador" {% if usuario.cargo == "Operador" %}selected{% endif %}>Operador</option>
-                        </select>
+                        <label for="telefono" class="form-label">Telefono</label>
+                        <input type="text" id="telefono" name="telefono" class="form-control" value="{{ perfil.telefono }}">
                     </div>
                 </div>
 
-                <div style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-lg);">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
                     <div class="form-group">
-                        <label for="contrasena" class="form-label">Nueva contrasena</label>
-                        <input type="password" id="contrasena" name="contrasena" class="form-control" placeholder="Dejar en blanco para conservar la actual">
+                        <label for="direccion" class="form-label">Direccion</label>
+                        <input type="text" id="direccion" name="direccion" class="form-control" value="{{ perfil.direccion }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cargo" class="form-label">Cargo</label>
+                        <input type="text" id="cargo" class="form-control" value="{{ perfil.cargo }}" readonly>
                     </div>
                 </div>
             </div>

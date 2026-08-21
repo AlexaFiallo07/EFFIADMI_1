@@ -1,8 +1,9 @@
+from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, redirect, render
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Sum, F
 from django.utils import timezone
 from datetime import timedelta
@@ -27,6 +28,10 @@ def login(request):
         try:
             user = authenticate(request, username=email, password=contrasena)
             if user is not None:
+                if not user.is_active:
+                    messages.error(request, "Tu cuenta esta desactivada. Contacta al administrador.")
+                    return redirect("effiadmi:login")
+
                 auth_login(request, user)
                 messages.success(request, f"¡Bienvenido, {user.first_name or user.username}!")
 
@@ -69,17 +74,17 @@ def logout(request):
 @autorizacion()
 def inicio(request):
     try:
-        total_productos = Product.objects.count()
-        total_clientes = Cliente.objects.count()
-        total_facturas = Factura.objects.count()
+        total_productos = Product.objects.filter(activo=True).count()
+        total_clientes = Cliente.objects.filter(activo=True).count()
+        total_facturas = Factura.objects.filter(estado="emitida").count()
         total_pedidos = Pedido.objects.count()
 
-        inventario = Inventory.objects.all()
+        inventario = Inventory.objects.select_related("product").all()
         unidades_totales = inventario.aggregate(total=Sum("cantidad_disponible"))["total"] or 0
         valor_inventario = 0
         productos_bajo_stock = []
 
-        for inv in inventario.select_related("product"):
+        for inv in inventario:
             valor_inventario += float(inv.product.precio_venta) * inv.cantidad_disponible
             if inv.cantidad_disponible <= inv.stock_minimo:
                 productos_bajo_stock.append(inv)
@@ -87,10 +92,12 @@ def inicio(request):
         hoy = timezone.now().date()
         inicio_mes = hoy.replace(day=1)
 
-        ventas_hoy = Factura.objects.filter(fecha_emision__date=hoy).aggregate(
-            total=Sum("total"))["total"] or 0
-        ventas_mes = Factura.objects.filter(fecha_emision__date__gte=inicio_mes).aggregate(
-            total=Sum("total"))["total"] or 0
+        ventas_hoy = Factura.objects.filter(
+            fecha_emision__date=hoy, estado="emitida"
+        ).aggregate(total=Sum("total"))["total"] or 0
+        ventas_mes = Factura.objects.filter(
+            fecha_emision__date__gte=inicio_mes, estado="emitida"
+        ).aggregate(total=Sum("total"))["total"] or 0
 
         productos_vendidos = (
             FacturaDetalle.objects
@@ -177,10 +184,10 @@ def lista_clientes(request):
 def crear_cliente(request):
     if request.method == "POST":
         try:
-            nombre = request.POST.get("nombre")
-            correo = request.POST.get("correo")
-            telefono = request.POST.get("telefono")
-            direccion = request.POST.get("direccion")
+            nombre = request.POST.get("nombre", "").strip()
+            correo = request.POST.get("correo", "").strip()
+            telefono = request.POST.get("telefono", "").strip()
+            direccion = request.POST.get("direccion", "").strip()
 
             if not all([nombre, correo, telefono, direccion]):
                 messages.error(request, "Por favor completa todos los campos.")
@@ -210,10 +217,10 @@ def editar_cliente(request, id):
         cliente = get_object_or_404(Cliente, pk=id)
 
         if request.method == "POST":
-            cliente.nombre = request.POST.get("nombre")
-            cliente.correo = request.POST.get("correo")
-            cliente.telefono = request.POST.get("telefono")
-            cliente.direccion = request.POST.get("direccion")
+            cliente.nombre = request.POST.get("nombre", "").strip()
+            cliente.correo = request.POST.get("correo", "").strip()
+            cliente.telefono = request.POST.get("telefono", "").strip()
+            cliente.direccion = request.POST.get("direccion", "").strip()
             cliente.save()
             messages.success(request, "¡Cliente actualizado exitosamente!")
             return redirect("effiadmi:lista_clientes")
@@ -229,8 +236,9 @@ def eliminar_cliente(request, id):
     try:
         cliente = get_object_or_404(Cliente, pk=id)
         if request.method == "POST":
-            cliente.delete()
-            messages.success(request, "¡Cliente eliminado exitosamente!")
+            cliente.activo = False
+            cliente.save()
+            messages.success(request, "Cliente desactivado exitosamente.")
         return redirect("effiadmi:lista_clientes")
     except Exception as e:
         messages.error(request, f"Error: {e}")
@@ -242,7 +250,11 @@ def eliminar_cliente(request, id):
 @autorizacion()
 def lista_productos(request):
     try:
-        productos_registrados = Product.objects.all().order_by("-id")
+        mostrar_inactivos = request.GET.get("inactivos") == "1"
+        if mostrar_inactivos:
+            productos_registrados = Product.objects.all().order_by("-id")
+        else:
+            productos_registrados = Product.objects.filter(activo=True).order_by("-id")
 
         stock_map = {}
         for inv in Inventory.objects.select_related("branch").all():
@@ -270,17 +282,45 @@ def crear_producto(request):
 
     if request.method == "POST":
         try:
-            sku = request.POST.get("sku")
-            nombre = request.POST.get("nombre")
-            descripcion = request.POST.get("descripcion")
-            categoria = request.POST.get("categoria")
-            precio_venta = request.POST.get("precio_venta")
+            sku = request.POST.get("sku", "").strip()
+            nombre = request.POST.get("nombre", "").strip()
+            descripcion = request.POST.get("descripcion", "").strip()
+            categoria = request.POST.get("categoria", "").strip()
+            precio_venta_str = request.POST.get("precio_venta", "0")
             sucursal_id = request.POST.get("sucursal")
-            stock_inicial = request.POST.get("stock_inicial", 0)
-            stock_minimo = request.POST.get("stock_minimo", 5)
+            stock_inicial_str = request.POST.get("stock_inicial", "0")
+            stock_minimo_str = request.POST.get("stock_minimo", "5")
 
-            if not all([sku, nombre, precio_venta]):
+            if not all([sku, nombre, precio_venta_str]):
                 messages.error(request, "Por favor completa los campos obligatorios.")
+                return render(request, "productos/crear.html", {"sucursales": sucursales})
+
+            try:
+                precio_venta = Decimal(precio_venta_str)
+            except (TypeError, ValueError):
+                messages.error(request, "El precio de venta no es valido.")
+                return render(request, "productos/crear.html", {"sucursales": sucursales})
+
+            if precio_venta <= 0:
+                messages.error(request, "El precio de venta debe ser mayor a 0.")
+                return render(request, "productos/crear.html", {"sucursales": sucursales})
+
+            try:
+                stock_inicial = int(stock_inicial_str)
+            except (TypeError, ValueError):
+                stock_inicial = 0
+
+            try:
+                stock_minimo = int(stock_minimo_str)
+            except (TypeError, ValueError):
+                stock_minimo = 5
+
+            if stock_inicial < 0:
+                messages.error(request, "El stock inicial no puede ser negativo.")
+                return render(request, "productos/crear.html", {"sucursales": sucursales})
+
+            if stock_minimo < 0:
+                messages.error(request, "El stock minimo no puede ser negativo.")
                 return render(request, "productos/crear.html", {"sucursales": sucursales})
 
             branch = None
@@ -291,33 +331,34 @@ def crear_producto(request):
             if not branch:
                 branch = Branch.objects.create(nombre="Sucursal Principal", es_principal=True)
 
-            producto = Product.objects.create(
-                sku=sku,
-                nombre=nombre,
-                descripcion=descripcion or "",
-                categoria=categoria or "",
-                precio_venta=float(precio_venta),
-            )
-
-            inventario = Inventory.objects.create(
-                product=producto,
-                branch=branch,
-                cantidad_disponible=int(stock_inicial),
-                stock_minimo=int(stock_minimo),
-            )
-
-            if int(stock_inicial) > 0:
-                usuario = None
-                if request.session.get("logueado"):
-                    usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
-                InventoryLog.objects.create(
-                    inventory=inventario,
-                    tipo_movimiento="ENTRADA",
-                    cantidad=int(stock_inicial),
-                    cantidad_resultante=int(stock_inicial),
-                    motivo="Creacion automatica de producto con stock inicial",
-                    usuario=usuario,
+            with transaction.atomic():
+                producto = Product.objects.create(
+                    sku=sku,
+                    nombre=nombre,
+                    descripcion=descripcion,
+                    categoria=categoria,
+                    precio_venta=precio_venta,
                 )
+
+                inventario = Inventory.objects.create(
+                    product=producto,
+                    branch=branch,
+                    cantidad_disponible=stock_inicial,
+                    stock_minimo=stock_minimo,
+                )
+
+                if stock_inicial > 0:
+                    usuario = None
+                    if request.session.get("logueado"):
+                        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+                    InventoryLog.objects.create(
+                        inventory=inventario,
+                        tipo_movimiento="ENTRADA",
+                        cantidad=stock_inicial,
+                        cantidad_resultante=stock_inicial,
+                        motivo="Creacion automatica de producto con stock inicial",
+                        usuario=usuario,
+                    )
 
             messages.success(request, "¡Producto creado exitosamente!")
             return redirect("effiadmi:lista_productos")
@@ -338,11 +379,29 @@ def editar_producto(request, id):
         sucursales = Branch.objects.all()
 
         if request.method == "POST":
-            producto.sku = request.POST.get("sku")
-            producto.nombre = request.POST.get("nombre")
+            sku = request.POST.get("sku", "").strip()
+            nombre = request.POST.get("nombre", "").strip()
+
+            if not sku or not nombre:
+                messages.error(request, "SKU y nombre son obligatorios.")
+                return render(request, "productos/editar.html", {"producto": producto, "sucursales": sucursales})
+
+            precio_venta_str = request.POST.get("precio_venta", "0")
+            try:
+                precio_venta = Decimal(precio_venta_str)
+            except (TypeError, ValueError):
+                messages.error(request, "El precio de venta no es valido.")
+                return render(request, "productos/editar.html", {"producto": producto, "sucursales": sucursales})
+
+            if precio_venta <= 0:
+                messages.error(request, "El precio de venta debe ser mayor a 0.")
+                return render(request, "productos/editar.html", {"producto": producto, "sucursales": sucursales})
+
+            producto.sku = sku
+            producto.nombre = nombre
             producto.descripcion = request.POST.get("descripcion", "")
             producto.categoria = request.POST.get("categoria", "")
-            producto.precio_venta = float(request.POST.get("precio_venta"))
+            producto.precio_venta = precio_venta
             producto.save()
             messages.success(request, "¡Producto actualizado exitosamente!")
             return redirect("effiadmi:lista_productos")
@@ -358,8 +417,9 @@ def eliminar_producto(request, id):
     try:
         producto = get_object_or_404(Product, pk=id)
         if request.method == "POST":
-            producto.delete()
-            messages.success(request, "¡Producto eliminado exitosamente!")
+            producto.activo = False
+            producto.save()
+            messages.success(request, "Producto desactivado exitosamente.")
         return redirect("effiadmi:lista_productos")
     except Exception as e:
         messages.error(request, f"Error: {e}")
@@ -426,36 +486,60 @@ def registrar_movimiento(request, id):
 
         if request.method == "POST":
             tipo = request.POST.get("tipo_movimiento")
-            cantidad = int(request.POST.get("cantidad", 0))
-            motivo = request.POST.get("motivo", "")
+            cantidad_str = request.POST.get("cantidad", "0")
+            motivo = request.POST.get("motivo", "").strip()
 
-            if tipo == "ENTRADA":
-                inventario.cantidad_disponible += cantidad
-            elif tipo == "SALIDA":
-                if inventario.cantidad_disponible < cantidad:
-                    messages.error(request, f"Stock insuficiente. Disponible: {inventario.cantidad_disponible}")
+            try:
+                cantidad = int(cantidad_str)
+            except (TypeError, ValueError):
+                messages.error(request, "La cantidad no es valida.")
+                return redirect("effiadmi:registrar_movimiento", id=inventario.id)
+
+            if cantidad <= 0:
+                messages.error(request, "La cantidad debe ser mayor a 0.")
+                return redirect("effiadmi:registrar_movimiento", id=inventario.id)
+
+            with transaction.atomic():
+                if tipo == "ENTRADA":
+                    inventario.cantidad_disponible += cantidad
+                elif tipo == "SALIDA":
+                    if inventario.cantidad_disponible < cantidad:
+                        messages.error(
+                            request,
+                            f"Stock insuficiente. Disponible: {inventario.cantidad_disponible}, solicitado: {cantidad}"
+                        )
+                        return redirect("effiadmi:registrar_movimiento", id=inventario.id)
+                    inventario.cantidad_disponible -= cantidad
+                elif tipo == "AJUSTE":
+                    if cantidad < 0:
+                        messages.error(request, "La cantidad de ajuste no puede ser negativa.")
+                        return redirect("effiadmi:registrar_movimiento", id=inventario.id)
+                    inventario.cantidad_disponible = cantidad
+                else:
+                    messages.error(request, "Tipo de movimiento no valido.")
                     return redirect("effiadmi:registrar_movimiento", id=inventario.id)
-                inventario.cantidad_disponible -= cantidad
-            elif tipo == "AJUSTE":
-                inventario.cantidad_disponible = cantidad
 
-            inventario.save()
+                inventario.save()
 
-            usuario = None
-            if request.session.get("logueado"):
-                usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+                usuario = None
+                if request.session.get("logueado"):
+                    usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
 
-            InventoryLog.objects.create(
-                inventory=inventario,
-                tipo_movimiento=tipo,
-                cantidad=cantidad,
-                cantidad_resultante=inventario.cantidad_disponible,
-                motivo=motivo,
-                usuario=usuario,
-            )
+                InventoryLog.objects.create(
+                    inventory=inventario,
+                    tipo_movimiento=tipo,
+                    cantidad=cantidad,
+                    cantidad_resultante=inventario.cantidad_disponible,
+                    motivo=motivo,
+                    usuario=usuario,
+                )
 
             if inventario.cantidad_disponible <= inventario.stock_minimo:
-                messages.warning(request, f"¡Alerta! Stock bajo para '{inventario.product.nombre}' ({inventario.cantidad_disponible}/{inventario.stock_minimo})")
+                messages.warning(
+                    request,
+                    f"¡Alerta! Stock bajo para '{inventario.product.nombre}' "
+                    f"({inventario.cantidad_disponible}/{inventario.stock_minimo})"
+                )
 
             messages.success(request, f"¡{tipo} registrada exitosamente!")
             return redirect("effiadmi:detalle_inventario", id=inventario.id)
@@ -464,111 +548,6 @@ def registrar_movimiento(request, id):
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_inventario")
-
-
-# ==================== FACTURAS ====================
-
-@autorizacion()
-def lista_facturas(request):
-    try:
-        facturas_registradas = Factura.objects.select_related("cliente").all().order_by("-id")
-        return render(request, "facturas/lista.html", {"facturas": facturas_registradas})
-    except Exception as e:
-        messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:inicio")
-
-
-@autorizacion()
-def crear_factura(request):
-    try:
-        clientes_registrados = Cliente.objects.all().order_by("nombre")
-        productos_disponibles = Product.objects.all().order_by("nombre")
-
-        if request.method == "POST":
-            cliente = get_object_or_404(Cliente, pk=request.POST.get("cliente"))
-            usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
-
-            factura = Factura.objects.create(
-                cliente=cliente,
-                usuario=usuario,
-                total=0,
-            )
-
-            total = 0
-            productos_ids = request.POST.getlist("producto")
-            cantidades = request.POST.getlist("cantidad")
-            precios = request.POST.getlist("precio_unitario")
-
-            for i in range(len(productos_ids)):
-                producto = Product.objects.get(pk=productos_ids[i])
-                cantidad = int(cantidades[i])
-                precio = float(precios[i])
-                subtotal = cantidad * precio
-
-                FacturaDetalle.objects.create(
-                    factura=factura,
-                    producto=producto,
-                    cantidad=cantidad,
-                    precio_unitario=precio,
-                    subtotal=subtotal,
-                )
-                total += subtotal
-
-            factura.total = total
-            factura.save()
-
-            messages.success(request, "¡Factura creada exitosamente!")
-            return redirect("effiadmi:lista_facturas")
-
-        return render(request, "facturas/crear.html", {"clientes": clientes_registrados, "productos": productos_disponibles})
-    except Exception as e:
-        messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas")
-
-
-@autorizacion()
-def detalle_factura(request, id):
-    try:
-        factura = get_object_or_404(
-            Factura.objects.select_related("cliente", "usuario"), pk=id
-        )
-        detalles = FacturaDetalle.objects.filter(factura=factura).select_related("producto")
-        return render(request, "facturas/detalle.html", {"factura": factura, "detalles": detalles})
-    except Exception as e:
-        messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas")
-
-
-@autorizacion()
-def editar_factura(request, id):
-    try:
-        factura = get_object_or_404(Factura, pk=id)
-        clientes_registrados = Cliente.objects.all().order_by("nombre")
-
-        if request.method == "POST":
-            factura.cliente = get_object_or_404(Cliente, pk=request.POST.get("cliente"))
-            factura.total = float(request.POST.get("total"))
-            factura.save()
-            messages.success(request, "¡Factura actualizada exitosamente!")
-            return redirect("effiadmi:lista_facturas")
-
-        return render(request, "facturas/editar.html", {"factura": factura, "clientes": clientes_registrados})
-    except Exception as e:
-        messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas")
-
-
-@autorizacion()
-def eliminar_factura(request, id):
-    try:
-        factura = get_object_or_404(Factura, pk=id)
-        if request.method == "POST":
-            factura.delete()
-            messages.success(request, "¡Factura eliminada exitosamente!")
-        return redirect("effiadmi:lista_facturas")
-    except Exception as e:
-        messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas")
 
 
 # ==================== PEDIDOS ====================
@@ -586,47 +565,76 @@ def lista_pedidos(request):
 @autorizacion()
 def crear_pedido(request):
     try:
-        clientes_registrados = Cliente.objects.all().order_by("nombre")
-        productos_disponibles = Product.objects.all().order_by("nombre")
+        clientes_activos = Cliente.objects.filter(activo=True).order_by("nombre")
+        productos_activos = Product.objects.filter(activo=True).order_by("nombre")
 
         if request.method == "POST":
-            cliente = get_object_or_404(Cliente, pk=request.POST.get("cliente"))
-            usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
-
-            pedido = Pedido.objects.create(
-                cliente=cliente,
-                usuario=usuario,
-                estado="pendiente",
-                total=0,
-            )
-
-            total = 0
+            cliente_id = request.POST.get("cliente")
             productos_ids = request.POST.getlist("producto")
             cantidades = request.POST.getlist("cantidad")
-            precios = request.POST.getlist("precio_unitario")
 
-            for i in range(len(productos_ids)):
-                producto = Product.objects.get(pk=productos_ids[i])
-                cantidad = int(cantidades[i])
-                precio = float(precios[i])
-                subtotal = cantidad * precio
+            if not cliente_id:
+                messages.error(request, "Debes seleccionar un cliente.")
+                return render(request, "pedidos/crear.html", {
+                    "clientes": clientes_activos, "productos": productos_activos
+                })
 
-                PedidoDetalle.objects.create(
-                    pedido=pedido,
-                    producto=producto,
-                    cantidad=cantidad,
-                    precio_unitario=precio,
-                    subtotal=subtotal,
+            cliente = get_object_or_404(Cliente, pk=cliente_id, activo=True)
+
+            if not productos_ids or len(productos_ids) == 0:
+                messages.error(request, "Debes agregar al menos un producto.")
+                return render(request, "pedidos/crear.html", {
+                    "clientes": clientes_activos, "productos": productos_activos
+                })
+
+            usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+
+            with transaction.atomic():
+                pedido = Pedido.objects.create(
+                    cliente=cliente,
+                    usuario=usuario,
+                    estado="pendiente",
+                    total=0,
                 )
-                total += subtotal
 
-            pedido.total = total
-            pedido.save()
+                total = Decimal("0")
+                for i in range(len(productos_ids)):
+                    if not productos_ids[i]:
+                        continue
+                    producto = Product.objects.get(pk=productos_ids[i], activo=True)
+                    try:
+                        cantidad = int(cantidades[i])
+                    except (TypeError, ValueError, IndexError):
+                        cantidad = 0
+
+                    if cantidad <= 0:
+                        messages.error(request, f"La cantidad para '{producto.nombre}' debe ser mayor a 0.")
+                        pedido.delete()
+                        return render(request, "pedidos/crear.html", {
+                            "clientes": clientes_activos, "productos": productos_activos
+                        })
+
+                    precio = producto.precio_venta
+                    subtotal = cantidad * precio
+
+                    PedidoDetalle.objects.create(
+                        pedido=pedido,
+                        producto=producto,
+                        cantidad=cantidad,
+                        precio_unitario=precio,
+                        subtotal=subtotal,
+                    )
+                    total += subtotal
+
+                pedido.total = total
+                pedido.save()
 
             messages.success(request, "¡Pedido creado exitosamente!")
             return redirect("effiadmi:lista_pedidos")
 
-        return render(request, "pedidos/crear.html", {"clientes": clientes_registrados, "productos": productos_disponibles})
+        return render(request, "pedidos/crear.html", {
+            "clientes": clientes_activos, "productos": productos_activos
+        })
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_pedidos")
@@ -639,27 +647,152 @@ def detalle_pedido(request, id):
             Pedido.objects.select_related("cliente", "usuario"), pk=id
         )
         detalles = PedidoDetalle.objects.filter(pedido=pedido).select_related("producto")
-        return render(request, "pedidos/detalle.html", {"pedido": pedido, "detalles": detalles})
+        factura = Factura.objects.filter(pedido=pedido).first()
+        return render(request, "pedidos/detalle.html", {
+            "pedido": pedido, "detalles": detalles, "factura_asociada": factura
+        })
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_pedidos")
 
 
 @autorizacion()
-def editar_pedido(request, id):
+def confirmar_pedido(request, id):
     try:
         pedido = get_object_or_404(Pedido, pk=id)
-        clientes_registrados = Cliente.objects.all().order_by("nombre")
 
-        if request.method == "POST":
-            pedido.cliente = get_object_or_404(Cliente, pk=request.POST.get("cliente"))
-            pedido.estado = request.POST.get("estado", pedido.estado)
-            pedido.total = float(request.POST.get("total"))
+        if request.method != "POST":
+            return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+        if pedido.estado != "pendiente":
+            messages.warning(request, "Solo se pueden confirmar pedidos pendientes.")
+            return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+        detalles = PedidoDetalle.objects.filter(pedido=pedido).select_related("producto")
+
+        if not detalles.exists():
+            messages.error(request, "El pedido no tiene productos.")
+            return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+        branch = Branch.objects.filter(es_principal=True).first()
+        if not branch:
+            branch = Branch.objects.first()
+        if not branch:
+            messages.error(request, "No hay sucursales configuradas.")
+            return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+        with transaction.atomic():
+            for det in detalles:
+                inv = Inventory.objects.filter(
+                    product=det.producto, branch=branch
+                ).first()
+                if not inv:
+                    messages.error(
+                        request,
+                        f"No hay inventario para '{det.producto.nombre}' en {branch.nombre}."
+                    )
+                    return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+                if inv.cantidad_disponible < det.cantidad:
+                    messages.error(
+                        request,
+                        f"Stock insuficiente para '{det.producto.nombre}'. "
+                        f"Disponible: {inv.cantidad_disponible}, requerido: {det.cantidad}."
+                    )
+                    return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+            for det in detalles:
+                inv = Inventory.objects.select_for_update().get(
+                    product=det.producto, branch=branch
+                )
+                inv.cantidad_disponible -= det.cantidad
+                inv.save()
+
+                InventoryLog.objects.create(
+                    inventory=inv,
+                    tipo_movimiento="SALIDA",
+                    cantidad=det.cantidad,
+                    cantidad_resultante=inv.cantidad_disponible,
+                    motivo=f"Salida por confirmacion de Pedido #{pedido.id}",
+                    usuario=usuario,
+                )
+
+            pedido.estado = "confirmado"
             pedido.save()
-            messages.success(request, "¡Pedido actualizado exitosamente!")
-            return redirect("effiadmi:lista_pedidos")
 
-        return render(request, "pedidos/editar.html", {"pedido": pedido, "clientes": clientes_registrados})
+            factura = Factura.objects.create(
+                cliente=pedido.cliente,
+                usuario=usuario,
+                pedido=pedido,
+                total=pedido.total,
+                estado="emitida",
+            )
+
+            for det in detalles:
+                FacturaDetalle.objects.create(
+                    factura=factura,
+                    producto=det.producto,
+                    cantidad=det.cantidad,
+                    precio_unitario=det.precio_unitario,
+                    subtotal=det.subtotal,
+                )
+
+        messages.success(
+            request,
+            f"Pedido #{pedido.id} confirmado. Factura #{factura.id} generada."
+        )
+        return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:lista_pedidos")
+
+
+@autorizacion()
+def cancelar_pedido(request, id):
+    try:
+        pedido = get_object_or_404(Pedido, pk=id)
+
+        if request.method != "POST":
+            return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+        if pedido.estado == "cancelado":
+            messages.warning(request, "El pedido ya esta cancelado.")
+            return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+        with transaction.atomic():
+            pedido.estado = "cancelado"
+            pedido.save()
+
+            factura = Factura.objects.filter(pedido=pedido, estado="emitida").first()
+            if factura:
+                factura.estado = "anulada"
+                factura.save()
+                for det in FacturaDetalle.objects.filter(factura=factura):
+                    inv = Inventory.objects.filter(
+                        product=det.producto
+                    ).first()
+                    if inv:
+                        inv.cantidad_disponible += det.cantidad
+                        inv.save()
+                        usuario = None
+                        if request.session.get("logueado"):
+                            usuario = User.objects.filter(
+                                id=request.session["logueado"]["id"]
+                            ).first()
+                        InventoryLog.objects.create(
+                            inventory=inv,
+                            tipo_movimiento="ENTRADA",
+                            cantidad=det.cantidad,
+                            cantidad_resultante=inv.cantidad_disponible,
+                            motivo=f"Devolucion por cancelacion de Pedido #{pedido.id}",
+                            usuario=usuario,
+                        )
+
+        messages.success(request, f"Pedido #{pedido.id} cancelado.")
+        return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_pedidos")
@@ -670,12 +803,171 @@ def eliminar_pedido(request, id):
     try:
         pedido = get_object_or_404(Pedido, pk=id)
         if request.method == "POST":
-            pedido.delete()
-            messages.success(request, "¡Pedido eliminado exitosamente!")
+            if pedido.estado == "pendiente":
+                pedido.delete()
+                messages.success(request, "¡Pedido eliminado exitosamente!")
+            else:
+                messages.warning(request, "Solo se pueden eliminar pedidos pendientes.")
         return redirect("effiadmi:lista_pedidos")
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_pedidos")
+
+
+@autorizacion()
+def editar_pedido(request, id):
+    messages.warning(request, "Los pedidos se confirman o cancelan, no se editan.")
+    return redirect("effiadmi:detalle_pedido", id=id)
+
+
+# ==================== FACTURAS ====================
+
+@autorizacion()
+def lista_facturas(request):
+    try:
+        facturas_registradas = Factura.objects.select_related(
+            "cliente", "pedido"
+        ).all().order_by("-id")
+        return render(request, "facturas/lista.html", {"facturas": facturas_registradas})
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:inicio")
+
+
+@autorizacion()
+def crear_factura(request):
+    try:
+        clientes_activos = Cliente.objects.filter(activo=True).order_by("nombre")
+        productos_activos = Product.objects.filter(activo=True).order_by("nombre")
+
+        if request.method == "POST":
+            cliente_id = request.POST.get("cliente")
+            productos_ids = request.POST.getlist("producto")
+            cantidades = request.POST.getlist("cantidad")
+
+            if not cliente_id:
+                messages.error(request, "Debes seleccionar un cliente.")
+                return render(request, "facturas/crear.html", {
+                    "clientes": clientes_activos, "productos": productos_activos
+                })
+
+            cliente = get_object_or_404(Cliente, pk=cliente_id, activo=True)
+
+            if not productos_ids or not any(productos_ids):
+                messages.error(request, "Debes agregar al menos un producto.")
+                return render(request, "facturas/crear.html", {
+                    "clientes": clientes_activos, "productos": productos_activos
+                })
+
+            usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+
+            with transaction.atomic():
+                factura = Factura.objects.create(
+                    cliente=cliente,
+                    usuario=usuario,
+                    total=0,
+                    estado="emitida",
+                )
+
+                total = Decimal("0")
+                for i in range(len(productos_ids)):
+                    if not productos_ids[i]:
+                        continue
+                    producto = Product.objects.get(pk=productos_ids[i], activo=True)
+                    try:
+                        cantidad = int(cantidades[i])
+                    except (TypeError, ValueError, IndexError):
+                        cantidad = 0
+
+                    if cantidad <= 0:
+                        continue
+
+                    precio = producto.precio_venta
+                    subtotal = cantidad * precio
+
+                    FacturaDetalle.objects.create(
+                        factura=factura,
+                        producto=producto,
+                        cantidad=cantidad,
+                        precio_unitario=precio,
+                        subtotal=subtotal,
+                    )
+                    total += subtotal
+
+                factura.total = total
+                factura.save()
+
+            messages.success(request, "¡Factura creada exitosamente!")
+            return redirect("effiadmi:lista_facturas")
+
+        return render(request, "facturas/crear.html", {
+            "clientes": clientes_activos, "productos": productos_activos
+        })
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:lista_facturas")
+
+
+@autorizacion()
+def detalle_factura(request, id):
+    try:
+        factura = get_object_or_404(
+            Factura.objects.select_related("cliente", "usuario", "pedido"), pk=id
+        )
+        detalles = FacturaDetalle.objects.filter(factura=factura).select_related("producto")
+        return render(request, "facturas/detalle.html", {
+            "factura": factura, "detalles": detalles
+        })
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:lista_facturas")
+
+
+@autorizacion()
+def anular_factura(request, id):
+    try:
+        factura = get_object_or_404(Factura, pk=id)
+
+        if request.method != "POST":
+            return redirect("effiadmi:detalle_factura", id=factura.id)
+
+        if factura.estado == "anulada":
+            messages.warning(request, "La factura ya esta anulada.")
+            return redirect("effiadmi:detalle_factura", id=factura.id)
+
+        with transaction.atomic():
+            factura.estado = "anulada"
+            factura.save()
+
+        messages.success(request, f"Factura #{factura.id} anulada.")
+        return redirect("effiadmi:detalle_factura", id=factura.id)
+
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:lista_facturas")
+
+
+@autorizacion()
+def eliminar_factura(request, id):
+    try:
+        factura = get_object_or_404(Factura, pk=id)
+        if request.method == "POST":
+            if factura.estado == "emitida":
+                factura.estado = "anulada"
+                factura.save()
+                messages.success(request, "Factura anulada.")
+            else:
+                messages.warning(request, "La factura ya esta anulada.")
+        return redirect("effiadmi:lista_facturas")
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:lista_facturas")
+
+
+@autorizacion()
+def editar_factura(request, id):
+    messages.warning(request, "Las facturas emitidas no se pueden editar. Anule y genere una nueva.")
+    return redirect("effiadmi:detalle_factura", id=id)
 
 
 # ==================== USUARIOS ====================
@@ -764,8 +1056,13 @@ def eliminar_usuario(request, id):
     try:
         user = get_object_or_404(User, pk=id)
         if request.method == "POST":
-            user.delete()
-            messages.success(request, "¡Usuario eliminado exitosamente!")
+            if user.id == request.session.get("logueado", {}).get("id"):
+                messages.warning(request, "No puedes desactivar tu propia cuenta.")
+                return redirect("effiadmi:lista_usuarios")
+
+            user.is_active = False
+            user.save()
+            messages.success(request, "¡Usuario desactivado exitosamente!")
         return redirect("effiadmi:lista_usuarios")
     except Exception as e:
         messages.error(request, f"Error: {e}")
@@ -788,10 +1085,10 @@ def lista_proveedores(request):
 def crear_proveedor(request):
     if request.method == "POST":
         try:
-            nombre = request.POST.get("nombre_proveedor")
-            correo = request.POST.get("correo")
-            telefono = request.POST.get("telefono")
-            direccion = request.POST.get("direccion")
+            nombre = request.POST.get("nombre_proveedor", "").strip()
+            correo = request.POST.get("correo", "").strip()
+            telefono = request.POST.get("telefono", "").strip()
+            direccion = request.POST.get("direccion", "").strip()
 
             if not all([nombre, correo, telefono, direccion]):
                 messages.error(request, "Por favor completa todos los campos.")
@@ -821,10 +1118,10 @@ def editar_proveedor(request, id):
         proveedor = get_object_or_404(Proveedor, pk=id)
 
         if request.method == "POST":
-            proveedor.nombre = request.POST.get("nombre_proveedor")
-            proveedor.correo = request.POST.get("correo")
-            proveedor.telefono = request.POST.get("telefono")
-            proveedor.direccion = request.POST.get("direccion")
+            proveedor.nombre = request.POST.get("nombre_proveedor", "").strip()
+            proveedor.correo = request.POST.get("correo", "").strip()
+            proveedor.telefono = request.POST.get("telefono", "").strip()
+            proveedor.direccion = request.POST.get("direccion", "").strip()
             proveedor.save()
             messages.success(request, "¡Proveedor actualizado exitosamente!")
             return redirect("effiadmi:lista_proveedores")
@@ -840,8 +1137,9 @@ def eliminar_proveedor(request, id):
     try:
         proveedor = get_object_or_404(Proveedor, pk=id)
         if request.method == "POST":
-            proveedor.delete()
-            messages.success(request, "¡Proveedor eliminado exitosamente!")
+            proveedor.activo = False
+            proveedor.save()
+            messages.success(request, "Proveedor desactivado exitosamente.")
         return redirect("effiadmi:lista_proveedores")
     except Exception as e:
         messages.error(request, f"Error: {e}")
@@ -895,10 +1193,10 @@ def eliminar_notificacion(request, id):
 @autorizacion()
 def estadisticas_ia(request):
     try:
-        total_productos = Product.objects.count()
-        total_proveedores = Proveedor.objects.count()
-        total_clientes = Cliente.objects.count()
-        total_facturas = Factura.objects.count()
+        total_productos = Product.objects.filter(activo=True).count()
+        total_proveedores = Proveedor.objects.filter(activo=True).count()
+        total_clientes = Cliente.objects.filter(activo=True).count()
+        total_facturas = Factura.objects.filter(estado="emitida").count()
 
         inventario = Inventory.objects.all()
         unidades_totales = inventario.aggregate(total=Sum("cantidad_disponible"))["total"] or 0
@@ -929,6 +1227,7 @@ def estadisticas_ia(request):
             "total_proveedores": total_proveedores,
             "total_clientes": total_clientes,
             "total_facturas": total_facturas,
+            "total_usuarios": User.objects.filter(is_active=True).count(),
             "unidades_totales": unidades_totales,
             "valor_inventario": valor_inventario,
             "productos_bajos": productos_bajos,

@@ -36,7 +36,7 @@
 
                 <div class="form-group">
                     <label for="precio_venta" class="form-label">Precio Venta</label>
-                    <input type="number" id="precio_venta" name="precio_venta" class="form-control" step="0.01" required>
+                    <input type="number" id="precio_venta" name="precio_venta" class="form-control" step="0.01" min="0.01" required>
                 </div>
 
                 <div class="form-group">
@@ -53,12 +53,12 @@
 
                 <div class="form-group">
                     <label for="stock_inicial" class="form-label">Stock Inicial</label>
-                    <input type="number" id="stock_inicial" name="stock_inicial" class="form-control" value="0">
+                    <input type="number" id="stock_inicial" name="stock_inicial" class="form-control" value="0" min="0">
                 </div>
 
                 <div class="form-group">
                     <label for="stock_minimo" class="form-label">Stock Minimo</label>
-                    <input type="number" id="stock_minimo" name="stock_minimo" class="form-control" value="5">
+                    <input type="number" id="stock_minimo" name="stock_minimo" class="form-control" value="5" min="0">
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">

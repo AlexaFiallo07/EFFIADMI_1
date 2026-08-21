@@ -1,6 +1,7 @@
 from django.db import models
-
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+
 
 # ============================================================
 # Perfil de usuario extendido (usa auth.User de Django)
@@ -52,6 +53,7 @@ class Product(models.Model):
     descripcion = models.TextField(blank=True, default="")
     categoria = models.CharField(max_length=100, blank=True, default="", db_index=True)
     precio_venta = models.DecimalField(max_digits=12, decimal_places=2)
+    activo = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Producto"
@@ -60,6 +62,13 @@ class Product(models.Model):
 
     def __str__(self):
         return f"[{self.sku}] {self.nombre}"
+
+    def clean(self):
+        errors = {}
+        if self.precio_venta is not None and self.precio_venta <= 0:
+            errors["precio_venta"] = "El precio de venta debe ser mayor a 0."
+        if errors:
+            raise ValidationError(errors)
 
 
 # ============================================================
@@ -125,6 +134,7 @@ class Cliente(models.Model):
     correo = models.EmailField(unique=True, db_index=True)
     telefono = models.CharField(max_length=20)
     direccion = models.CharField(max_length=200)
+    activo = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Cliente"
@@ -143,6 +153,7 @@ class Proveedor(models.Model):
     correo = models.EmailField(unique=True, db_index=True)
     telefono = models.CharField(max_length=20)
     direccion = models.CharField(max_length=200)
+    activo = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Proveedor"
@@ -171,52 +182,13 @@ class ProveedorProducto(models.Model):
 
 
 # ============================================================
-# Facturas
-# ============================================================
-
-class Factura(models.Model):
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="facturas")
-    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    fecha_emision = models.DateTimeField(auto_now_add=True)
-    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
-    class Meta:
-        verbose_name = "Factura"
-        verbose_name_plural = "Facturas"
-        ordering = ["-fecha_emision"]
-
-    def __str__(self):
-        return f"Factura {self.id} - {self.cliente.nombre}"
-
-
-class FacturaDetalle(models.Model):
-    factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name="detalles")
-    producto = models.ForeignKey(Product, on_delete=models.CASCADE)
-    cantidad = models.PositiveIntegerField()
-    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
-    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
-
-    class Meta:
-        verbose_name = "Detalle de Factura"
-        verbose_name_plural = "Detalles de Factura"
-
-    def __str__(self):
-        return f"{self.producto.nombre} x{self.cantidad}"
-
-    def save(self, *args, **kwargs):
-        self.subtotal = self.cantidad * self.precio_unitario
-        super().save(*args, **kwargs)
-
-
-# ============================================================
 # Pedidos
 # ============================================================
 
 class Pedido(models.Model):
     ESTADO_CHOICES = [
         ("pendiente", "Pendiente"),
-        ("en_proceso", "En Proceso"),
-        ("entregado", "Entregado"),
+        ("confirmado", "Confirmado"),
         ("cancelado", "Cancelado"),
     ]
 
@@ -245,6 +217,51 @@ class PedidoDetalle(models.Model):
     class Meta:
         verbose_name = "Detalle de Pedido"
         verbose_name_plural = "Detalles de Pedido"
+
+    def __str__(self):
+        return f"{self.producto.nombre} x{self.cantidad}"
+
+    def save(self, *args, **kwargs):
+        self.subtotal = self.cantidad * self.precio_unitario
+        super().save(*args, **kwargs)
+
+
+# ============================================================
+# Facturas
+# ============================================================
+
+class Factura(models.Model):
+    ESTADO_CHOICES = [
+        ("emitida", "Emitida"),
+        ("anulada", "Anulada"),
+    ]
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="facturas")
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    pedido = models.ForeignKey(Pedido, on_delete=models.SET_NULL, null=True, blank=True, related_name="facturas")
+    fecha_emision = models.DateTimeField(auto_now_add=True)
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default="emitida")
+
+    class Meta:
+        verbose_name = "Factura"
+        verbose_name_plural = "Facturas"
+        ordering = ["-fecha_emision"]
+
+    def __str__(self):
+        return f"Factura {self.id} - {self.cliente.nombre}"
+
+
+class FacturaDetalle(models.Model):
+    factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name="detalles")
+    producto = models.ForeignKey(Product, on_delete=models.CASCADE)
+    cantidad = models.PositiveIntegerField()
+    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        verbose_name = "Detalle de Factura"
+        verbose_name_plural = "Detalles de Factura"
 
     def __str__(self):
         return f"{self.producto.nombre} x{self.cantidad}"
