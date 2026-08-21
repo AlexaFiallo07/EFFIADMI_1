@@ -172,7 +172,7 @@
     new Chart(ctxProd, {
         type: 'bar',
         data: {
-            labels: [{% for p in productos_vendidos %}'{{ p.nombre }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+            labels: [{% for p in productos_vendidos %}"{{ p.nombre|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],
             datasets: [{
                 data: [{% for p in productos_vendidos %}{{ p.total_vendido }}{% if not forloop.last %},{% endif %}{% endfor %}],
                 backgroundColor: '#3b82f6',
@@ -193,7 +193,7 @@
     new Chart(ctxCat, {
         type: 'pie',
         data: {
-            labels: [{% for c in categorias_labels %}'{{ c }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+            labels: [{% for c in categorias_labels %}"{{ c|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],
             datasets: [{
                 data: [{% for d in categorias_data %}{{ d }}{% if not forloop.last %},{% endif %}{% endfor %}],
                 backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
