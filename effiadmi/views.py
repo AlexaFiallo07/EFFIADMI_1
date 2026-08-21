@@ -3,7 +3,9 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db import IntegrityError
-from django.db.models import Sum
+from django.db.models import Sum, F
+from django.utils import timezone
+from datetime import timedelta
 from .models import (
     UserProfile, Branch, Product, Inventory, InventoryLog,
     Cliente, Proveedor, ProveedorProducto,
@@ -82,6 +84,35 @@ def inicio(request):
             if inv.cantidad_disponible <= inv.stock_minimo:
                 productos_bajo_stock.append(inv)
 
+        hoy = timezone.now().date()
+        inicio_mes = hoy.replace(day=1)
+
+        ventas_hoy = Factura.objects.filter(fecha_emision__date=hoy).aggregate(
+            total=Sum("total"))["total"] or 0
+        ventas_mes = Factura.objects.filter(fecha_emision__date__gte=inicio_mes).aggregate(
+            total=Sum("total"))["total"] or 0
+
+        productos_vendidos = (
+            FacturaDetalle.objects
+            .values(nombre=F("producto__nombre"))
+            .annotate(total_vendido=Sum("cantidad"))
+            .order_by("-total_vendido")[:5]
+        )
+
+        categorias_rentables = (
+            FacturaDetalle.objects
+            .values(nombre=F("producto__categoria"))
+            .annotate(total=Sum("subtotal"))
+            .order_by("-total")
+            .exclude(nombre="")
+        )
+
+        categorias_labels = []
+        categorias_data = []
+        for cat in categorias_rentables[:4]:
+            categorias_labels.append(cat["nombre"])
+            categorias_data.append(float(cat["total"]))
+
         movimientos_recientes = InventoryLog.objects.select_related(
             "inventory__product", "inventory__branch"
         ).order_by("-fecha")[:10]
@@ -93,6 +124,11 @@ def inicio(request):
             "total_pedidos": total_pedidos,
             "unidades_totales": unidades_totales,
             "valor_inventario": valor_inventario,
+            "ventas_hoy": ventas_hoy,
+            "ventas_mes": ventas_mes,
+            "productos_vendidos": list(productos_vendidos),
+            "categorias_labels": categorias_labels,
+            "categorias_data": categorias_data,
             "productos_bajo_stock": productos_bajo_stock,
             "movimientos_recientes": movimientos_recientes,
         }
