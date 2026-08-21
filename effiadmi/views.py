@@ -864,10 +864,18 @@ def pagar_pedido(request, id):
 @autorizacion(roles=['admin', 'operador'])
 def lista_facturas(request):
     try:
+        estado = request.GET.get("estado", "")
         facturas_registradas = Factura.objects.select_related(
             "cliente", "pedido"
         ).all().order_by("-id")
-        return render(request, "facturas/lista.html", {"facturas": facturas_registradas})
+        if estado == "emitida":
+            facturas_registradas = facturas_registradas.filter(estado="emitida")
+        elif estado == "anulada":
+            facturas_registradas = facturas_registradas.filter(estado="anulada")
+        return render(request, "facturas/lista.html", {
+            "facturas": facturas_registradas,
+            "filtro_estado": estado,
+        })
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
@@ -1113,8 +1121,16 @@ def eliminar_usuario(request, id):
 @autorizacion(roles=['admin', 'operador'])
 def lista_proveedores(request):
     try:
+        estado = request.GET.get("estado", "")
         proveedores_registrados = Proveedor.objects.all().order_by("-id")
-        return render(request, "proveedores/lista.html", {"proveedores": proveedores_registrados})
+        if estado == "activo":
+            proveedores_registrados = proveedores_registrados.filter(activo=True)
+        elif estado == "inactivo":
+            proveedores_registrados = proveedores_registrados.filter(activo=False)
+        return render(request, "proveedores/lista.html", {
+            "proveedores": proveedores_registrados,
+            "filtro_estado": estado,
+        })
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")

@@ -9,6 +9,21 @@
         <a href="{% url 'effiadmi:crear_factura' %}" class="btn btn-primary">+ Nueva Factura</a>
     </div>
 
+    <div class="card" style="margin-bottom: var(--spacing-lg);">
+        <div class="card-body">
+            <form method="GET" style="display: flex; gap: var(--spacing-md); align-items: flex-end;">
+                <div class="form-group" style="flex: 1; min-width: 200px;">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" class="form-control" onchange="this.form.submit()">
+                        <option value="">Todas</option>
+                        <option value="emitida" {% if filtro_estado == 'emitida' %}selected{% endif %}>Emitidas</option>
+                        <option value="anulada" {% if filtro_estado == 'anulada' %}selected{% endif %}>Anuladas</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card">
         <table class="table">
             <thead>
@@ -49,7 +64,7 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="7" style="text-align: center; padding: var(--spacing-xl);">No hay facturas registradas.</td>
+                        <td colspan="7" style="text-align: center; padding: var(--spacing-xl);">No hay facturas {% if filtro_estado %}con estado "{{ filtro_estado }}"{% endif %} registradas.</td>
                     </tr>
                 {% endfor %}
             </tbody>
