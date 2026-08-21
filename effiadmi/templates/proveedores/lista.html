@@ -6,7 +6,9 @@
 <div class="container" style="max-width: 1200px; margin: 0 auto;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
         <h1>Listado de Proveedores</h1>
+        {% if request.session.logueado.rol == 'admin' %}
         <a href="{% url 'effiadmi:crear_proveedor' %}" class="btn btn-primary">+ Nuevo Proveedor</a>
+        {% endif %}
     </div>
 
     <div class="card" style="margin-bottom: var(--spacing-lg);">

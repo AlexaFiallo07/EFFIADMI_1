@@ -308,3 +308,37 @@ class ChatHistorial(models.Model):
 
     def __str__(self):
         return f"Chat {self.usuario.username} - {self.fecha}"
+
+
+# ============================================================
+# Reportes (operador -> admin)
+# ============================================================
+
+class Reporte(models.Model):
+    TIPO_CHOICES = [
+        ("solicitud_producto", "Solicitud de Producto"),
+        ("solicitud_proveedor", "Solicitud de Proveedor"),
+        ("reporte_stock", "Reporte de Stock"),
+        ("reporte_general", "Reporte General"),
+    ]
+    ESTADO_CHOICES = [
+        ("pendiente", "Pendiente"),
+        ("visto", "Visto"),
+        ("resuelto", "Resuelto"),
+    ]
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reportes")
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES, default="reporte_general")
+    titulo = models.CharField(max_length=200)
+    descripcion = models.TextField()
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default="pendiente")
+    respuesta = models.TextField(blank=True, default="")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_respuesta = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Reporte"
+        verbose_name_plural = "Reportes"
+        ordering = ["-fecha_creacion"]
+
+    def __str__(self):
+        return f"[{self.get_tipo_display()}] {self.titulo} - {self.usuario.username}"

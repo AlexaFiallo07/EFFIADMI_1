@@ -11,7 +11,7 @@ from .models import (
     UserProfile, Branch, Product, Inventory, InventoryLog,
     Cliente, Proveedor, ProveedorProducto,
     Factura, FacturaDetalle, Pedido, PedidoDetalle,
-    Notificacion, ChatHistorial,
+    Notificacion, ChatHistorial, Reporte,
 )
 from .servicio_ia import consultar_asistente_effiadmi
 from .utilidades import autorizacion
@@ -1319,3 +1319,83 @@ def estadisticas_ia(request):
 @autorizacion(roles=['admin'])
 def chat_ia(request):
     return redirect("effiadmi:estadisticas_ia")
+
+
+# ==================== REPORTES ====================
+
+@autorizacion(roles=['admin', 'operador'])
+def reportes(request):
+    try:
+        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+        es_admin = request.session["logueado"]["rol"] == "admin"
+
+        if es_admin:
+            reportes_lista = Reporte.objects.select_related("usuario").all()
+            filtro_estado = request.GET.get("estado", "")
+            if filtro_estado:
+                reportes_lista = reportes_lista.filter(estado=filtro_estado)
+        else:
+            reportes_lista = Reporte.objects.filter(usuario=usuario)
+
+        if request.method == "POST":
+            titulo = request.POST.get("titulo", "").strip()
+            tipo = request.POST.get("tipo", "reporte_general")
+            descripcion = request.POST.get("descripcion", "").strip()
+
+            if not titulo or not descripcion:
+                messages.error(request, "Debes completar el titulo y la descripcion.")
+                return redirect("effiadmi:reportes")
+
+            Reporte.objects.create(
+                usuario=usuario,
+                tipo=tipo,
+                titulo=titulo,
+                descripcion=descripcion,
+            )
+            messages.success(request, "Reporte enviado exitosamente.")
+            return redirect("effiadmi:reportes")
+
+        return render(request, "dashboard/reportes.html", {
+            "reportes": reportes_lista,
+            "es_admin": es_admin,
+            "filtro_estado": request.GET.get("estado", ""),
+        })
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:inicio")
+
+
+@autorizacion(roles=['admin', 'operador'])
+def detalle_reporte(request, id):
+    try:
+        reporte = get_object_or_404(Reporte, pk=id)
+        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+        es_admin = request.session["logueado"]["rol"] == "admin"
+
+        if not es_admin and reporte.usuario != usuario:
+            messages.warning(request, "No tienes acceso a este reporte.")
+            return redirect("effiadmi:reportes")
+
+        if request.method == "POST" and es_admin:
+            respuesta = request.POST.get("respuesta", "").strip()
+            nuevo_estado = request.POST.get("estado", reporte.estado)
+
+            if respuesta:
+                reporte.respuesta = respuesta
+            reporte.estado = nuevo_estado
+            reporte.fecha_respuesta = timezone.now()
+            reporte.save()
+            messages.success(request, "Reporte actualizado exitosamente.")
+            return redirect("effiadmi:detalle_reporte", id=reporte.id)
+
+        if reporte.estado == "pendiente" and es_admin:
+            reporte.estado = "visto"
+            reporte.save()
+
+        return render(request, "dashboard/detalle_reporte.html", {
+            "reporte": reporte,
+            "es_admin": es_admin,
+        })
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:reportes")

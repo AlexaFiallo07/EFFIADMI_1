@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Reportes{% endblock %}
+
+{% block contenido %}
+<div class="container" style="max-width: 1200px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <h1>{% if es_admin %}Reportes del Equipo{% else %}Mis Reportes{% endif %}</h1>
+    </div>
+
+    {% if not es_admin %}
+    <div class="card" style="margin-bottom: var(--spacing-xl);">
+        <div class="card-header">
+            <h3 class="card-title">Nuevo Reporte</h3>
+        </div>
+        <form method="POST">
+            {% csrf_token %}
+            <div class="card-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                    <div class="form-group">
+                        <label for="titulo" class="form-label">Titulo</label>
+                        <input type="text" id="titulo" name="titulo" class="form-control" placeholder="Ej: Solicitud de producto X" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tipo" class="form-label">Tipo</label>
+                        <select id="tipo" name="tipo" class="form-control" required>
+                            <option value="solicitud_producto">Solicitud de Producto</option>
+                            <option value="solicitud_proveedor">Solicitud de Proveedor</option>
+                            <option value="reporte_stock">Reporte de Stock</option>
+                            <option value="reporte_general">Reporte General</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="descripcion" class="form-label">Descripcion</label>
+                    <textarea id="descripcion" name="descripcion" class="form-control" rows="4" placeholder="Describe tu solicitud o reporte..." required></textarea>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">Enviar Reporte</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if es_admin %}
+    <div class="card" style="margin-bottom: var(--spacing-lg);">
+        <div class="card-body">
+            <form method="GET" style="display: flex; gap: var(--spacing-md); align-items: flex-end;">
+                <div class="form-group" style="flex: 1; min-width: 200px;">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" class="form-control" onchange="this.form.submit()">
+                        <option value="">Todos</option>
+                        <option value="pendiente" {% if filtro_estado == 'pendiente' %}selected{% endif %}>Pendientes</option>
+                        <option value="visto" {% if filtro_estado == 'visto' %}selected{% endif %}>Vistos</option>
+                        <option value="resuelto" {% if filtro_estado == 'resuelto' %}selected{% endif %}>Resueltos</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Titulo</th>
+                        {% if es_admin %}<th>Usuario</th>{% endif %}
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in reportes %}
+                        <tr>
+                            <td><span style="font-size: 13px;">{{ r.get_tipo_display }}</span></td>
+                            <td>{{ r.titulo }}</td>
+                            {% if es_admin %}<td>{{ r.usuario.first_name }} {{ r.usuario.last_name }}</td>{% endif %}
+                            <td>
+                                {% if r.estado == 'pendiente' %}
+                                    <span style="color: #f59e0b; font-weight: 600;">Pendiente</span>
+                                {% elif r.estado == 'visto' %}
+                                    <span style="color: #3b82f6; font-weight: 600;">Visto</span>
+                                {% else %}
+                                    <span style="color: #10b981; font-weight: 600;">Resuelto</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ r.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <a href="{% url 'effiadmi:detalle_reporte' r.id %}" class="btn btn-outline btn-sm">Ver</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">
+                                No hay reportes {% if es_admin and filtro_estado %}con estado "{{ filtro_estado }}"{% endif %}.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

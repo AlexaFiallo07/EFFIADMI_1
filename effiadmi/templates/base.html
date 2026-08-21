@@ -173,9 +173,15 @@
                 <a href="{% url 'effiadmi:lista_facturas' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_facturas' %}active{% endif %}">
                     <span class="material-symbols-outlined">description</span> Facturación
                 </a>
+                {% if request.session.logueado.rol == 'admin' %}
                 <a href="{% url 'effiadmi:estadisticas_ia' %}" class="menu-link {% if request.resolver_match.url_name == 'estadisticas_ia' %}active{% endif %}">
-                    <span class="material-symbols-outlined">psychology</span> Estadísticas IA
+                    <span class="material-symbols-outlined">psychology</span> Estadisticas IA
                 </a>
+                {% else %}
+                <a href="{% url 'effiadmi:reportes' %}" class="menu-link {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
+                    <span class="material-symbols-outlined">feedback</span> Reportes
+                </a>
+                {% endif %}
                 <a href="{% url 'effiadmi:lista_notificaciones' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_notificaciones' %}active{% endif %}">
                     <span class="material-symbols-outlined">notifications</span> Notificaciones
                 </a>
