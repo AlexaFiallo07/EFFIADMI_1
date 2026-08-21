@@ -26,7 +26,7 @@
                         <tr>
                             <td>{{ usuario.first_name }} {{ usuario.last_name }}</td>
                             <td>{{ usuario.email }}</td>
-                            <td>{% if usuario.profile %}{{ usuario.profile.get_cargo_display }}{% else %}-{% endif %}</td>
+                            <td>{% if usuario.profile %}{{ usuario.profile.get_cargo_display }}{% else %}Sin perfil{% endif %}</td>
                             <td>
                                 {% if usuario.is_active %}
                                     <span style="color: #10b981; font-weight: 600;">Activo</span>
