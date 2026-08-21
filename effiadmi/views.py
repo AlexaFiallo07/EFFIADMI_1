@@ -11,25 +11,7 @@ from .models import (
     Notificacion, ChatHistorial,
 )
 from .servicio_ia import consultar_asistente_effiadmi
-import functools
-
-
-def autorizacion(cargos_permitidos=None):
-    def decorator(view_func):
-        @functools.wraps(view_func)
-        def _wrapped(request, *args, **kwargs):
-            if not request.session.get("logueado"):
-                return redirect("effiadmi:login")
-            
-            if cargos_permitidos:
-                rol_usuario = request.session.get("logueado", {}).get("rol")
-                if rol_usuario not in cargos_permitidos:
-                    messages.error(request, "No tienes permisos para acceder a esta seccion.")
-                    return redirect("effiadmi:inicio")
-            
-            return view_func(request, *args, **kwargs)
-        return _wrapped
-    return decorator
+from .utilidades import autorizacion
 
 
 # ==================== LOGIN/LOGOUT ====================
@@ -662,7 +644,7 @@ def eliminar_pedido(request, id):
 
 # ==================== USUARIOS ====================
 
-@autorizacion(cargos_permitidos=["admin"])
+@autorizacion(roles=["admin"])
 def lista_usuarios(request):
     try:
         usuarios_registrados = User.objects.select_related("profile").all().order_by("-id")
@@ -672,7 +654,7 @@ def lista_usuarios(request):
         return redirect("effiadmi:inicio")
 
 
-@autorizacion(cargos_permitidos=["admin"])
+@autorizacion(roles=["admin"])
 def crear_usuario(request):
     if request.method == "POST":
         try:
@@ -712,7 +694,7 @@ def crear_usuario(request):
     return render(request, "usuarios/crear.html")
 
 
-@autorizacion(cargos_permitidos=["admin"])
+@autorizacion(roles=["admin"])
 def editar_usuario(request, id):
     try:
         user = get_object_or_404(User, pk=id)
@@ -741,7 +723,7 @@ def editar_usuario(request, id):
         return redirect("effiadmi:lista_usuarios")
 
 
-@autorizacion(cargos_permitidos=["admin"])
+@autorizacion(roles=["admin"])
 def eliminar_usuario(request, id):
     try:
         user = get_object_or_404(User, pk=id)
