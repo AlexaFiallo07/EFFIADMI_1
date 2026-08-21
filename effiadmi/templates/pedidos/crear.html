@@ -62,12 +62,9 @@
 {% endblock %}
 
 {% block js %}
+{{ productos|json_script:"productos-data" }}
 <script>
-    const productos = [
-        {% for p in productos %}
-        {id: {{ p.id }}, nombre: "{{ p.nombre|escapejs }}", precio: {{ p.precio_venta }} }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
+    const productos = JSON.parse(document.getElementById("productos-data").textContent);
     let contador = 0;
 
     function agregarProducto() {
@@ -78,7 +75,7 @@
 
         let opciones = '<option value="">Selecciona...</option>';
         for (const p of productos) {
-            opciones += '<option value="' + p.id + '" data-precio="' + p.precio + '">' + p.nombre + ' - $' + p.precio + '</option>';
+            opciones += '<option value="' + p.id + '" data-precio="' + p.precio_venta + '">' + p.nombre + ' - $' + p.precio_venta + '</option>';
         }
 
         fila.innerHTML = 

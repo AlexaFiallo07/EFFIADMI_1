@@ -569,7 +569,7 @@ def lista_pedidos(request):
 def crear_pedido(request):
     try:
         clientes_activos = Cliente.objects.filter(activo=True).order_by("nombre")
-        productos_activos = Product.objects.filter(activo=True).order_by("nombre")
+        productos_activos = list(Product.objects.filter(activo=True).order_by("nombre").values("id", "nombre", "precio_venta"))
 
         if request.method == "POST":
             cliente_id = request.POST.get("cliente")
@@ -885,7 +885,7 @@ def lista_facturas(request):
 def crear_factura(request):
     try:
         clientes_activos = Cliente.objects.filter(activo=True).order_by("nombre")
-        productos_activos = Product.objects.filter(activo=True).order_by("nombre")
+        productos_activos = list(Product.objects.filter(activo=True).order_by("nombre").values("id", "nombre", "precio_venta"))
 
         if request.method == "POST":
             cliente_id = request.POST.get("cliente")
