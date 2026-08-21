@@ -724,26 +724,9 @@ def confirmar_pedido(request, id):
             pedido.estado = "confirmado"
             pedido.save()
 
-            factura = Factura.objects.create(
-                cliente=pedido.cliente,
-                usuario=usuario,
-                pedido=pedido,
-                total=pedido.total,
-                estado="emitida",
-            )
-
-            for det in detalles:
-                FacturaDetalle.objects.create(
-                    factura=factura,
-                    producto=det.producto,
-                    cantidad=det.cantidad,
-                    precio_unitario=det.precio_unitario,
-                    subtotal=det.subtotal,
-                )
-
         messages.success(
             request,
-            f"Pedido #{pedido.id} confirmado. Factura #{factura.id} generada."
+            f"Pedido #{pedido.id} confirmado. Stock descontado."
         )
         return redirect("effiadmi:detalle_pedido", id=pedido.id)
 
@@ -772,26 +755,28 @@ def cancelar_pedido(request, id):
             if factura:
                 factura.estado = "anulada"
                 factura.save()
-                for det in FacturaDetalle.objects.filter(factura=factura):
-                    inv = Inventory.objects.filter(
-                        product=det.producto
-                    ).first()
-                    if inv:
-                        inv.cantidad_disponible += det.cantidad
-                        inv.save()
-                        usuario = None
-                        if request.session.get("logueado"):
-                            usuario = User.objects.filter(
-                                id=request.session["logueado"]["id"]
-                            ).first()
-                        InventoryLog.objects.create(
-                            inventory=inv,
-                            tipo_movimiento="ENTRADA",
-                            cantidad=det.cantidad,
-                            cantidad_resultante=inv.cantidad_disponible,
-                            motivo=f"Devolucion por cancelacion de Pedido #{pedido.id}",
-                            usuario=usuario,
-                        )
+
+            detalles = PedidoDetalle.objects.filter(pedido=pedido).select_related("producto")
+            for det in detalles:
+                inv = Inventory.objects.filter(
+                    product=det.producto
+                ).first()
+                if inv:
+                    inv.cantidad_disponible += det.cantidad
+                    inv.save()
+                    usuario = None
+                    if request.session.get("logueado"):
+                        usuario = User.objects.filter(
+                            id=request.session["logueado"]["id"]
+                        ).first()
+                    InventoryLog.objects.create(
+                        inventory=inv,
+                        tipo_movimiento="ENTRADA",
+                        cantidad=det.cantidad,
+                        cantidad_resultante=inv.cantidad_disponible,
+                        motivo=f"Devolucion por cancelacion de Pedido #{pedido.id}",
+                        usuario=usuario,
+                    )
 
         messages.success(request, f"Pedido #{pedido.id} cancelado.")
         return redirect("effiadmi:detalle_pedido", id=pedido.id)
@@ -821,6 +806,57 @@ def eliminar_pedido(request, id):
 def editar_pedido(request, id):
     messages.warning(request, "Los pedidos se confirman o cancelan, no se editan.")
     return redirect("effiadmi:detalle_pedido", id=id)
+
+
+@autorizacion(roles=['admin', 'operador'])
+def pagar_pedido(request, id):
+    try:
+        pedido = get_object_or_404(Pedido, pk=id)
+
+        if request.method != "POST":
+            return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+        if pedido.estado != "confirmado":
+            messages.warning(request, "Solo se pueden pagar pedidos confirmados.")
+            return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+        if Factura.objects.filter(pedido=pedido, estado="emitida").exists():
+            messages.warning(request, "Este pedido ya tiene una factura emitida.")
+            return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+        detalles = PedidoDetalle.objects.filter(pedido=pedido).select_related("producto")
+        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+
+        with transaction.atomic():
+            factura = Factura.objects.create(
+                cliente=pedido.cliente,
+                usuario=usuario,
+                pedido=pedido,
+                total=pedido.total,
+                estado="emitida",
+            )
+
+            for det in detalles:
+                FacturaDetalle.objects.create(
+                    factura=factura,
+                    producto=det.producto,
+                    cantidad=det.cantidad,
+                    precio_unitario=det.precio_unitario,
+                    subtotal=det.subtotal,
+                )
+
+            pedido.estado = "pagado"
+            pedido.save()
+
+        messages.success(
+            request,
+            f"Pedido #{pedido.id} marcado como pagado. Factura #{factura.id} generada."
+        )
+        return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:lista_pedidos")
 
 
 # ==================== FACTURAS ====================
@@ -1196,6 +1232,8 @@ def eliminar_notificacion(request, id):
 @autorizacion(roles=['admin'])
 def estadisticas_ia(request):
     try:
+        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+
         total_productos = Product.objects.filter(activo=True).count()
         total_proveedores = Proveedor.objects.filter(activo=True).count()
         total_clientes = Cliente.objects.filter(activo=True).count()
@@ -1237,12 +1275,19 @@ def estadisticas_ia(request):
             "producto_mas_vendido": producto_mas_vendido,
             "entradas": InventoryLog.objects.filter(tipo_movimiento="ENTRADA").count(),
             "salidas": InventoryLog.objects.filter(tipo_movimiento="SALIDA").count(),
+            "historial": ChatHistorial.objects.filter(usuario=usuario).order_by("-fecha")[:20],
         }
 
         if request.method == "POST":
             pregunta = request.POST.get("pregunta", "").strip()
             if pregunta:
-                contexto["respuesta_ia"] = consultar_asistente_effiadmi(pregunta)
+                respuesta = consultar_asistente_effiadmi(pregunta)
+                ChatHistorial.objects.create(
+                    usuario=usuario,
+                    mensaje=pregunta,
+                    respuesta=respuesta,
+                )
+                contexto["respuesta_ia"] = respuesta
                 contexto["pregunta"] = pregunta
             else:
                 messages.warning(request, "Escribe una pregunta para el asistente IA.")
@@ -1257,36 +1302,4 @@ def estadisticas_ia(request):
 
 @autorizacion(roles=['admin'])
 def chat_ia(request):
-    try:
-        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
-
-        if request.method == "POST":
-            pregunta = request.POST.get("mensaje", "").strip()
-            if pregunta:
-                historial_usuario = ChatHistorial.objects.filter(usuario=usuario).order_by("-fecha")[:10]
-
-                contexto_ia = [
-                    {"role": "system", "content": "Eres el asistente inteligente de EFFIADMI, un sistema de gestion para PYMES. Responde en espanol, de forma breve y practica."}
-                ]
-                for h in reversed(historial_usuario):
-                    contexto_ia.append({"role": "user", "content": h.mensaje})
-                    contexto_ia.append({"role": "assistant", "content": h.respuesta})
-                contexto_ia.append({"role": "user", "content": pregunta})
-
-                respuesta = consultar_asistente_effiadmi(pregunta)
-
-                ChatHistorial.objects.create(
-                    usuario=usuario,
-                    mensaje=pregunta,
-                    respuesta=respuesta,
-                )
-
-                messages.success(request, "Pregunta enviada.")
-            else:
-                messages.warning(request, "Escribe una pregunta.")
-
-        historial = ChatHistorial.objects.filter(usuario=usuario).order_by("-fecha")[:20]
-        return render(request, "dashboard/chat_ia.html", {"historial": historial})
-    except Exception as e:
-        messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:inicio")
+    return redirect("effiadmi:estadisticas_ia")

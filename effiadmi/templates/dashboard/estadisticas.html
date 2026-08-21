@@ -64,23 +64,42 @@
     <div class="ia-column" style="display: flex; flex-direction: column; gap: 24px;">
         <div class="dashboard-panel-card">
             <h3 class="panel-card-title">Asistente Inteligente</h3>
-            <form method="post" style="display: flex; flex-direction: column; gap: 12px;">
-                {% csrf_token %}
-                <textarea name="pregunta" rows="3" placeholder="Ej: ¿qué productos necesito reponer? ¿cuánto vale mi inventario? ¿cómo mejorar mis ventas?" required
-                    style="width: 100%; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; resize: vertical; font-family: inherit;">{{ pregunta }}</textarea>
-                <button type="submit" class="btn btn-primary" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px;">
-                    <span class="material-symbols-outlined">auto_awesome</span> Consultar IA
-                </button>
-            </form>
-
-            {% if respuesta_ia %}
-            <div style="margin-top: 20px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
-                <div style="font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
-                    <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: text-bottom;">smart_toy</span> Respuesta de la IA
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4 style="font-size: 14px; color: #64748b; margin: 0 0 12px 0;">Historial</h4>
+                    <div style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                        {% for h in historial %}
+                            <div style="padding: 10px 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0;">
+                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">{{ h.fecha|date:"d/m/Y H:i" }}</div>
+                                <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 2px;">Tú: {{ h.mensaje }}</div>
+                                <div style="font-size: 13px; color: #334155;">IA: {{ h.respuesta }}</div>
+                            </div>
+                        {% empty %}
+                            <p style="color: #94a3b8; font-size: 13px; text-align: center; padding: 30px 0;">Aun no has hecho preguntas.</p>
+                        {% endfor %}
+                    </div>
                 </div>
-                <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #1e293b; white-space: pre-wrap;">{{ respuesta_ia }}</p>
+                <div>
+                    <h4 style="font-size: 14px; color: #64748b; margin: 0 0 12px 0;">Nueva Pregunta</h4>
+                    <form method="post" style="display: flex; flex-direction: column; gap: 12px;">
+                        {% csrf_token %}
+                        <textarea name="pregunta" rows="4" placeholder="Ej: ¿qué productos necesito reponer? ¿cuánto vale mi inventario?" required
+                            style="width: 100%; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; resize: vertical; font-family: inherit;">{{ pregunta }}</textarea>
+                        <button type="submit" class="btn btn-primary" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px;">
+                            <span class="material-symbols-outlined">auto_awesome</span> Consultar IA
+                        </button>
+                    </form>
+
+                    {% if respuesta_ia %}
+                    <div style="margin-top: 16px; background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 14px;">
+                        <div style="font-size: 12px; color: #0369a1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: text-bottom;">smart_toy</span> Respuesta
+                        </div>
+                        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #1e293b; white-space: pre-wrap;">{{ respuesta_ia }}</p>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            {% endif %}
         </div>
 
         <div class="dashboard-panel-card">

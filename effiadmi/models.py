@@ -189,6 +189,7 @@ class Pedido(models.Model):
     ESTADO_CHOICES = [
         ("pendiente", "Pendiente"),
         ("confirmado", "Confirmado"),
+        ("pagado", "Pagado"),
         ("cancelado", "Cancelado"),
     ]
 

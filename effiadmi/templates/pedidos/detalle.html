@@ -24,7 +24,9 @@
                         {% if pedido.estado == "pendiente" %}
                             <span style="color: #eab308; font-weight: 600;">Pendiente</span>
                         {% elif pedido.estado == "confirmado" %}
-                            <span style="color: #10b981; font-weight: 600;">Confirmado</span>
+                            <span style="color: #3b82f6; font-weight: 600;">Confirmado</span>
+                        {% elif pedido.estado == "pagado" %}
+                            <span style="color: #10b981; font-weight: 600;">Pagado</span>
                         {% elif pedido.estado == "cancelado" %}
                             <span style="color: #ef4444; font-weight: 600;">Cancelado</span>
                         {% endif %}
@@ -70,9 +72,18 @@
         </div>
         <div class="card-footer" style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
             {% if pedido.estado == "pendiente" %}
-                <form method="POST" action="{% url 'effiadmi:confirmar_pedido' pedido.id %}" style="display: inline;" onsubmit="return confirm('Confirmar este pedido? Se descontara el inventario y se generara la factura.');">
+                <form method="POST" action="{% url 'effiadmi:confirmar_pedido' pedido.id %}" style="display: inline;" onsubmit="return confirm('Confirmar este pedido? Se descontara el inventario.');">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-primary">Confirmar Pedido</button>
+                </form>
+                <form method="POST" action="{% url 'effiadmi:cancelar_pedido' pedido.id %}" style="display: inline;" onsubmit="return confirm('Cancelar este pedido?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;">Cancelar Pedido</button>
+                </form>
+            {% elif pedido.estado == "confirmado" %}
+                <form method="POST" action="{% url 'effiadmi:pagar_pedido' pedido.id %}" style="display: inline;" onsubmit="return confirm('Marcar como pagado? Se generara la factura.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">Marcar como Pagado</button>
                 </form>
                 <form method="POST" action="{% url 'effiadmi:cancelar_pedido' pedido.id %}" style="display: inline;" onsubmit="return confirm('Cancelar este pedido?');">
                     {% csrf_token %}
