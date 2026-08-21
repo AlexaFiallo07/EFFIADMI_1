@@ -62,12 +62,19 @@
 {% endblock %}
 
 {% block js %}
+<select id="catalogoProductos" hidden>
+    {% for p in productos %}
+    <option value="{{ p.id }}" data-nombre="{{ p.nombre|escapejs }}" data-precio="{{ p.precio_venta }}">{{ p.nombre }}</option>
+    {% endfor %}
+</select>
 <script>
-    const productos = [
-        {% for p in productos %}
-        {id: {{ p.id }}, nombre: "{{ p.nombre|escapejs }}", precio: {{ p.precio_venta }} }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
+    const productos = Array.from(document.querySelectorAll("#catalogoProductos option")).map(function(option) {
+        return {
+            id: option.value,
+            nombre: option.dataset.nombre,
+            precio: parseFloat(option.dataset.precio) || 0
+        };
+    });
     let contador = 0;
 
     function agregarProducto() {
