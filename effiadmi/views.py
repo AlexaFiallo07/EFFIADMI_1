@@ -102,7 +102,7 @@ def inicio(request):
         return render(request, "dashboard/index.html")
 
 
-@autorizacion(roles=["admin, operador"])
+@autorizacion(roles=["admin", "operador"])
 def perfil(request):
     user = User.objects.get(pk=request.session.get("logueado", {}).get("id"))
     perfil, _ = UserProfile.objects.get_or_create(user=user)
@@ -127,7 +127,7 @@ def perfil(request):
 
 # ==================== CLIENTES ====================
 
-@autorizacion(roles=["admin, operador"])
+@autorizacion(roles=["admin", "operador"])
 def lista_clientes(request):
     try:
         clientes_registrados = Cliente.objects.all().order_by("-id")
@@ -137,7 +137,7 @@ def lista_clientes(request):
         return redirect("effiadmi:inicio")
 
 
-@autorizacion(roles=["admin, operador"])
+@autorizacion(roles=["admin", "operador"])
 def crear_cliente(request):
     if request.method == "POST":
         try:
