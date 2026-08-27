@@ -31,7 +31,7 @@
                             <td>{{ item.producto.sku }}</td>
                             <td>{{ item.producto.nombre }}</td>
                             <td>{{ item.producto.categoria|default:"-" }}</td>
-                            <td>${{ item.producto.precio_venta }}</td>
+                            <td>{{ item.producto.precio_venta|cop }}</td>
                             <td>{{ item.stock }}</td>
                             <td>
                                 {% if item.producto.activo %}
@@ -42,6 +42,10 @@
                             </td>
                             <td>
                                 <a href="{% url 'effiadmi:editar_producto' item.producto.id %}" class="btn btn-outline btn-sm">Editar</a>
+                                {% if request.session.logueado.rol == 'admin' %}
+                                <a href="{% url 'effiadmi:eliminar_producto' item.producto.id %}" class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); if (confirm('Esta seguro de eliminar el producto \'{{ item.producto.nombre }}\'? Esta accion no se puede deshacer.')) { document.getElementById('formEliminar{{ item.producto.id }}').submit(); }">Eliminar</a>
+                                <form id="formEliminar{{ item.producto.id }}" method="POST" action="{% url 'effiadmi:eliminar_producto' item.producto.id %}" style="display: none;">{% csrf_token %}</form>
+                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}

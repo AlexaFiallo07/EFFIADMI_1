@@ -4,11 +4,34 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db import IntegrityError, transaction
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Count
 from django.utils import timezone
 from datetime import timedelta
+from django import template as django_template
+
+register = django_template.Library()
+
+
+def _formato_colombiano(value, decimales=False):
+    try:
+        numero = float(value)
+    except (TypeError, ValueError):
+        return value
+    if decimales:
+        return f"{numero:,.2f}".replace(",", ".").replace(".", ",", 1)
+    return f"{int(round(numero)):,}".replace(",", ".")
+
+
+@register.filter(name="cop")
+def cop(value):
+    return f"$ {_formato_colombiano(value)}"
+
+
+@register.filter(name="cop_decimal")
+def cop_decimal(value):
+    return f"$ {_formato_colombiano(value, decimales=True)}"
 from .models import (
-    UserProfile, Branch, Product, Inventory, InventoryLog,
+    UserProfile, Branch, Product, Categoria, Inventory, InventoryLog,
     Cliente, Proveedor, ProveedorProducto,
     Factura, FacturaDetalle, Pedido, PedidoDetalle,
     Notificacion, ChatHistorial, Reporte,
@@ -108,9 +131,10 @@ def inicio(request):
 
         categorias_rentables = (
             FacturaDetalle.objects
-            .values(nombre=F("producto__categoria"))
+            .values(nombre=F("producto__categoria__nombre"))
             .annotate(total=Sum("subtotal"))
             .order_by("-total")
+            .exclude(nombre__isnull=True)
             .exclude(nombre="")
         )
 
@@ -279,34 +303,52 @@ def lista_productos(request):
         return redirect("effiadmi:inicio")
 
 
+def _siguiente_id_producto():
+    maximo = 0
+    for sku in Product.objects.values_list("sku", flat=True):
+        if str(sku).isdigit():
+            maximo = max(maximo, int(sku))
+    return str(maximo + 1)
+
+
 @autorizacion(roles=['admin'])
 def crear_producto(request):
     sucursales = Branch.objects.all()
+    categorias = Categoria.objects.filter(activa=True).order_by("nombre")
+    proximo_id = _siguiente_id_producto()
+    _ctx = {"sucursales": sucursales, "categorias": categorias, "proximo_id": proximo_id}
 
     if request.method == "POST":
         try:
-            sku = request.POST.get("sku", "").strip()
             nombre = request.POST.get("nombre", "").strip()
             descripcion = request.POST.get("descripcion", "").strip()
-            categoria = request.POST.get("categoria", "").strip()
+            categoria_id = request.POST.get("categoria", "")
             precio_venta_str = request.POST.get("precio_venta", "0")
             sucursal_id = request.POST.get("sucursal")
             stock_inicial_str = request.POST.get("stock_inicial", "0")
             stock_minimo_str = request.POST.get("stock_minimo", "5")
 
-            if not all([sku, nombre, precio_venta_str]):
+            if not all([nombre, precio_venta_str]):
                 messages.error(request, "Por favor completa los campos obligatorios.")
-                return render(request, "productos/crear.html", {"sucursales": sucursales})
+                return render(request, "productos/crear.html", _ctx)
+
+            categoria = (
+                Categoria.objects.filter(id=categoria_id, activa=True).first()
+                if categoria_id else None
+            )
+            if not categoria:
+                messages.error(request, "Debes seleccionar una categoria valida.")
+                return render(request, "productos/crear.html", _ctx)
 
             try:
                 precio_venta = Decimal(precio_venta_str)
             except (TypeError, ValueError):
                 messages.error(request, "El precio de venta no es valido.")
-                return render(request, "productos/crear.html", {"sucursales": sucursales})
+                return render(request, "productos/crear.html", _ctx)
 
             if precio_venta <= 0:
                 messages.error(request, "El precio de venta debe ser mayor a 0.")
-                return render(request, "productos/crear.html", {"sucursales": sucursales})
+                return render(request, "productos/crear.html", _ctx)
 
             try:
                 stock_inicial = int(stock_inicial_str)
@@ -320,11 +362,11 @@ def crear_producto(request):
 
             if stock_inicial < 0:
                 messages.error(request, "El stock inicial no puede ser negativo.")
-                return render(request, "productos/crear.html", {"sucursales": sucursales})
+                return render(request, "productos/crear.html", _ctx)
 
             if stock_minimo < 0:
                 messages.error(request, "El stock minimo no puede ser negativo.")
-                return render(request, "productos/crear.html", {"sucursales": sucursales})
+                return render(request, "productos/crear.html", _ctx)
 
             branch = None
             if sucursal_id:
@@ -336,7 +378,7 @@ def crear_producto(request):
 
             with transaction.atomic():
                 producto = Product.objects.create(
-                    sku=sku,
+                    sku=proximo_id,
                     nombre=nombre,
                     descripcion=descripcion,
                     categoria=categoria,
@@ -367,12 +409,12 @@ def crear_producto(request):
             return redirect("effiadmi:lista_productos")
         except IntegrityError:
             messages.error(request, "El SKU ya esta registrado.")
-            return render(request, "productos/crear.html", {"sucursales": sucursales})
+            return render(request, "productos/crear.html", _ctx)
         except Exception as e:
             messages.error(request, f"Error: {e}")
-            return render(request, "productos/crear.html", {"sucursales": sucursales})
+            return render(request, "productos/crear.html", _ctx)
 
-    return render(request, "productos/crear.html", {"sucursales": sucursales})
+    return render(request, "productos/crear.html", _ctx)
 
 
 @autorizacion(roles=['admin'])
@@ -380,6 +422,8 @@ def editar_producto(request, id):
     try:
         producto = get_object_or_404(Product, pk=id)
         sucursales = Branch.objects.all()
+        categorias = Categoria.objects.filter(activa=True).order_by("nombre")
+        _ctx = {"producto": producto, "sucursales": sucursales, "categorias": categorias}
 
         if request.method == "POST":
             sku = request.POST.get("sku", "").strip()
@@ -387,29 +431,42 @@ def editar_producto(request, id):
 
             if not sku or not nombre:
                 messages.error(request, "SKU y nombre son obligatorios.")
-                return render(request, "productos/editar.html", {"producto": producto, "sucursales": sucursales})
+                return render(request, "productos/editar.html", _ctx)
+
+            if not sku.isdigit():
+                messages.error(request, "El ID del producto debe contener solo numeros.")
+                return render(request, "productos/editar.html", _ctx)
 
             precio_venta_str = request.POST.get("precio_venta", "0")
             try:
                 precio_venta = Decimal(precio_venta_str)
             except (TypeError, ValueError):
                 messages.error(request, "El precio de venta no es valido.")
-                return render(request, "productos/editar.html", {"producto": producto, "sucursales": sucursales})
+                return render(request, "productos/editar.html", _ctx)
 
             if precio_venta <= 0:
                 messages.error(request, "El precio de venta debe ser mayor a 0.")
-                return render(request, "productos/editar.html", {"producto": producto, "sucursales": sucursales})
+                return render(request, "productos/editar.html", _ctx)
+
+            categoria_id = request.POST.get("categoria", "")
+            if categoria_id:
+                categoria = Categoria.objects.filter(id=categoria_id, activa=True).first()
+                if not categoria:
+                    messages.error(request, "La categoria seleccionada no es valida.")
+                    return render(request, "productos/editar.html", _ctx)
+            else:
+                categoria = None
 
             producto.sku = sku
             producto.nombre = nombre
             producto.descripcion = request.POST.get("descripcion", "")
-            producto.categoria = request.POST.get("categoria", "")
+            producto.categoria = categoria
             producto.precio_venta = precio_venta
             producto.save()
             messages.success(request, "¡Producto actualizado exitosamente!")
             return redirect("effiadmi:lista_productos")
 
-        return render(request, "productos/editar.html", {"producto": producto, "sucursales": sucursales})
+        return render(request, "productos/editar.html", _ctx)
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_productos")
@@ -420,13 +477,115 @@ def eliminar_producto(request, id):
     try:
         producto = get_object_or_404(Product, pk=id)
         if request.method == "POST":
-            producto.activo = False
-            producto.save()
-            messages.success(request, "Producto desactivado exitosamente.")
+            tiene_historial = (
+                Inventory.objects.filter(product=producto, cantidad_disponible__gt=0).exists()
+                or PedidoDetalle.objects.filter(producto=producto).exists()
+                or FacturaDetalle.objects.filter(producto=producto).exists()
+                or ProveedorProducto.objects.filter(producto=producto).exists()
+            )
+            if tiene_historial:
+                producto.activo = False
+                producto.save()
+                messages.warning(
+                    request,
+                    "El producto tiene registros asociados (inventario, pedidos, facturas o proveedores), "
+                    "por lo que no se elimino. Quedo desactivado."
+                )
+            else:
+                producto.delete()
+                messages.success(request, "Producto eliminado exitosamente.")
         return redirect("effiadmi:lista_productos")
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_productos")
+
+
+# ==================== CATEGORIAS ====================
+
+@autorizacion(roles=['admin'])
+def lista_categorias(request):
+    try:
+        categorias_registradas = Categoria.objects.annotate(
+            total_productos=Count("productos")
+        ).order_by("nombre")
+        return render(request, "categorias/lista.html", {"categorias": categorias_registradas})
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:inicio")
+
+
+@autorizacion(roles=['admin'])
+def crear_categoria(request):
+    if request.method == "POST":
+        try:
+            nombre = request.POST.get("nombre", "").strip().upper()
+            if not nombre:
+                messages.error(request, "Por favor escribe el nombre de la categoria.")
+                return render(request, "categorias/crear.html")
+
+            if Categoria.objects.filter(nombre__iexact=nombre).exists():
+                messages.error(request, "El nombre de la categoria ya existe.")
+                return render(request, "categorias/crear.html")
+
+            Categoria.objects.create(nombre=nombre)
+            messages.success(request, "¡Categoria creada exitosamente!")
+            return redirect("effiadmi:lista_categorias")
+        except IntegrityError:
+            messages.error(request, "El nombre de la categoria ya existe.")
+            return render(request, "categorias/crear.html")
+        except Exception as e:
+            messages.error(request, f"Error: {e}")
+            return render(request, "categorias/crear.html")
+
+    return render(request, "categorias/crear.html")
+
+
+@autorizacion(roles=['admin'])
+def editar_categoria(request, id):
+    try:
+        categoria = get_object_or_404(Categoria, pk=id)
+
+        if request.method == "POST":
+            nombre = request.POST.get("nombre", "").strip().upper()
+            if not nombre:
+                messages.error(request, "El nombre no puede estar vacio.")
+                return render(request, "categorias/editar.html", {"categoria": categoria})
+
+            existe = Categoria.objects.filter(nombre__iexact=nombre).exclude(pk=categoria.pk).exists()
+            if existe:
+                messages.error(request, "El nombre de la categoria ya existe.")
+                return render(request, "categorias/editar.html", {"categoria": categoria})
+
+            categoria.nombre = nombre
+            categoria.save()
+            messages.success(request, "¡Categoria actualizada exitosamente!")
+            return redirect("effiadmi:lista_categorias")
+
+        return render(request, "categorias/editar.html", {"categoria": categoria})
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:lista_categorias")
+
+
+@autorizacion(roles=['admin'])
+def eliminar_categoria(request, id):
+    try:
+        categoria = get_object_or_404(Categoria, pk=id)
+        if request.method == "POST":
+            tiene_productos = Product.objects.filter(categoria=categoria).exists()
+            if tiene_productos:
+                messages.error(
+                    request,
+                    "No se puede eliminar: hay productos asignados a esta categoria. "
+                    "Reasigna los productos a otra categoria primero."
+                )
+                return redirect("effiadmi:lista_categorias")
+            categoria.delete()
+            messages.success(request, "Categoria eliminada exitosamente.")
+        return redirect("effiadmi:lista_categorias")
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:lista_categorias")
 
 
 # ==================== INVENTARIO ====================
@@ -442,17 +601,17 @@ def lista_inventario(request):
         if sucursal_id:
             inventario = inventario.filter(branch_id=sucursal_id)
         if categoria:
-            inventario = inventario.filter(product__categoria=categoria)
+            inventario = inventario.filter(product__categoria_id=categoria)
 
-        inventario = inventario.order_by("product__categoria", "product__nombre")
+        inventario = inventario.order_by("product__categoria__nombre", "product__nombre")
 
         sucursales = Branch.objects.all()
-        categorias = Product.objects.values_list("categoria", flat=True).distinct().exclude(categoria="")
+        categorias = Categoria.objects.filter(activa=True).order_by("nombre")
 
         contexto = {
             "inventario": inventario,
             "sucursales": sucursales,
-            "categorias": list(categorias),
+            "categorias": categorias,
             "sucursal_seleccionada": sucursal_id,
             "categoria_seleccionada": categoria,
         }
@@ -879,80 +1038,6 @@ def lista_facturas(request):
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
-
-
-@autorizacion(roles=['admin', 'operador'])
-def crear_factura(request):
-    try:
-        clientes_activos = Cliente.objects.filter(activo=True).order_by("nombre")
-        productos_activos = list(Product.objects.filter(activo=True).order_by("nombre").values("id", "nombre", "precio_venta"))
-
-        if request.method == "POST":
-            cliente_id = request.POST.get("cliente")
-            productos_ids = request.POST.getlist("producto")
-            cantidades = request.POST.getlist("cantidad")
-
-            if not cliente_id:
-                messages.error(request, "Debes seleccionar un cliente.")
-                return render(request, "facturas/crear.html", {
-                    "clientes": clientes_activos, "productos": productos_activos
-                })
-
-            cliente = get_object_or_404(Cliente, pk=cliente_id, activo=True)
-
-            if not productos_ids or not any(productos_ids):
-                messages.error(request, "Debes agregar al menos un producto.")
-                return render(request, "facturas/crear.html", {
-                    "clientes": clientes_activos, "productos": productos_activos
-                })
-
-            usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
-
-            with transaction.atomic():
-                factura = Factura.objects.create(
-                    cliente=cliente,
-                    usuario=usuario,
-                    total=0,
-                    estado="emitida",
-                )
-
-                total = Decimal("0")
-                for i in range(len(productos_ids)):
-                    if not productos_ids[i]:
-                        continue
-                    producto = Product.objects.get(pk=productos_ids[i], activo=True)
-                    try:
-                        cantidad = int(cantidades[i])
-                    except (TypeError, ValueError, IndexError):
-                        cantidad = 0
-
-                    if cantidad <= 0:
-                        continue
-
-                    precio = producto.precio_venta
-                    subtotal = cantidad * precio
-
-                    FacturaDetalle.objects.create(
-                        factura=factura,
-                        producto=producto,
-                        cantidad=cantidad,
-                        precio_unitario=precio,
-                        subtotal=subtotal,
-                    )
-                    total += subtotal
-
-                factura.total = total
-                factura.save()
-
-            messages.success(request, "¡Factura creada exitosamente!")
-            return redirect("effiadmi:lista_facturas")
-
-        return render(request, "facturas/crear.html", {
-            "clientes": clientes_activos, "productos": productos_activos
-        })
-    except Exception as e:
-        messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas")
 
 
 @autorizacion(roles=['admin', 'operador'])
@@ -1399,3 +1484,39 @@ def detalle_reporte(request, id):
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:reportes")
+
+
+# ==================== BACKEND DE AUTENTICACION ====================
+
+
+class EmailOrUsernameBackend:
+    def authenticate(self, request, username=None, password=None, **kwargs):
+        UserModel = User
+        if username is None:
+            username = kwargs.get("username")
+        if username is None or password is None:
+            return None
+
+        from django.db.models import Q
+
+        try:
+            user = UserModel.objects.get(
+                Q(username__iexact=username) | Q(email__iexact=username)
+            )
+        except (UserModel.DoesNotExist, UserModel.MultipleObjectsReturned):
+            UserModel().set_password(password)
+            return None
+
+        if user.check_password(password) and self.user_can_authenticate(user):
+            return user
+        return None
+
+    def user_can_authenticate(self, user):
+        is_active = getattr(user, "is_active", None)
+        return is_active or is_active is None
+
+    def get_user(self, user_id):
+        try:
+            return User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return None

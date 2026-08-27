@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Editar Categoria{% endblock %}
+
+{% block contenido %}
+<div class="container" style="max-width: 520px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <h1>Editar Categoria</h1>
+        <a href="{% url 'effiadmi:lista_categorias' %}" class="btn btn-outline">Volver</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="nombre" class="form-label">Nombre de la categoria</label>
+                    <input type="text" id="nombre" name="nombre" class="form-control" value="{{ categoria.nombre }}" required>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+                    <a href="{% url 'effiadmi:lista_categorias' %}" class="btn btn-outline">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

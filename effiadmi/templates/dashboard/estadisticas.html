@@ -21,7 +21,7 @@
         <div class="kpi-icon-box geo-green"><span class="material-symbols-outlined">attach_money</span></div>
         <div class="kpi-core-data">
             <span class="kpi-tag">Valor del Inventario</span>
-            <h3 class="kpi-number">${{ valor_inventario|floatformat:0 }}</h3>
+            <h3 class="kpi-number">{{ valor_inventario|cop }}</h3>
         </div>
     </div>
 
@@ -146,7 +146,7 @@
                 <table style="width: 100%; font-size: 13px; color: #475569;">
                     <tr><td style="padding: 4px 0;">Productos registrados:</td><td style="text-align: right; font-weight: 600;">{{ total_productos }}</td></tr>
                     <tr><td style="padding: 4px 0;">Unidades totales:</td><td style="text-align: right; font-weight: 600;">{{ unidades_totales }}</td></tr>
-                    <tr><td style="padding: 4px 0;">Valor total inventario:</td><td style="text-align: right; font-weight: 600;">${{ valor_inventario|floatformat:0 }}</td></tr>
+                    <tr><td style="padding: 4px 0;">Valor total inventario:</td><td style="text-align: right; font-weight: 600;">{{ valor_inventario|cop }}</td></tr>
                     <tr><td style="padding: 4px 0;">Productos bajo stock:</td><td style="text-align: right; font-weight: 600; color: {% if productos_bajos %}#b45309{% else %}#10b981{% endif %};">{{ productos_bajos|length }}</td></tr>
                 </table>
             </div>

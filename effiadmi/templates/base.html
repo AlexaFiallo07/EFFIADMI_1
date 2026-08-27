@@ -161,6 +161,12 @@
                     <span class="material-symbols-outlined">category</span> Productos
                 </a>
 
+                {% if request.session.logueado.rol == 'admin' %}
+                <a href="{% url 'effiadmi:lista_categorias' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_categorias' %}active{% endif %}">
+                    <span class="material-symbols-outlined">sell</span> Categorias
+                </a>
+                {% endif %}
+
                 <a href="{% url 'effiadmi:lista_pedidos' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_pedidos' %}active{% endif %}">
                     <span class="material-symbols-outlined">shopping_cart</span> Pedidos
                 </a>

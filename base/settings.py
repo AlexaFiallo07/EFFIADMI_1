@@ -61,6 +61,9 @@ TEMPLATES = [
         'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
+            'builtins': [
+                'effiadmi.views',
+            ],
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
@@ -86,6 +89,10 @@ DATABASES = {
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
+
+AUTHENTICATION_BACKENDS = [
+    'effiadmi.views.EmailOrUsernameBackend',
+]
 
 AUTH_PASSWORD_VALIDATORS = [
     {
