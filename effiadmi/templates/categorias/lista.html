@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Categorias{% endblock %}
+
+{% block contenido %}
+<div class="container" style="max-width: 900px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <h1>Categorias</h1>
+        <a href="{% url 'effiadmi:crear_categoria' %}" class="btn btn-primary">+ Nueva Categoria</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Productos</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in categorias %}
+                        <tr>
+                            <td>{{ cat.nombre }}</td>
+                            <td>{{ cat.total_productos|default:0 }}</td>
+                            <td>
+                                {% if cat.activa %}
+                                    <span style="color: #10b981; font-weight: 600;">Activa</span>
+                                {% else %}
+                                    <span style="color: #ef4444; font-weight: 600;">Inactiva</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'effiadmi:editar_categoria' cat.id %}" class="btn btn-outline btn-sm">Editar</a>
+                                {% if cat.total_productos %}
+                                    <span class="btn btn-outline btn-sm" style="color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed;" title="No se puede eliminar porque tiene {{ cat.total_productos }} producto(s) asignado(s)">Eliminar</span>
+                                {% else %}
+                                    <a href="{% url 'effiadmi:eliminar_categoria' cat.id %}" class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); if (confirm('Esta seguro de eliminar la categoria \'{{ cat.nombre }}\'? Esta accion no se puede deshacer.')) { document.getElementById('formEliminar{{ cat.id }}').submit(); }">Eliminar</a>
+                                    <form id="formEliminar{{ cat.id }}" method="POST" action="{% url 'effiadmi:eliminar_categoria' cat.id %}" style="display: none;">{% csrf_token %}</form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: var(--spacing-xl);">
+                                No hay categorias registradas.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

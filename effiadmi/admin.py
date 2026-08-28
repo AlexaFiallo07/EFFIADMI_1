@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from .models import (
-    UserProfile, Branch, Product, Inventory, InventoryLog,
+    UserProfile, Branch, Product, Categoria, Inventory, InventoryLog,
     Cliente, Proveedor, ProveedorProducto,
     Factura, FacturaDetalle, Pedido, PedidoDetalle,
     Notificacion, ChatHistorial,
@@ -28,6 +28,13 @@ admin.site.register(User, CustomUserAdmin)
 class BranchAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'direccion', 'es_principal')
     list_filter = ('es_principal',)
+
+
+@admin.register(Categoria)
+class CategoriaAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'activa')
+    list_filter = ('activa',)
+    search_fields = ('nombre',)
 
 
 @admin.register(Product)

@@ -44,6 +44,23 @@ class Branch(models.Model):
 
 
 # ============================================================
+# Categorías de productos
+# ============================================================
+
+class Categoria(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+    activa = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Categoria"
+        verbose_name_plural = "Categorias"
+        ordering = ["nombre"]
+
+    def __str__(self):
+        return self.nombre
+
+
+# ============================================================
 # Productos (catálogo general)
 # ============================================================
 
@@ -51,7 +68,10 @@ class Product(models.Model):
     sku = models.CharField(max_length=50, unique=True, db_index=True)
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, default="")
-    categoria = models.CharField(max_length=100, blank=True, default="", db_index=True)
+    categoria = models.ForeignKey(
+        Categoria, on_delete=models.PROTECT,
+        null=True, blank=True, related_name="productos", db_index=True,
+    )
     precio_venta = models.DecimalField(max_digits=12, decimal_places=2)
     activo = models.BooleanField(default=True)
 
@@ -65,6 +85,8 @@ class Product(models.Model):
 
     def clean(self):
         errors = {}
+        if self.sku and not str(self.sku).isdigit():
+            errors["sku"] = "El ID del producto debe contener solo numeros."
         if self.precio_venta is not None and self.precio_venta <= 0:
             errors["precio_venta"] = "El precio de venta debe ser mayor a 0."
         if errors:

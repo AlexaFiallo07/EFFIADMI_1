@@ -14,7 +14,7 @@
         <div class="kpi-icon-box geo-green"><span class="material-symbols-outlined">attach_money</span></div>
         <div class="kpi-core-data">
             <span class="kpi-tag">Ventas Hoy</span>
-            <h3 class="kpi-number">${{ ventas_hoy|floatformat:0 }}</h3>
+            <h3 class="kpi-number">{{ ventas_hoy|cop }}</h3>
         </div>
     </div>
 
@@ -22,7 +22,7 @@
         <div class="kpi-icon-box geo-blue"><span class="material-symbols-outlined">stacked_line_chart</span></div>
         <div class="kpi-core-data">
             <span class="kpi-tag">Ventas del Mes</span>
-            <h3 class="kpi-number">${{ ventas_mes|floatformat:0 }}</h3>
+            <h3 class="kpi-number">{{ ventas_mes|cop }}</h3>
         </div>
     </div>
 
@@ -54,7 +54,7 @@
         <div class="kpi-icon-box geo-green"><span class="material-symbols-outlined">account_balance</span></div>
         <div class="kpi-core-data">
             <span class="kpi-tag">Valor del Inventario</span>
-            <h3 class="kpi-number">${{ valor_inventario|floatformat:0 }}</h3>
+            <h3 class="kpi-number">{{ valor_inventario|cop }}</h3>
         </div>
     </div>
 </div>

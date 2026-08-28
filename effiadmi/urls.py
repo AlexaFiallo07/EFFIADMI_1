@@ -22,6 +22,12 @@ urlpatterns = [
     path('productos/crear/', views.crear_producto, name='crear_producto'),
     path('productos/<int:id>/editar/', views.editar_producto, name='editar_producto'),
     path('productos/<int:id>/eliminar/', views.eliminar_producto, name='eliminar_producto'),
+
+    # ==================== CATEGORIAS ====================
+    path('categorias/', views.lista_categorias, name='lista_categorias'),
+    path('categorias/crear/', views.crear_categoria, name='crear_categoria'),
+    path('categorias/<int:id>/editar/', views.editar_categoria, name='editar_categoria'),
+    path('categorias/<int:id>/eliminar/', views.eliminar_categoria, name='eliminar_categoria'),
     
     # ==================== INVENTARIO ====================
     path('inventario/', views.lista_inventario, name='lista_inventario'),
@@ -30,7 +36,6 @@ urlpatterns = [
     
     # ==================== FACTURAS ====================
     path('facturas/', views.lista_facturas, name='lista_facturas'),
-    path('facturas/crear/', views.crear_factura, name='crear_factura'),
     path('facturas/<int:id>/', views.detalle_factura, name='detalle_factura'),
     path('facturas/<int:id>/editar/', views.editar_factura, name='editar_factura'),
     path('facturas/<int:id>/anular/', views.anular_factura, name='anular_factura'),

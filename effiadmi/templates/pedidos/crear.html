@@ -48,7 +48,7 @@
                 <div style="display: flex; justify-content: flex-end; margin-top: var(--spacing-lg); border-top: 1px solid #e2e8f0; padding-top: var(--spacing-lg);">
                     <div style="text-align: right;">
                         <span style="font-size: 14px; color: #64748b;">Total:</span>
-                        <h2 id="totalPedido" style="margin: 0; font-size: 24px; font-weight: 600; color: #0f172a;">$0</h2>
+                        <h2 id="totalPedido" style="margin: 0; font-size: 24px; font-weight: 600; color: #0f172a;">$ 0</h2>
                     </div>
                 </div>
             </div>
@@ -67,6 +67,10 @@
     const productos = JSON.parse(document.getElementById("productos-data").textContent);
     let contador = 0;
 
+    function formatoCOP(num) {
+        return "$ " + Math.round(num).toLocaleString("es-CO");
+    }
+
     function agregarProducto() {
         contador++;
         const tbody = document.getElementById("cuerpoProductos");
@@ -75,14 +79,14 @@
 
         let opciones = '<option value="">Selecciona...</option>';
         for (const p of productos) {
-            opciones += '<option value="' + p.id + '" data-precio="' + p.precio_venta + '">' + p.nombre + ' - $' + p.precio_venta + '</option>';
+            opciones += '<option value="' + p.id + '" data-precio="' + p.precio_venta + '">' + p.nombre + ' - ' + formatoCOP(p.precio_venta) + '</option>';
         }
 
         fila.innerHTML = 
             '<td><select name="producto" class="form-control" required onchange="actualizarPrecio(this)">' + opciones + '</select></td>' +
             '<td><input type="number" name="cantidad" class="form-control" min="1" value="1" required onchange="calcularSubtotal(this)" oninput="calcularSubtotal(this)"></td>' +
-            '<td><span class="precio-unitario">$0</span><input type="hidden" name="precio_unitario"></td>' +
-            '<td><span class="subtotal-fila">$0</span></td>' +
+            '<td><span class="precio-unitario">$ 0</span><input type="hidden" name="precio_unitario"></td>' +
+            '<td><span class="subtotal-fila">$ 0</span></td>' +
             '<td><button type="button" class="btn btn-ghost btn-sm" onclick="eliminarProducto(' + contador + ')" title="Eliminar">&times;</button></td>';
 
         tbody.appendChild(fila);
@@ -102,7 +106,7 @@
         const fila = select.closest("tr");
         const option = select.options[select.selectedIndex];
         const precio = option.getAttribute("data-precio") || 0;
-        fila.querySelector(".precio-unitario").textContent = "$" + parseFloat(precio).toFixed(0);
+        fila.querySelector(".precio-unitario").textContent = formatoCOP(precio);
         fila.querySelector('input[name="precio_unitario"]').value = precio;
         calcularSubtotal(select);
     }
@@ -112,16 +116,16 @@
         const precio = parseFloat(fila.querySelector('input[name="precio_unitario"]').value) || 0;
         const cantidad = parseInt(fila.querySelector('input[name="cantidad"]').value) || 0;
         const subtotal = precio * cantidad;
-        fila.querySelector(".subtotal-fila").textContent = "$" + subtotal.toFixed(0);
+        fila.querySelector(".subtotal-fila").textContent = formatoCOP(subtotal);
         calcularTotal();
     }
 
     function calcularTotal() {
         let total = 0;
         document.querySelectorAll(".subtotal-fila").forEach(function(el) {
-            total += parseFloat(el.textContent.replace("$", "")) || 0;
+            total += parseFloat(el.textContent.replace(/[^0-9.-]/g, "")) || 0;
         });
-        document.getElementById("totalPedido").textContent = "$" + total.toFixed(0);
+        document.getElementById("totalPedido").textContent = formatoCOP(total);
     }
 </script>
 {% endblock %}

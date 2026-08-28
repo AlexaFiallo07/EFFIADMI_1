@@ -15,7 +15,8 @@
             <div class="card-body">
                 <div class="form-group">
                     <label for="sku" class="form-label">ID</label>
-                    <input type="text" id="sku" name="sku" class="form-control" value="{{ producto.sku }}" required>
+                    <input type="text" id="sku" name="sku" class="form-control" value="{{ producto.sku }}" readonly>
+                    <small class="form-text text-muted" style="color:#64748b; font-size:12px;">El ID es asignado automaticamente y no se puede editar.</small>
                 </div>
                 <div class="form-group">
                     <label for="nombre" class="form-label">Nombre</label>
@@ -27,18 +28,25 @@
                 </div>
                 <div class="form-group">
                     <label for="categoria" class="form-label">Categoria</label>
-                    <input type="text" id="categoria" name="categoria" class="form-control" value="{{ producto.categoria }}">
+                    <select id="categoria" name="categoria" class="form-control">
+                        <option value="">-- Sin categoria --</option>
+                        {% for cat in categorias %}
+                            <option value="{{ cat.id }}" {% if producto.categoria_id == cat.id %}selected{% endif %}>
+                                {{ cat.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="form-group">
-                    <label for="precio_venta" class="form-label">Precio Venta</label>
-                    <input type="number" id="precio_venta" name="precio_venta" class="form-control" step="0.01" min="0.01" value="{{ producto.precio_venta }}" required>
+                    <label for="precio_venta" class="form-label">Precio Venta (COP)</label>
+                    <input type="number" id="precio_venta" name="precio_venta" class="form-control" step="1" min="1" value="{{ producto.precio_venta|floatformat:0 }}" required>
                 </div>
             </div>
             <div class="card-footer" style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     {% if producto.activo %}
-                        <a href="{% url 'effiadmi:eliminar_producto' producto.id %}" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); document.getElementById('formDesactivar').submit();">Desactivar</a>
-                        <form id="formDesactivar" method="POST" action="{% url 'effiadmi:eliminar_producto' producto.id %}" style="display: none;">{% csrf_token %}</form>
+                        <a href="{% url 'effiadmi:eliminar_producto' producto.id %}" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); if (confirm('Esta seguro de eliminar el producto \'{{ producto.nombre }}\'? Si tiene historial asociado se desactivara.')) { document.getElementById('formEliminar').submit(); }">Eliminar</a>
+                        <form id="formEliminar" method="POST" action="{% url 'effiadmi:eliminar_producto' producto.id %}" style="display: none;">{% csrf_token %}</form>
                     {% else %}
                         <a href="{% url 'effiadmi:eliminar_producto' producto.id %}" class="btn btn-outline" style="color: #10b981; border-color: #10b981;" onclick="event.preventDefault(); document.getElementById('formActivar').submit();">Activar</a>
                         <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_producto' producto.id %}" style="display: none;">{% csrf_token %}</form>

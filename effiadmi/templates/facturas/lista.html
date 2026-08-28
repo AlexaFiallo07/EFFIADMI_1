@@ -6,7 +6,6 @@
 <div class="container" style="max-width: 1200px; margin: 0 auto;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
         <h1>Gestion de Facturas</h1>
-        <a href="{% url 'effiadmi:crear_factura' %}" class="btn btn-primary">+ Nueva Factura</a>
     </div>
 
     <div class="card" style="margin-bottom: var(--spacing-lg);">
@@ -44,7 +43,7 @@
                         <td>{{ factura.cliente.nombre }}</td>
                         <td>{% if factura.pedido %}PED-{{ factura.pedido.id }}{% else %}-{% endif %}</td>
                         <td>{{ factura.fecha_emision|date:"Y-m-d H:i" }}</td>
-                        <td>${{ factura.total }}</td>
+                        <td>{{ factura.total|cop }}</td>
                         <td>
                             {% if factura.estado == "emitida" %}
                                 <span style="color: #10b981; font-weight: 600;">Emitida</span>

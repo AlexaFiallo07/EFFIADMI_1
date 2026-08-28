@@ -50,15 +50,15 @@
                             <tr>
                                 <td>{{ det.producto.nombre }}</td>
                                 <td>{{ det.cantidad }}</td>
-                                <td>${{ det.precio_unitario }}</td>
-                                <td>${{ det.subtotal }}</td>
+                                <td>{{ det.precio_unitario|cop }}</td>
+                                <td>{{ det.subtotal|cop }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
                 <div style="text-align: right; border-top: 1px solid #e2e8f0; padding-top: 12px;">
                     <span style="font-size: 14px; color: #64748b;">Total:</span>
-                    <strong style="font-size: 20px; margin-left: 8px;">${{ pedido.total }}</strong>
+                    <strong style="font-size: 20px; margin-left: 8px;">{{ pedido.total|cop }}</strong>
                 </div>
             </div>
 

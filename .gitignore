@@ -29,3 +29,4 @@ config.local.json
 # Sistemas operativos
 Thumbs.db
 .DS_Store
+db.sqlite3

@@ -27,7 +27,7 @@
                         <td>PED-{{ pedido.id }}</td>
                         <td>{{ pedido.cliente.nombre }}</td>
                         <td>{{ pedido.fecha_pedido|date:"Y-m-d H:i" }}</td>
-                        <td>${{ pedido.total }}</td>
+                        <td>{{ pedido.total|cop }}</td>
                         <td>
                             {% if pedido.estado == "pendiente" %}
                                 <span style="color: #eab308; font-weight: 600;">Pendiente</span>
