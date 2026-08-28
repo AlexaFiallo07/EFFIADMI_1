@@ -354,6 +354,10 @@ def crear_producto(request):
                 messages.error(request, "El precio debe ser un valor entero en pesos colombianos, sin decimales.")
                 return render(request, "productos/crear.html", _ctx)
 
+            if precio_venta < 1000 or precio_venta > 100000000:
+                messages.error(request, "El precio de venta debe estar entre $1.000 y $100.000.000 (pesos colombianos).")
+                return render(request, "productos/crear.html", _ctx)
+
             precio_venta = int(precio_venta)
 
             try:
@@ -456,6 +460,10 @@ def editar_producto(request, id):
 
             if precio_venta != precio_venta.to_integral_value():
                 messages.error(request, "El precio debe ser un valor entero en pesos colombianos, sin decimales.")
+                return render(request, "productos/editar.html", _ctx)
+
+            if precio_venta < 1000 or precio_venta > 100000000:
+                messages.error(request, "El precio de venta debe estar entre $1.000 y $100.000.000 (pesos colombianos).")
                 return render(request, "productos/editar.html", _ctx)
 
             precio_venta = int(precio_venta)

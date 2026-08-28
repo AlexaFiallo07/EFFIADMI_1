@@ -39,7 +39,7 @@
                 </div>
                 <div class="form-group">
                     <label for="precio_venta" class="form-label">Precio Venta (COP)</label>
-                    <input type="number" id="precio_venta" name="precio_venta" class="form-control" step="1" min="1" value="{{ producto.precio_venta|floatformat:0 }}" required>
+                    <input type="number" id="precio_venta" name="precio_venta" class="form-control" step="1" min="1000" max="100000000" value="{{ producto.precio_venta|floatformat:0 }}" required>
                 </div>
             </div>
             <div class="card-footer" style="display: flex; justify-content: space-between; align-items: center;">
