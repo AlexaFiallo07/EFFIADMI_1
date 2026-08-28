@@ -350,6 +350,12 @@ def crear_producto(request):
                 messages.error(request, "El precio de venta debe ser mayor a 0.")
                 return render(request, "productos/crear.html", _ctx)
 
+            if precio_venta != precio_venta.to_integral_value():
+                messages.error(request, "El precio debe ser un valor entero en pesos colombianos, sin decimales.")
+                return render(request, "productos/crear.html", _ctx)
+
+            precio_venta = int(precio_venta)
+
             try:
                 stock_inicial = int(stock_inicial_str)
             except (TypeError, ValueError):
@@ -447,6 +453,12 @@ def editar_producto(request, id):
             if precio_venta <= 0:
                 messages.error(request, "El precio de venta debe ser mayor a 0.")
                 return render(request, "productos/editar.html", _ctx)
+
+            if precio_venta != precio_venta.to_integral_value():
+                messages.error(request, "El precio debe ser un valor entero en pesos colombianos, sin decimales.")
+                return render(request, "productos/editar.html", _ctx)
+
+            precio_venta = int(precio_venta)
 
             categoria_id = request.POST.get("categoria", "")
             if categoria_id:
