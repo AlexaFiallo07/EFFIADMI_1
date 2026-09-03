@@ -167,45 +167,60 @@
 
 {% block js %}
 <script>
-    {% if productos_vendidos %}
-    const ctxProd = document.getElementById('canvasProductosMasVendidos').getContext('2d');
-    new Chart(ctxProd, {
-        type: 'bar',
-        data: {
-            labels: [{% for p in productos_vendidos %}"{{ p.nombre|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],
-            datasets: [{
-                data: [{% for p in productos_vendidos %}{{ p.total_vendido }}{% if not forloop.last %},{% endif %}{% endfor %}],
-                backgroundColor: '#3b82f6',
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { grid: { color: '#f1f5f9' }, beginAtZero: true }, x: { grid: { display: false } } }
-        }
-    });
-    {% endif %}
+    document.addEventListener('DOMContentLoaded', function () {
+        const productosChartElement = document.getElementById('canvasProductosMasVendidos');
+        if (productosChartElement) {
+            const productosVendidos = JSON.parse('{{ productos_vendidos|escapejs|default:"[]" }}');
 
-    {% if categorias_data %}
-    const ctxCat = document.getElementById('canvasCategoriasRentables').getContext('2d');
-    new Chart(ctxCat, {
-        type: 'pie',
-        data: {
-            labels: [{% for c in categorias_labels %}"{{ c|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],
-            datasets: [{
-                data: [{% for d in categorias_data %}{{ d }}{% if not forloop.last %},{% endif %}{% endfor %}],
-                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
-                borderWidth: 2,
-                borderColor: '#ffffff'
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } }
+            if (productosVendidos && productosVendidos.length) {
+                new Chart(productosChartElement.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: productosVendidos.map(function (producto) {
+                            return producto.nombre;
+                        }),
+                        datasets: [{
+                            data: productosVendidos.map(function (producto) {
+                                return producto.total_vendido;
+                            }),
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { grid: { color: '#f1f5f9' }, beginAtZero: true }, x: { grid: { display: false } } }
+                    }
+                });
+            }
+        }
+
+        const categoriasChartElement = document.getElementById('canvasCategoriasRentables');
+        if (categoriasChartElement) {
+            const categoriasLabels = JSON.parse('{{ categorias_labels|escapejs|default:"[]" }}');
+            const categoriasData = JSON.parse('{{ categorias_data|escapejs|default:"[]" }}');
+
+            if (categoriasLabels && categoriasLabels.length && categoriasData && categoriasData.length) {
+                new Chart(categoriasChartElement.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: categoriasLabels,
+                        datasets: [{
+                            data: categoriasData,
+                            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } }
+                    }
+                });
+            }
         }
     });
-    {% endif %}
 </script>
 {% endblock %}
