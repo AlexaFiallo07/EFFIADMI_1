@@ -37,7 +37,7 @@ from .models import (
     Notificacion, ChatHistorial, Reporte,
 )
 from .servicio_ia import consultar_asistente_effiadmi
-from .utilidades import autorizacion
+from .utilidades import autorizacion, crear_notificacion, ids_admins
 
 
 # ==================== LOGIN/LOGOUT ====================
@@ -717,6 +717,7 @@ def registrar_movimiento(request, id):
                 )
 
             if inventario.cantidad_disponible <= inventario.stock_minimo:
+                _notificar_stock_bajo(inventario)
                 messages.warning(
                     request,
                     f"¡Alerta! Stock bajo para '{inventario.product.nombre}' "
@@ -811,6 +812,13 @@ def crear_pedido(request):
                 pedido.total = total
                 pedido.save()
 
+            nombre_usuario = f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username
+            crear_notificacion(
+                ids_admins(),
+                f"Nuevo pedido #{pedido.id} de {cliente.nombre} (creado por {nombre_usuario}).",
+                enlace=f"pedidos/{pedido.id}/",
+            )
+
             messages.success(request, "¡Pedido creado exitosamente!")
             return redirect("effiadmi:lista_pedidos")
 
@@ -899,10 +907,17 @@ def confirmar_pedido(request, id):
                     motivo=f"Salida por confirmacion de Pedido #{pedido.id}",
                     usuario=usuario,
                 )
+                if inv.cantidad_disponible <= inv.stock_minimo:
+                    _notificar_stock_bajo(inv)
 
             pedido.estado = "confirmado"
             pedido.save()
 
+        crear_notificacion(
+            ids_admins(),
+            f"Pedido #{pedido.id} confirmado. Stock descontado.",
+            enlace=f"pedidos/{pedido.id}/",
+        )
         messages.success(
             request,
             f"Pedido #{pedido.id} confirmado. Stock descontado."
@@ -957,6 +972,11 @@ def cancelar_pedido(request, id):
                         usuario=usuario,
                     )
 
+        crear_notificacion(
+            ids_admins(),
+            f"Pedido #{pedido.id} cancelado. Stock devuelto al inventario.",
+            enlace=f"pedidos/{pedido.id}/",
+        )
         messages.success(request, f"Pedido #{pedido.id} cancelado.")
         return redirect("effiadmi:detalle_pedido", id=pedido.id)
 
@@ -1027,6 +1047,11 @@ def pagar_pedido(request, id):
             pedido.estado = "pagado"
             pedido.save()
 
+        crear_notificacion(
+            ids_admins(),
+            f"Pedido #{pedido.id} pagado. Factura #{factura.id} generada.",
+            enlace=f"facturas/{factura.id}/",
+        )
         messages.success(
             request,
             f"Pedido #{pedido.id} marcado como pagado. Factura #{factura.id} generada."
@@ -1091,6 +1116,11 @@ def anular_factura(request, id):
             factura.estado = "anulada"
             factura.save()
 
+        crear_notificacion(
+            ids_admins(),
+            f"Factura #{factura.id} anulada (cliente: {factura.cliente.nombre}).",
+            enlace=f"facturas/{factura.id}/",
+        )
         messages.success(request, f"Factura #{factura.id} anulada.")
         return redirect("effiadmi:detalle_factura", id=factura.id)
 
@@ -1308,6 +1338,25 @@ def eliminar_proveedor(request, id):
 
 # ==================== NOTIFICACIONES ====================
 
+def _notificar_stock_bajo(inventario):
+    mensaje = (
+        f"ALERTA: Stock bajo para '{inventario.product.nombre}' "
+        f"({inventario.cantidad_disponible}/{inventario.stock_minimo})."
+    )
+    ya_notificado = Notificacion.objects.filter(
+        usuario_id__in=ids_admins(),
+        mensaje=mensaje,
+        leido=False,
+    ).exists()
+    if ya_notificado:
+        return
+    crear_notificacion(
+        ids_admins(),
+        mensaje,
+        enlace=f"inventario/{inventario.id}/",
+    )
+
+
 @autorizacion(roles=['admin', 'operador'])
 def lista_notificaciones(request):
     try:
@@ -1347,6 +1396,17 @@ def eliminar_notificacion(request, id):
         return redirect("effiadmi:lista_notificaciones")
 
 
+@autorizacion(roles=['admin', 'operador'])
+def marcar_todas_leidas(request):
+    try:
+        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+        Notificacion.objects.filter(usuario=usuario, leido=False).update(leido=True)
+        messages.success(request, "Todas las notificaciones marcadas como leidas.")
+        return redirect("effiadmi:lista_notificaciones")
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:lista_notificaciones")
+
 
 # ==================== ESTADISTICAS IA ====================
 
@@ -1354,6 +1414,7 @@ def eliminar_notificacion(request, id):
 def estadisticas_ia(request):
     try:
         usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+        es_admin = request.session["logueado"]["rol"] == "admin"
 
         total_productos = Product.objects.filter(activo=True).count()
         total_proveedores = Proveedor.objects.filter(activo=True).count()
@@ -1364,6 +1425,14 @@ def estadisticas_ia(request):
         unidades_totales = inventario.aggregate(total=Sum("cantidad_disponible"))["total"] or 0
         valor_inventario = 0
         productos_bajos = []
+
+        precios_compra = {
+            pp.producto_id: float(pp.precio_compra)
+            for pp in ProveedorProducto.objects.select_related("producto")
+        }
+        proveedor_de = {}
+        for pp in ProveedorProducto.objects.select_related("proveedor"):
+            proveedor_de.setdefault(pp.producto_id, pp.proveedor.nombre)
 
         for inv in inventario.select_related("product"):
             valor_inventario += float(inv.product.precio_venta) * inv.cantidad_disponible
@@ -1396,13 +1465,59 @@ def estadisticas_ia(request):
             "producto_mas_vendido": producto_mas_vendido,
             "entradas": InventoryLog.objects.filter(tipo_movimiento="ENTRADA").count(),
             "salidas": InventoryLog.objects.filter(tipo_movimiento="SALIDA").count(),
-            "historial": ChatHistorial.objects.filter(usuario=usuario).order_by("-fecha")[:20],
+            "es_admin": es_admin,
+        }
+
+        # Historial: admin ve todos (o filtra por usuario), operador ve solo el suyo
+        usuarios_disponibles = []
+        query_historial = ChatHistorial.objects.select_related("usuario")
+        if es_admin:
+            usuarios_disponibles = User.objects.filter(
+                id__in=ChatHistorial.objects.values("usuario_id").distinct()
+            ).order_by("username")
+            filtro_usuario = request.GET.get("usuario", "")
+            if filtro_usuario:
+                query_historial = query_historial.filter(usuario_id=filtro_usuario)
+        else:
+            query_historial = query_historial.filter(usuario=usuario)
+        contexto["historial"] = query_historial.order_by("-fecha")[:30]
+        contexto["usuarios_disponibles"] = usuarios_disponibles
+
+        # Contexto de negocio para la IA
+        productos_str = []
+        for v in ventas_por_producto[:15]:
+            pid = v["producto__id"]
+            margen = ""
+            if pid in precios_compra:
+                pv = {p.id: float(p.precio_venta) for p in Product.objects.filter(pk=pid)}
+                if pid in pv:
+                    margen = f", margen={round(pv[pid] - precios_compra[pid], 2)}"
+            productos_str.append(
+                f"{v['producto__nombre']}: {v['total']} uds vendidas{margen}"
+            )
+        bajos_str = []
+        for inv in productos_bajos:
+            prov = proveedor_de.get(inv.product_id, "sin proveedor asignado")
+            bajos_str.append(
+                f"{inv.product.nombre}: stock {inv.cantidad_disponible}/{inv.stock_minimo}, proveedor={prov}"
+            )
+        contexto_negocio = {
+            "Productos activos": total_productos,
+            "Proveedores": total_proveedores,
+            "Clientes": total_clientes,
+            "Facturas emitidas": total_facturas,
+            "Valor del inventario": round(valor_inventario, 2),
+            "Unidades totales en inventario": unidades_totales,
+            "Ventas por producto": "; ".join(productos_str) if productos_str else "Sin ventas registradas",
+            "Productos bajo stock": "; ".join(bajos_str) if bajos_str else "Ninguno",
+            "Entradas de inventario": contexto["entradas"],
+            "Salidas de inventario": contexto["salidas"],
         }
 
         if request.method == "POST":
             pregunta = request.POST.get("pregunta", "").strip()
             if pregunta:
-                respuesta = consultar_asistente_effiadmi(pregunta)
+                respuesta = consultar_asistente_effiadmi(pregunta, contexto_negocio=contexto_negocio)
                 ChatHistorial.objects.create(
                     usuario=usuario,
                     mensaje=pregunta,
@@ -1451,11 +1566,17 @@ def reportes(request):
                 messages.error(request, "Debes completar el titulo y la descripcion.")
                 return redirect("effiadmi:reportes")
 
-            Reporte.objects.create(
+            reporte = Reporte.objects.create(
                 usuario=usuario,
                 tipo=tipo,
                 titulo=titulo,
                 descripcion=descripcion,
+            )
+            nombre_operador = f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username
+            crear_notificacion(
+                ids_admins(),
+                f"Nuevo reporte de {nombre_operador}: {titulo}.",
+                enlace=f"reportes/{reporte.id}/",
             )
             messages.success(request, "Reporte enviado exitosamente.")
             return redirect("effiadmi:reportes")
@@ -1490,6 +1611,15 @@ def detalle_reporte(request, id):
             reporte.estado = nuevo_estado
             reporte.fecha_respuesta = timezone.now()
             reporte.save()
+            try:
+                nombre_admin = f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username
+            except Exception:
+                nombre_admin = "Administrador"
+            crear_notificacion(
+                [reporte.usuario_id],
+                f"Tu reporte '{reporte.titulo}' fue respondido por {nombre_admin}.",
+                enlace=f"reportes/{reporte.id}/",
+            )
             messages.success(request, "Reporte actualizado exitosamente.")
             return redirect("effiadmi:detalle_reporte", id=reporte.id)
 

@@ -6,6 +6,10 @@
 <div class="container" style="max-width: 1200px; margin: 0 auto;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
         <h1>Listado de Notificaciones</h1>
+        <form method="POST" action="{% url 'effiadmi:marcar_todas_leidas' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline">Marcar todas como leídas</button>
+        </form>
     </div>
 
     <div class="card">
@@ -32,6 +36,9 @@
                                 {% endif %}
                             </td>
                             <td>
+                                {% if notif.enlace %}
+                                <a href="/{{ notif.enlace }}" class="btn btn-outline btn-sm">Ir</a>
+                                {% endif %}
                                 <a href="{% url 'effiadmi:detalle_notificacion' notif.id %}" class="btn btn-outline btn-sm">Ver</a>
                                 <form method="POST" action="{% url 'effiadmi:eliminar_notificacion' notif.id %}" style="display: inline;">
                                     {% csrf_token %}

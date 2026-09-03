@@ -96,6 +96,21 @@
             font-size: 22px;
         }
 
+        .badge-notif {
+            margin-left: auto;
+            background-color: #ef4444;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .sidebar-footer {
             padding: 16px 12px;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -183,13 +198,15 @@
                 <a href="{% url 'effiadmi:estadisticas_ia' %}" class="menu-link {% if request.resolver_match.url_name == 'estadisticas_ia' %}active{% endif %}">
                     <span class="material-symbols-outlined">psychology</span> Estadisticas IA
                 </a>
-                {% else %}
+                {% endif %}
                 <a href="{% url 'effiadmi:reportes' %}" class="menu-link {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
                     <span class="material-symbols-outlined">feedback</span> Reportes
                 </a>
-                {% endif %}
                 <a href="{% url 'effiadmi:lista_notificaciones' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_notificaciones' %}active{% endif %}">
                     <span class="material-symbols-outlined">notifications</span> Notificaciones
+                    {% if no_leidas_notificaciones %}
+                    <span class="badge-notif">{{ no_leidas_notificaciones }}</span>
+                    {% endif %}
                 </a>
             {% else %}
                 <a href="{% url 'effiadmi:login' %}" class="menu-link active">

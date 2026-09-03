@@ -67,15 +67,25 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div>
                     <h4 style="font-size: 14px; color: #64748b; margin: 0 0 12px 0;">Historial</h4>
+                    {% if es_admin and usuarios_disponibles %}
+                    <form method="GET" style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
+                        <select name="usuario" class="form-control" onchange="this.form.submit()" style="width: auto;">
+                            <option value="">Todos los usuarios</option>
+                            {% for u in usuarios_disponibles %}
+                            <option value="{{ u.id }}" {% if request.GET.usuario == u.id|stringformat:"s" %}selected{% endif %}>{{ u.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    {% endif %}
                     <div style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
                         {% for h in historial %}
                             <div style="padding: 10px 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0;">
                                 <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">{{ h.fecha|date:"d/m/Y H:i" }}</div>
-                                <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 2px;">Tú: {{ h.mensaje }}</div>
+                                <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 2px;">{{ h.usuario.username }}: {{ h.mensaje }}</div>
                                 <div style="font-size: 13px; color: #334155;">IA: {{ h.respuesta }}</div>
                             </div>
                         {% empty %}
-                            <p style="color: #94a3b8; font-size: 13px; text-align: center; padding: 30px 0;">Aun no has hecho preguntas.</p>
+                            <p style="color: #94a3b8; font-size: 13px; text-align: center; padding: 30px 0;">Aun no hay consultas.</p>
                         {% endfor %}
                     </div>
                 </div>
@@ -83,7 +93,7 @@
                     <h4 style="font-size: 14px; color: #64748b; margin: 0 0 12px 0;">Nueva Pregunta</h4>
                     <form method="post" style="display: flex; flex-direction: column; gap: 12px;">
                         {% csrf_token %}
-                        <textarea name="pregunta" rows="4" placeholder="Ej: ¿qué productos necesito reponer? ¿cuánto vale mi inventario?" required
+                        <textarea name="pregunta" rows="4" placeholder="Ej: ¿qué productos necesito reponer? ¿es rentable el producto X? ¿puedes redactar un correo a mi proveedor de stock bajo? ¿qué estrategias de venta me recomiendas?" required
                             style="width: 100%; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; resize: vertical; font-family: inherit;">{{ pregunta }}</textarea>
                         <button type="submit" class="btn btn-primary" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px;">
                             <span class="material-symbols-outlined">auto_awesome</span> Consultar IA

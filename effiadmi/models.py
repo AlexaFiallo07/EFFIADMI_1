@@ -301,6 +301,7 @@ class FacturaDetalle(models.Model):
 class Notificacion(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notificaciones")
     mensaje = models.TextField()
+    enlace = models.CharField(max_length=200, blank=True, default="")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     leido = models.BooleanField(default=False)
 
