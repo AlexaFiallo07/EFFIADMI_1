@@ -39,13 +39,11 @@
             </div>
             <div class="card-footer" style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    {% if usuario.id != request.session.logueado %}
+                    {% if usuario.id != request.session.logueado.id %}
                         {% if usuario.is_active %}
                             <a href="{% url 'effiadmi:eliminar_usuario' usuario.id %}" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); document.getElementById('formDesactivar').submit();">Desactivar</a>
-                            <form id="formDesactivar" method="POST" action="{% url 'effiadmi:eliminar_usuario' usuario.id %}" style="display: none;">{% csrf_token %}</form>
                         {% else %}
                             <a href="{% url 'effiadmi:eliminar_usuario' usuario.id %}" class="btn btn-outline" style="color: #10b981; border-color: #10b981;" onclick="event.preventDefault(); document.getElementById('formActivar').submit();">Activar</a>
-                            <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_usuario' usuario.id %}" style="display: none;">{% csrf_token %}</form>
                         {% endif %}
                     {% endif %}
                 </div>
@@ -55,6 +53,14 @@
                 </div>
             </div>
         </form>
+
+        {% if usuario.id != request.session.logueado.id %}
+            {% if usuario.is_active %}
+                <form id="formDesactivar" method="POST" action="{% url 'effiadmi:eliminar_usuario' usuario.id %}" style="display: none;">{% csrf_token %}</form>
+            {% else %}
+                <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_usuario' usuario.id %}" style="display: none;">{% csrf_token %}</form>
+            {% endif %}
+        {% endif %}
     </div>
 </div>
 {% endblock %}

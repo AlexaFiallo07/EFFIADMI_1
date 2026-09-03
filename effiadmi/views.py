@@ -263,9 +263,14 @@ def eliminar_cliente(request, id):
     try:
         cliente = get_object_or_404(Cliente, pk=id)
         if request.method == "POST":
-            cliente.activo = False
-            cliente.save()
-            messages.success(request, "Cliente desactivado exitosamente.")
+            if cliente.activo:
+                cliente.activo = False
+                cliente.save()
+                messages.success(request, "Cliente desactivado exitosamente.")
+            else:
+                cliente.activo = True
+                cliente.save()
+                messages.success(request, "Cliente activado exitosamente.")
         return redirect("effiadmi:lista_clientes")
     except Exception as e:
         messages.error(request, f"Error: {e}")
@@ -497,6 +502,12 @@ def eliminar_producto(request, id):
     try:
         producto = get_object_or_404(Product, pk=id)
         if request.method == "POST":
+            if not producto.activo:
+                producto.activo = True
+                producto.save()
+                messages.success(request, "Producto activado exitosamente.")
+                return redirect("effiadmi:lista_productos")
+
             tiene_historial = (
                 Inventory.objects.filter(product=producto, cantidad_disponible__gt=0).exists()
                 or PedidoDetalle.objects.filter(producto=producto).exists()
@@ -1242,9 +1253,14 @@ def eliminar_usuario(request, id):
                 messages.warning(request, "No puedes desactivar tu propia cuenta.")
                 return redirect("effiadmi:lista_usuarios")
 
-            user.is_active = False
-            user.save()
-            messages.success(request, "¡Usuario desactivado exitosamente!")
+            if user.is_active:
+                user.is_active = False
+                user.save()
+                messages.success(request, "¡Usuario desactivado exitosamente!")
+            else:
+                user.is_active = True
+                user.save()
+                messages.success(request, "¡Usuario activado exitosamente!")
         return redirect("effiadmi:lista_usuarios")
     except Exception as e:
         messages.error(request, f"Error: {e}")
@@ -1327,9 +1343,14 @@ def eliminar_proveedor(request, id):
     try:
         proveedor = get_object_or_404(Proveedor, pk=id)
         if request.method == "POST":
-            proveedor.activo = False
-            proveedor.save()
-            messages.success(request, "Proveedor desactivado exitosamente.")
+            if proveedor.activo:
+                proveedor.activo = False
+                proveedor.save()
+                messages.success(request, "Proveedor desactivado exitosamente.")
+            else:
+                proveedor.activo = True
+                proveedor.save()
+                messages.success(request, "Proveedor activado exitosamente.")
         return redirect("effiadmi:lista_proveedores")
     except Exception as e:
         messages.error(request, f"Error: {e}")

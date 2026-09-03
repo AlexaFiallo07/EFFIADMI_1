@@ -35,10 +35,8 @@
                     {% if cliente %}
                         {% if cliente.activo %}
                             <a href="{% url 'effiadmi:eliminar_cliente' cliente.id %}" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); document.getElementById('formDesactivar').submit();">Desactivar</a>
-                            <form id="formDesactivar" method="POST" action="{% url 'effiadmi:eliminar_cliente' cliente.id %}" style="display: none;">{% csrf_token %}</form>
                         {% else %}
                             <a href="{% url 'effiadmi:eliminar_cliente' cliente.id %}" class="btn btn-outline" style="color: #10b981; border-color: #10b981;" onclick="event.preventDefault(); document.getElementById('formActivar').submit();">Activar</a>
-                            <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_cliente' cliente.id %}" style="display: none;">{% csrf_token %}</form>
                         {% endif %}
                     {% endif %}
                 </div>
@@ -48,6 +46,14 @@
                 </div>
             </div>
         </form>
+
+        {% if cliente %}
+            {% if cliente.activo %}
+                <form id="formDesactivar" method="POST" action="{% url 'effiadmi:eliminar_cliente' cliente.id %}" style="display: none;">{% csrf_token %}</form>
+            {% else %}
+                <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_cliente' cliente.id %}" style="display: none;">{% csrf_token %}</form>
+            {% endif %}
+        {% endif %}
     </div>
 </div>
 {% endblock %}

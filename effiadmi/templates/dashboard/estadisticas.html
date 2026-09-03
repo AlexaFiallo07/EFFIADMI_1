@@ -62,54 +62,75 @@
 
 <div class="bottom-layout" style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start;">
     <div class="ia-column" style="display: flex; flex-direction: column; gap: 24px;">
-        <div class="dashboard-panel-card">
-            <h3 class="panel-card-title">Asistente Inteligente</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div>
-                    <h4 style="font-size: 14px; color: #64748b; margin: 0 0 12px 0;">Historial</h4>
-                    {% if es_admin and usuarios_disponibles %}
-                    <form method="GET" style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
-                        <select name="usuario" class="form-control" onchange="this.form.submit()" style="width: auto;">
-                            <option value="">Todos los usuarios</option>
-                            {% for u in usuarios_disponibles %}
-                            <option value="{{ u.id }}" {% if request.GET.usuario == u.id|stringformat:"s" %}selected{% endif %}>{{ u.username }}</option>
-                            {% endfor %}
-                        </select>
-                    </form>
-                    {% endif %}
-                    <div style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
-                        {% for h in historial %}
-                            <div style="padding: 10px 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0;">
-                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">{{ h.fecha|date:"d/m/Y H:i" }}</div>
-                                <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 2px;">{{ h.usuario.username }}: {{ h.mensaje }}</div>
-                                <div style="font-size: 13px; color: #334155;">IA: {{ h.respuesta }}</div>
-                            </div>
-                        {% empty %}
-                            <p style="color: #94a3b8; font-size: 13px; text-align: center; padding: 30px 0;">Aun no hay consultas.</p>
+        <div class="dashboard-panel-card chat-card">
+            <div class="chat-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="material-symbols-outlined" style="color: #3b82f6;">smart_toy</span>
+                    <div>
+                        <div style="font-weight: 600; color: #1e293b;">Asistente IA</div>
+                        <div style="font-size: 12px; color: #10b981;">Analiza en tiempo real tu base de datos</div>
+                    </div>
+                </div>
+                {% if es_admin and usuarios_disponibles %}
+                <form method="GET" style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 12px; color: #64748b;">Ver:</span>
+                    <select name="usuario" class="form-control" onchange="this.form.submit()" style="width: auto; padding: 4px 8px; font-size: 13px;">
+                        <option value="">Todos los usuarios</option>
+                        {% for u in usuarios_disponibles %}
+                        <option value="{{ u.id }}" {% if request.GET.usuario == u.id|stringformat:"s" %}selected{% endif %}>{{ u.username }}</option>
                         {% endfor %}
-                    </div>
-                </div>
-                <div>
-                    <h4 style="font-size: 14px; color: #64748b; margin: 0 0 12px 0;">Nueva Pregunta</h4>
-                    <form method="post" style="display: flex; flex-direction: column; gap: 12px;">
-                        {% csrf_token %}
-                        <textarea name="pregunta" rows="4" placeholder="Ej: ¿qué productos necesito reponer? ¿es rentable el producto X? ¿puedes redactar un correo a mi proveedor de stock bajo? ¿qué estrategias de venta me recomiendas?" required
-                            style="width: 100%; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; resize: vertical; font-family: inherit;">{{ pregunta }}</textarea>
-                        <button type="submit" class="btn btn-primary" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 8px;">
-                            <span class="material-symbols-outlined">auto_awesome</span> Consultar IA
-                        </button>
-                    </form>
-
-                    {% if respuesta_ia %}
-                    <div style="margin-top: 16px; background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 14px;">
-                        <div style="font-size: 12px; color: #0369a1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
-                            <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: text-bottom;">smart_toy</span> Respuesta
-                        </div>
-                        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #1e293b; white-space: pre-wrap;">{{ respuesta_ia }}</p>
-                    </div>
-                    {% endif %}
-                </div>
+                    </select>
+                </form>
+                {% endif %}
             </div>
+
+            <div class="chat-messages" id="chatMessages">
+                {% for h in historial %}
+                    <div class="msg-row msg-user">
+                        <div class="msg-bubble user-bubble">
+                            <div class="msg-text">{{ h.mensaje }}</div>
+                            <div class="msg-meta">{{ h.fecha|date:"H:i" }}</div>
+                        </div>
+                    </div>
+                    <div class="msg-row msg-ia">
+                        <div class="msg-avatar">IA</div>
+                        <div class="msg-bubble ia-bubble">
+                            <div class="msg-text">{{ h.respuesta }}</div>
+                            <div class="msg-meta">{{ h.fecha|date:"H:i" }}</div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="chat-empty">
+                        <span class="material-symbols-outlined" style="font-size: 40px; color: #cbd5e1;">chat</span>
+                        <p>Haz tu primera pregunta sobre tu negocio.</p>
+                        <small>Ej: ¿qué productos necesito reponer? ¿es rentable el producto X? redacta un correo a mi proveedor de stock bajo</small>
+                    </div>
+                {% endfor %}
+
+                {% if respuesta_ia %}
+                    <div class="msg-row msg-user">
+                        <div class="msg-bubble user-bubble">
+                            <div class="msg-text">{{ pregunta }}</div>
+                            <div class="msg-meta">Ahora</div>
+                        </div>
+                    </div>
+                    <div class="msg-row msg-ia">
+                        <div class="msg-avatar">IA</div>
+                        <div class="msg-bubble ia-bubble">
+                            <div class="msg-text">{{ respuesta_ia }}</div>
+                            <div class="msg-meta">Ahora</div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <form method="post" class="chat-inputbar">
+                {% csrf_token %}
+                <textarea name="pregunta" rows="1" placeholder="Escribe tu pregunta..." required>{{ pregunta }}</textarea>
+                <button type="submit" class="chat-send" title="Enviar">
+                    <span class="material-symbols-outlined">send</span>
+                </button>
+            </form>
         </div>
 
         <div class="dashboard-panel-card">
@@ -243,6 +264,133 @@
     }
     .warn-alert { background-color: #fffbeb; color: #b45309; }
     .info-alert { background-color: #eff6ff; color: #1e40af; }
+
+    .chat-card {
+        display: flex;
+        flex-direction: column;
+        height: 600px;
+        padding: 0;
+        overflow: hidden;
+    }
+    .chat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 20px;
+        border-bottom: 1px solid #e2e8f0;
+        flex-shrink: 0;
+    }
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #f1f5f9;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .msg-row {
+        display: flex;
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    .msg-user { justify-content: flex-end; }
+    .msg-ia { justify-content: flex-start; }
+    .msg-bubble {
+        max-width: 75%;
+        padding: 10px 14px;
+        border-radius: 16px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        position: relative;
+    }
+    .user-bubble {
+        background-color: #3b82f6;
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+    .ia-bubble {
+        background-color: white;
+        color: #1e293b;
+        border: 1px solid #e2e8f0;
+        border-bottom-left-radius: 4px;
+    }
+    .msg-text {
+        font-size: 14px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .msg-meta {
+        font-size: 11px;
+        text-align: right;
+        margin-top: 4px;
+        opacity: 0.7;
+    }
+    .msg-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #3b82f6;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 8px;
+        flex-shrink: 0;
+    }
+    .msg-ia { align-items: flex-end; }
+    .chat-empty {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-align: center;
+        color: #64748b;
+        padding: 20px;
+    }
+    .chat-empty p { margin: 0; font-size: 15px; color: #334155; }
+    .chat-empty small { font-size: 13px; color: #94a3b8; max-width: 420px; line-height: 1.5; }
+    .chat-inputbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px;
+        border-top: 1px solid #e2e8f0;
+        background: white;
+        flex-shrink: 0;
+    }
+    .chat-inputbar textarea {
+        flex: 1;
+        resize: none;
+        padding: 12px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 22px;
+        font-size: 14px;
+        font-family: inherit;
+        outline: none;
+        max-height: 120px;
+    }
+    .chat-inputbar textarea:focus { border-color: #3b82f6; }
+    .chat-send {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: none;
+        background: #3b82f6;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .chat-send:hover { background: #2563eb; }
+    .chat-send .material-symbols-outlined { font-size: 22px; }
 </style>
 {% endblock %}
 
@@ -265,5 +413,20 @@
             plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } }
         }
     });
+
+    (function () {
+        const messages = document.getElementById('chatMessages');
+        if (messages) {
+            messages.scrollTop = messages.scrollHeight;
+        }
+        const area = document.querySelector('.chat-inputbar textarea');
+        if (area) {
+            const resize = function () {
+                area.style.height = 'auto';
+                area.style.height = Math.min(area.scrollHeight, 120) + 'px';
+            };
+            area.addEventListener('input', resize);
+        }
+    })();
 </script>
 {% endblock %}

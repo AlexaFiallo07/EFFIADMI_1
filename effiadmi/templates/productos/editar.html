@@ -46,10 +46,8 @@
                 <div>
                     {% if producto.activo %}
                         <a href="{% url 'effiadmi:eliminar_producto' producto.id %}" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); if (confirm('Esta seguro de eliminar el producto \'{{ producto.nombre }}\'? Si tiene historial asociado se desactivara.')) { document.getElementById('formEliminar').submit(); }">Eliminar</a>
-                        <form id="formEliminar" method="POST" action="{% url 'effiadmi:eliminar_producto' producto.id %}" style="display: none;">{% csrf_token %}</form>
                     {% else %}
                         <a href="{% url 'effiadmi:eliminar_producto' producto.id %}" class="btn btn-outline" style="color: #10b981; border-color: #10b981;" onclick="event.preventDefault(); document.getElementById('formActivar').submit();">Activar</a>
-                        <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_producto' producto.id %}" style="display: none;">{% csrf_token %}</form>
                     {% endif %}
                 </div>
                 <div style="display: flex; gap: var(--spacing-md);">
@@ -58,6 +56,12 @@
                 </div>
             </div>
         </form>
+
+        {% if producto.activo %}
+            <form id="formEliminar" method="POST" action="{% url 'effiadmi:eliminar_producto' producto.id %}" style="display: none;">{% csrf_token %}</form>
+        {% else %}
+            <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_producto' producto.id %}" style="display: none;">{% csrf_token %}</form>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

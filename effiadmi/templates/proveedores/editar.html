@@ -34,10 +34,8 @@
                 <div>
                     {% if proveedor.activo %}
                         <a href="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); document.getElementById('formDesactivar').submit();">Desactivar</a>
-                        <form id="formDesactivar" method="POST" action="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" style="display: none;">{% csrf_token %}</form>
                     {% else %}
                         <a href="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" class="btn btn-outline" style="color: #10b981; border-color: #10b981;" onclick="event.preventDefault(); document.getElementById('formActivar').submit();">Activar</a>
-                        <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" style="display: none;">{% csrf_token %}</form>
                     {% endif %}
                 </div>
                 <div style="display: flex; gap: var(--spacing-md);">
@@ -46,6 +44,12 @@
                 </div>
             </div>
         </form>
+
+        {% if proveedor.activo %}
+            <form id="formDesactivar" method="POST" action="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" style="display: none;">{% csrf_token %}</form>
+        {% else %}
+            <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" style="display: none;">{% csrf_token %}</form>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
