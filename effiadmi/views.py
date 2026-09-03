@@ -30,6 +30,18 @@ def cop(value):
 @register.filter(name="cop_decimal")
 def cop_decimal(value):
     return f"$ {_formato_colombiano(value, decimales=True)}"
+
+
+@register.filter(name="marklight")
+def marklight(value):
+    from django.utils.html import escape
+    from django.utils.safestring import mark_safe
+    import re
+
+    texto = escape(str(value) if value is not None else "")
+    texto = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", texto)
+    texto = re.sub(r"`(.+?)`", r"<code>\1</code>", texto)
+    return mark_safe(texto)
 from .models import (
     UserProfile, Branch, Product, Categoria, Inventory, InventoryLog,
     Cliente, Proveedor, ProveedorProducto,

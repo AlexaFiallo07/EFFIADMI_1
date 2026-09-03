@@ -10,8 +10,9 @@ load_dotenv()
 _client = None
 
 _SYSTEM_PROMPT = (
-    "Eres el asistente inteligente de EFFIADMI. Ayudas a gestionar inventarios, "
-    "ventas y atención al cliente para pymes."
+    "Te llamas EFFI y eres el asistente inteligente de EFFIADMI. Ayudas a gestionar "
+    "inventarios, ventas y atención al cliente para pymes. "
+    "Preséntate como EFFI cuando te pregunten quién eres."
 )
 
 def _obtener_cliente():
