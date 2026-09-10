@@ -204,7 +204,7 @@ class DashboardViewSet(viewsets.ViewSet):
         productos_bajo_stock = []
 
         for inv in inventario.select_related("product"):
-            valor_inventario += float(inv.product.precio_compra or 0) * inv.cantidad_disponible
+            valor_inventario += float(inv.product.precio_venta or 0) * inv.cantidad_disponible
             if inv.cantidad_disponible <= inv.stock_minimo:
                 productos_bajo_stock.append({
                     "inventory_id": inv.id,
