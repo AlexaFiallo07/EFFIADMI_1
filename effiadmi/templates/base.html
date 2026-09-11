@@ -179,6 +179,15 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                overflow-x: hidden;
+            }
+
+            img, canvas {
+                max-width: 100%;
+                height: auto;
+            }
+
             .menu-toggle {
                 display: inline-flex;
             }
@@ -223,7 +232,7 @@
                 flex-wrap: wrap;
             }
 
-            .card-body {
+            .card, .card-body {
                 overflow-x: auto;
             }
 
@@ -233,6 +242,11 @@
 
             h1 {
                 font-size: 22px;
+            }
+
+            .effi-panel {
+                width: 100% !important;
+                max-width: calc(100vw - 16px) !important;
             }
         }
     </style>
