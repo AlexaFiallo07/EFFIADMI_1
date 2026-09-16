@@ -1,0 +1,69 @@
+{% extends 'landing/base.html' %}
+{% load static %}
+
+{% block titulo %}Cómo funciona — EFFIADMI{% endblock %}
+
+{% block contenido %}
+    <!-- ======================= BANNER ======================= -->
+    <section class="pagina-banner">
+        <div class="contenedor">
+            <nav class="miga" aria-label="Ruta de navegación">
+                <a href="{% url 'landing' %}">Inicio</a>
+                <span>/</span>
+                <span>Cómo funciona</span>
+            </nav>
+            <span class="seccion-etiqueta">Cómo funciona</span>
+            <h1>
+                Empezar con EFFIADMI
+                <span class="resalte">es directo.</span>
+            </h1>
+            <p class="pagina-banner-desc">
+                No necesitas un equipo técnico: la plataforma está pensada para adaptarse a la
+                operación de tu empresa desde el primer día.
+            </p>
+        </div>
+    </section>
+
+    <!-- ======================= PASOS ======================= -->
+    <section class="seccion">
+        <div class="contenedor">
+            <div class="proceso">
+                <div class="paso">
+                    <h3>Conoce el sistema</h3>
+                    <p>Explora los módulos y ve cómo centraliza la información de tu negocio.</p>
+                    <a class="paso-enlace" href="{% url 'modulos' %}">Ver módulos →</a>
+                </div>
+                <div class="paso">
+                    <h3>Configura tu empresa</h3>
+                    <p>Ajusta la plataforma a tu operación: sucursales, productos, clientes y usuarios.</p>
+                </div>
+                <div class="paso">
+                    <h3>Organiza tu información</h3>
+                    <p>Registra tu inventario y pon al día los datos de tu negocio.</p>
+                </div>
+                <div class="paso">
+                    <h3>Administra a diario</h3>
+                    <p>Gestiona ventas, pedidos y facturación desde un solo lugar.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================= CTA ======================= -->
+    <section class="seccion seccion-alterna">
+        <div class="contenedor">
+            <div class="banda-cta">
+                <div>
+                    <h3>¿Listo para dar el siguiente paso?</h3>
+                    <p>
+                        Escríbenos y te contamos cómo EFFIADMI se adapta a la operación de tu empresa.
+                    </p>
+                </div>
+                <a class="btn btn-primario" href="{% url 'contacto' %}">
+                    Pedir información
+                    <span class="flecha" aria-hidden="true">→</span>
+                </a>
+            </div>
+        </div>
+    </section>
+{% endblock contenido %}

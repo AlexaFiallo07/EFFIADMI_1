@@ -37,7 +37,7 @@
                             </td>
                             <td>
                                 {% if notif.enlace %}
-                                <a href="/{{ notif.enlace }}" class="btn btn-outline btn-sm">Ir</a>
+                                <a href="{% url 'effiadmi:inicio' %}{{ notif.enlace }}" class="btn btn-outline btn-sm">Ir</a>
                                 {% endif %}
                                 <a href="{% url 'effiadmi:detalle_notificacion' notif.id %}" class="btn btn-outline btn-sm">Ver</a>
                                 <form method="POST" action="{% url 'effiadmi:eliminar_notificacion' notif.id %}" style="display: inline;">

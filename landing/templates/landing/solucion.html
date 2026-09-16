@@ -1,0 +1,103 @@
+{% extends 'landing/base.html' %}
+{% load static %}
+
+{% block titulo %}La solución — EFFIADMI{% endblock %}
+
+{% block contenido %}
+    <!-- ======================= BANNER ======================= -->
+    <section class="pagina-banner">
+        <div class="contenedor">
+            <nav class="miga" aria-label="Ruta de navegación">
+                <a href="{% url 'landing' %}">Inicio</a>
+                <span>/</span>
+                <span>La solución</span>
+            </nav>
+            <span class="seccion-etiqueta">La solución</span>
+            <h1>
+                Un solo lugar para administrar
+                <span class="resalte">tu empresa.</span>
+            </h1>
+            <p class="pagina-banner-desc">
+                EFFIADMI nace de una necesidad real: que las PYMES cuenten con una herramienta
+                clara y accesible para llevar sus procesos administrativos, sin depender de
+                planillas dispersas ni de información repartida.
+            </p>
+        </div>
+    </section>
+
+    <!-- ======================= PILARES ======================= -->
+    <section class="seccion">
+        <div class="contenedor">
+            <div class="dos-col">
+                <div class="trama" aria-hidden="true">
+                    <div class="trama-celda">
+                        <div class="numero">(01)</div>
+                        <h3>Centralización</h3>
+                        <p>Toda la información de tu empresa, reunida en una sola plataforma.</p>
+                    </div>
+                    <div class="trama-celda">
+                        <div class="numero">(02)</div>
+                        <h3>Control</h3>
+                        <p>Visibilidad sobre productos, clientes, ventas y operaciones.</p>
+                    </div>
+                    <div class="trama-celda">
+                        <div class="numero">(03)</div>
+                        <h3>Decisiones</h3>
+                        <p>Información organizada para entender el comportamiento del negocio.</p>
+                    </div>
+                    <div class="trama-celda">
+                        <div class="numero">(04)</div>
+                        <h3>Simplicidad</h3>
+                        <p>Una interfaz clara y moderna, pensada para quienes usan la plataforma a diario.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="sobre-titulo">Pensada para el día a día de las PYMES</h3>
+                    <p class="sobre-parrafo">
+                        Administrar un negocio implica coordinar muchos frentes al mismo tiempo.
+                        EFFIADMI se enfoca en reducir la dispersión y facilitar el control, para que
+                        la gestión diaria sea más simple y confiable.
+                    </p>
+                    <p class="sobre-parrafo">
+                        No buscamos recargarte de funciones: buscamos que cada área de tu empresa
+                        quede conectada y que puedas encontrar lo que necesitas cuando lo necesitas.
+                    </p>
+                    <ul class="sobre-lista">
+                        <li>
+                            <span class="marca">✓</span>
+                            <span>Centralización de la información empresarial.</span>
+                        </li>
+                        <li>
+                            <span class="marca">✓</span>
+                            <span>Control claro de los procesos administrativos.</span>
+                        </li>
+                        <li>
+                            <span class="marca">✓</span>
+                            <span>Información útil para tomar decisiones.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================= CTA MÓDULOS ======================= -->
+    <section class="seccion seccion-alterna">
+        <div class="contenedor">
+            <div class="banda-cta">
+                <div>
+                    <h3>Conoce cada módulo por separado</h3>
+                    <p>
+                        Inventario, ventas, clientes, pedidos, facturación y más, cada área en su propio
+                        espacio de trabajo.
+                    </p>
+                </div>
+                <a class="btn btn-primario" href="{% url 'modulos' %}">
+                    Ver módulos
+                    <span class="flecha" aria-hidden="true">→</span>
+                </a>
+            </div>
+        </div>
+    </section>
+{% endblock contenido %}

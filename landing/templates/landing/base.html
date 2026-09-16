@@ -1,0 +1,138 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}EFFIADMI — Gestión administrativa para PYMES{% endblock %}</title>
+    <meta name="description"
+          content="EFFIADMI es una plataforma de gestión administrativa para pequeñas y medianas empresas: inventario, ventas, clientes, pedidos, facturación y reportes en un solo lugar.">
+    <meta property="og:title" content="EFFIADMI — Gestión administrativa para PYMES">
+    <meta property="og:description"
+          content="Centraliza los procesos administrativos de tu empresa y toma mejores decisiones con información clara.">
+    <meta property="og:type" content="website">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+    <link rel="icon" type="image/png" href="{% static 'img/logoeffiadmi.png' %}">
+</head>
+<body>
+
+    <!-- ======================= CABECERA ======================= -->
+    <header class="cabecera" id="cabecera">
+        <div class="contenedor nav">
+            <a href="{% url 'landing' %}" class="logo" aria-label="EFFIADMI — inicio">
+                <img src="{% static 'img/logoeffiadmi_1.png' %}" alt="EFFIADMI" class="logo-img">
+            </a>
+
+            <nav class="nav-lista" aria-label="Navegación principal">
+                <a class="nav-enlace {% if seccion == 'inicio' %}activo{% endif %}" href="{% url 'landing' %}">Inicio</a>
+                <a class="nav-enlace {% if seccion == 'solucion' %}activo{% endif %}" href="{% url 'solucion' %}">La solución</a>
+                <a class="nav-enlace {% if seccion == 'modulos' %}activo{% endif %}" href="{% url 'modulos' %}">Módulos</a>
+                <a class="nav-enlace {% if seccion == 'proceso' %}activo{% endif %}" href="{% url 'proceso' %}">Cómo funciona</a>
+                <a class="nav-enlace {% if seccion == 'contacto' %}activo{% endif %}" href="{% url 'contacto' %}">Contacto</a>
+            </nav>
+
+            <div class="nav-acciones">
+                <a class="btn btn-primario nav-acceder-escritorio" href="{{ sistema_login_url }}">
+                    Acceder al sistema
+                    <span class="flecha" aria-hidden="true">→</span>
+                </a>
+                <button class="nav-boton" id="botonMenu" aria-label="Abrir menú" aria-expanded="false"
+                        aria-controls="menuMovil">
+                    <span></span>
+                </button>
+            </div>
+        </div>
+
+        <div class="menu-movil" id="menuMovil">
+            <div class="contenedor">
+                <ul>
+                    <li><a href="{% url 'landing' %}">Inicio</a></li>
+                    <li><a href="{% url 'solucion' %}">La solución</a></li>
+                    <li><a href="{% url 'modulos' %}">Módulos</a></li>
+                    <li><a href="{% url 'proceso' %}">Cómo funciona</a></li>
+                    <li><a href="{% url 'contacto' %}">Contacto</a></li>
+                </ul>
+                <a class="btn btn-primario acceder-movil" href="{{ sistema_login_url }}">
+                    Acceder al sistema →
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        {% block contenido %}{% endblock %}
+    </main>
+
+    <!-- ======================= PIE ======================= -->
+    <footer class="pie">
+        <div class="contenedor">
+            <div class="pie-superior">
+                <div>
+                    <a href="{% url 'landing' %}" class="logo">
+                        <img src="{% static 'img/logoeffiadmi_1.png' %}" alt="EFFIADMI" class="logo-img">
+                    </a>
+                    <p class="pie-desc">
+                        Optimizando la administración, las finanzas y las operaciones de las PYMES
+                        colombianas mediante una plataforma integral, moderna y eficiente.
+                    </p>
+                    <div class="pie-redes">
+                        <a href="#" aria-label="Facebook">f</a>
+                        <a href="#" aria-label="Twitter / X">x</a>
+                        <a href="#" aria-label="Instagram">ig</a>
+                        <a href="#" aria-label="LinkedIn">in</a>
+                    </div>
+                </div>
+
+                <div>
+                    <h4>Plataforma</h4>
+                    <ul class="pie-enlaces">
+                        <li><a href="{% url 'landing' %}">Inicio</a></li>
+                        <li><a href="{% url 'solucion' %}">La solución</a></li>
+                        <li><a href="{% url 'modulos' %}">Módulos</a></li>
+                        <li><a href="{% url 'proceso' %}">Cómo funciona</a></li>
+                        <li><a href="{% url 'tecnologia' %}">Tecnología</a></li>
+                        <li><a href="{{ sistema_login_url }}">Acceder al sistema</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4>Módulos</h4>
+                    <ul class="pie-enlaces">
+                        <li><a href="{% url 'modulo' 'inventario' %}">Inventario</a></li>
+                        <li><a href="{% url 'modulo' 'ventas' %}">Ventas</a></li>
+                        <li><a href="{% url 'modulo' 'clientes' %}">Clientes</a></li>
+                        <li><a href="{% url 'modulo' 'pedidos' %}">Pedidos</a></li>
+                        <li><a href="{% url 'modulo' 'facturacion' %}">Facturación</a></li>
+                        <li><a href="{% url 'modulo' 'reportes' %}">Reportes</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4>Contacto</h4>
+                    <ul class="pie-enlaces">
+                        <li><a href="mailto:info@effiadmi.com">info@effiadmi.com</a></li>
+                        <li><a href="tel:+573001234567">+57 300 123 4567</a></li>
+                        <li><a href="{% url 'contacto' %}">Medellín, Colombia</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pie-inferior">
+                <span>© 2026 EFFIADMI. Todos los derechos reservados.</span>
+                <span>Hecho con dedicación para las empresas.</span>
+            </div>
+        </div>
+    </footer>
+
+    <button class="volver-arriba" id="volverArriba" aria-label="Volver arriba">↑</button>
+
+    <script src="{% static 'js/principal.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

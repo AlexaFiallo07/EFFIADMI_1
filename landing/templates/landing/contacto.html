@@ -1,0 +1,99 @@
+{% extends 'landing/base.html' %}
+{% load static %}
+
+{% block titulo %}Contacto — EFFIADMI{% endblock %}
+
+{% block contenido %}
+    <!-- ======================= BANNER ======================= -->
+    <section class="pagina-banner">
+        <div class="contenedor">
+            <nav class="miga" aria-label="Ruta de navegación">
+                <a href="{% url 'landing' %}">Inicio</a>
+                <span>/</span>
+                <span>Contacto</span>
+            </nav>
+            <span class="seccion-etiqueta">Contacto</span>
+            <h1>
+                Hablemos sobre
+                <span class="resalte">tu empresa.</span>
+            </h1>
+            <p class="pagina-banner-desc">
+                ¿Quieres conocer más sobre EFFIADMI? Escríbenos y te ayudaremos con gusto.
+            </p>
+        </div>
+    </section>
+
+    <!-- ======================= REJILLA DE CONTACTO ======================= -->
+    <section class="seccion">
+        <div class="contenedor contacto-rejilla">
+            <div class="tarjeta">
+                <h3 style="font-size:1.2rem;margin-bottom:18px;">Información de contacto</h3>
+                <div class="dato-contacto">
+                    <div class="icono" aria-hidden="true">✉</div>
+                    <div>
+                        <h4>Correo</h4>
+                        <p>info@effiadmi.com</p>
+                    </div>
+                </div>
+                <div class="dato-contacto">
+                    <div class="icono" aria-hidden="true">☏</div>
+                    <div>
+                        <h4>Teléfono</h4>
+                        <p>+57 300 123 4567</p>
+                    </div>
+                </div>
+                <div class="dato-contacto">
+                    <div class="icono" aria-hidden="true">⌖</div>
+                    <div>
+                        <h4>Ubicación</h4>
+                        <p>Medellín, Colombia</p>
+                    </div>
+                </div>
+
+                <div style="margin-top:22px;">
+                    <a class="btn btn-contorno" href="{{ sistema_login_url }}">
+                        Acceder al sistema →
+                    </a>
+                </div>
+            </div>
+
+            <div class="tarjeta">
+                {% if messages %}
+                    <div class="mensajes">
+                        {% for message in messages %}
+                            <div class="mensaje {% if message.tags == 'success' %}mensaje-exito{% else %}mensaje-error{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <form class="formulario" method="post" action="{% url 'contacto' %}">
+                    {% csrf_token %}
+                    <div class="fila-campos">
+                        <div class="campo">
+                            <label for="nombre">Nombre <span class="obligatorio">*</span></label>
+                            <input type="text" id="nombre" name="nombre" required autocomplete="name">
+                        </div>
+                        <div class="campo">
+                            <label for="correo">Correo electrónico <span class="obligatorio">*</span></label>
+                            <input type="email" id="correo" name="correo" required autocomplete="email">
+                        </div>
+                    </div>
+                    <div class="campo">
+                        <label for="asunto">Asunto</label>
+                        <input type="text" id="asunto" name="asunto">
+                    </div>
+                    <div class="campo">
+                        <label for="mensaje">Mensaje <span class="obligatorio">*</span></label>
+                        <textarea id="mensaje" name="mensaje" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primario">
+                        Enviar mensaje
+                        <span class="flecha" aria-hidden="true">→</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+{% endblock contenido %}

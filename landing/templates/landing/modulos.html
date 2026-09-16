@@ -1,0 +1,61 @@
+{% extends 'landing/base.html' %}
+{% load static %}
+
+{% block titulo %}Módulos — EFFIADMI{% endblock %}
+
+{% block contenido %}
+    <!-- ======================= BANNER ======================= -->
+    <section class="pagina-banner">
+        <div class="contenedor">
+            <nav class="miga" aria-label="Ruta de navegación">
+                <a href="{% url 'landing' %}">Inicio</a>
+                <span>/</span>
+                <span>Módulos</span>
+            </nav>
+            <span class="seccion-etiqueta">Módulos</span>
+            <h1>
+                Cada área de tu empresa,
+                <span class="resalte">en su propio espacio.</span>
+            </h1>
+            <p class="pagina-banner-desc">
+                EFFIADMI reúne los principales procesos administrativos en módulos especializados
+                que trabajan de forma integrada. Cada uno tiene su propia página de trabajo.
+            </p>
+        </div>
+    </section>
+
+    <!-- ======================= REJILLA DE MÓDULOS ======================= -->
+    <section class="seccion">
+        <div class="contenedor">
+            <div class="panel-rejilla">
+                {% for modulo in modulos %}
+                    <a class="celda celda-enlace" href="{% url 'modulo' modulo.slug %}">
+                        <div class="icono" aria-hidden="true">{{ modulo.icono }}</div>
+                        <h3>{{ modulo.nombre }}</h3>
+                        <p>{{ modulo.resumen }}</p>
+                        <span class="celda-cta">Ver módulo <span class="flecha" aria-hidden="true">→</span></span>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================= CTA ======================= -->
+    <section class="seccion seccion-alterna">
+        <div class="contenedor">
+            <div class="banda-cta">
+                <div>
+                    <h3>Estos módulos trabajan juntos</h3>
+                    <p>
+                        Aunque cada área vive en su espacio, los datos están conectados: una venta
+                        afecta inventario, un pedido se vincula con facturación.
+                    </p>
+                </div>
+                <a class="btn btn-primario" href="{% url 'proceso' %}">
+                    Cómo empezar
+                    <span class="flecha" aria-hidden="true">→</span>
+                </a>
+            </div>
+        </div>
+    </section>
+{% endblock contenido %}

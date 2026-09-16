@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'effiadmi',
+    'landing',
     'rest_framework',
     'corsheaders',
 ]
@@ -152,3 +153,8 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
+
+# ==================== LANDING ====================
+# URL del sistema EFFIADMI a la que apunta el botón "Acceder al sistema"
+# de la landing. La app queda montada bajo /app/ y la landing en /.
+SISTEMA_LOGIN_URL = "/app/login/"
