@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block titulo %}Iniciar sesión{% endblock %}
+
+{% block sidebar_logo %}{% static 'img/logoeffiadmi_2.png' %}{% endblock %}
 
 {% block contenido %}
 <section class="login-page">

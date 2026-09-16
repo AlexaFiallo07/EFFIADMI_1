@@ -1,0 +1,95 @@
+{% extends 'landing/base.html' %}
+{% load static %}
+
+{% block titulo %}{{ modulo.nombre }} — EFFIADMI{% endblock %}
+
+{% block contenido %}
+    <!-- ======================= BANNER ======================= -->
+    <section class="pagina-banner">
+        <div class="contenedor">
+            <nav class="miga" aria-label="Ruta de navegación">
+                <a href="{% url 'landing' %}">Inicio</a>
+                <span>/</span>
+                <a href="{% url 'modulos' %}">Módulos</a>
+                <span>/</span>
+                <span>{{ modulo.nombre }}</span>
+            </nav>
+            <div class="banner-modulo">
+                <div class="icono icono-grande" aria-hidden="true">{{ modulo.icono }}</div>
+                <div>
+                    <span class="seccion-etiqueta">{{ modulo.categoria }}</span>
+                    <h1>{{ modulo.nombre }}</h1>
+                    <p class="pagina-banner-desc">{{ modulo.descripcion }}</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================= DETALLE ======================= -->
+    <section class="seccion">
+        <div class="contenedor">
+            <div class="dos-col">
+                <div>
+                    <h3 class="sobre-titulo">¿Qué incluye este módulo?</h3>
+                    <ul class="sobre-lista">
+                        {% for caracteristica in modulo.caracteristicas %}
+                            <li>
+                                <span class="marca">✓</span>
+                                <span>{{ caracteristica }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 class="sobre-titulo">Para tu negocio</h3>
+                    <p class="sobre-parrafo">
+                        Este módulo está pensado para que la operación diaria sea más ordenada y que la
+                        información esté siempre disponible cuando la necesitas.
+                    </p>
+                    <ul class="sobre-lista">
+                        {% for beneficio in modulo.beneficios %}
+                            <li>
+                                <span class="marca">✦</span>
+                                <span>{{ beneficio }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================= OTROS MÓDULOS ======================= -->
+    <section class="seccion seccion-alterna">
+        <div class="contenedor">
+            <div class="seccion-encabezado">
+                <span class="seccion-etiqueta">Sigue explorando</span>
+                <h2 class="seccion-titulo">
+                    Otros módulos de
+                    <span class="resalte">EFFIADMI.</span>
+                </h2>
+            </div>
+
+            <div class="panel-rejilla panel-rejilla-densa">
+                {% for otro in otros_modulos %}
+                    <a class="celda celda-enlace" href="{% url 'modulo' otro.slug %}">
+                        <div class="icono" aria-hidden="true">{{ otro.icono }}</div>
+                        <h3>{{ otro.nombre }}</h3>
+                        <p>{{ otro.resumen }}</p>
+                        <span class="celda-cta">Ver módulo <span class="flecha" aria-hidden="true">→</span></span>
+                    </a>
+                {% endfor %}
+            </div>
+
+            <div class="modulo-navegacion">
+                <a class="btn btn-contorno" href="{% url 'modulo' modulo_anterior.slug %}">
+                    ← {{ modulo_anterior.nombre }}
+                </a>
+                <a class="btn btn-primario" href="{% url 'modulo' modulo_siguiente.slug %}">
+                    {{ modulo_siguiente.nombre }} →
+                </a>
+            </div>
+        </div>
+    </section>
+{% endblock contenido %}

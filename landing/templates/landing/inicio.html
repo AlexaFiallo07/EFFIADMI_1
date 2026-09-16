@@ -1,0 +1,177 @@
+{% extends 'landing/base.html' %}
+{% load static %}
+
+{% block titulo %}EFFIADMI — Gestión administrativa para PYMES{% endblock %}
+
+{% block contenido %}
+    <!-- ======================= HERO ======================= -->
+    <section class="hero" id="inicio">
+        <div class="contenedor hero-interior">
+
+            <div class="hero-texto">
+                <span class="hero-nota">
+                    <span class="punto"></span>
+                    Gestión administrativa para PYMES
+                </span>
+
+                <h1>
+                    La administración de tu negocio,
+                    <span class="resalte">en orden.</span>
+                </h1>
+
+                <p class="hero-desc">
+                    EFFIADMI reúne inventario, ventas, clientes, pedidos y facturación en una sola
+                    plataforma. Menos papeles, menos dispersión y una visión clara de tu empresa.
+                </p>
+
+                <div class="hero-acciones">
+                    <a class="btn btn-primario" href="{% url 'solucion' %}">
+                        Conocer EFFIADMI
+                        <span class="flecha" aria-hidden="true">→</span>
+                    </a>
+                    <a class="btn btn-contorno" href="{% url 'contacto' %}">Pedir información</a>
+                </div>
+
+                <div class="hero-metricas">
+                    <div class="metrica">
+                        <span class="valor">10</span>
+                        <span class="etiqueta">módulos integrados</span>
+                    </div>
+                    <div class="metrica">
+                        <span class="valor">1</span>
+                        <span class="etiqueta">plataforma central</span>
+                    </div>
+                    <div class="metrica">
+                        <span class="valor">24/7</span>
+                        <span class="etiqueta">información disponible</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hero-mosaico" aria-hidden="true">
+                <div class="tarjeta-fondo"></div>
+                <div class="tarjeta-principal">
+                    <div class="tarjeta-fila">
+                        <span class="tarjeta-titulo">Panel de control</span>
+                        <span class="pastilla">Activo</span>
+                    </div>
+                    <div class="tarjeta-fila">
+                        <span class="tarjeta-dato">Ventas del mes</span>
+                        <span class="tarjeta-dato" style="font-weight:600;color:#3A2370;">$24.580.000</span>
+                    </div>
+                    <div class="barra">
+                        <div class="barra-col" style="height:34%"></div>
+                        <div class="barra-col" style="height:52%"></div>
+                        <div class="barra-col" style="height:41%"></div>
+                        <div class="barra-col" style="height:72%"></div>
+                        <div class="barra-col" style="height:58%"></div>
+                        <div class="barra-col" style="height:86%"></div>
+                    </div>
+                    <div class="tarjeta-renglon">
+                        <div class="mini-celda">
+                            <span class="valor">248</span>
+                            <span class="etiqueta">Ventas</span>
+                        </div>
+                        <div class="mini-celda">
+                            <span class="valor">1.284</span>
+                            <span class="etiqueta">Clientes</span>
+                        </div>
+                        <div class="mini-celda">
+                            <span class="valor">856</span>
+                            <span class="etiqueta">Productos</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="insignia-flotante insignia-a">
+                    <span class="linea">+18.4%</span>
+                    este mes
+                </div>
+                <div class="insignia-flotante insignia-b">
+                    <span class="linea">Inventario</span>
+                    actualizado
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ======================= TEASER SOLUCIÓN ======================= -->
+    <section class="seccion seccion-alterna">
+        <div class="contenedor">
+            <div class="seccion-encabezado">
+                <span class="seccion-etiqueta">La solución</span>
+                <h2 class="seccion-titulo">
+                    Un solo lugar para administrar
+                    <span class="resalte">tu empresa.</span>
+                </h2>
+                <p class="seccion-desc">
+                    EFFIADMI nace de una necesidad real: que las PYMES cuenten con una herramienta
+                    clara y accesible para llevar sus procesos administrativos, sin depender de
+                    planillas dispersas ni de información repartida.
+                </p>
+            </div>
+
+            <div class="banda-cta">
+                <p>
+                    Cada área de tu negocio conectada: información centralizada, control claro de los
+                    procesos y datos útiles para tomar decisiones.
+                </p>
+                <a class="btn btn-primario" href="{% url 'solucion' %}">
+                    Conocer la solución
+                    <span class="flecha" aria-hidden="true">→</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================= MÓDULOS DESTACADOS ======================= -->
+    <section class="seccion">
+        <div class="contenedor">
+            <div class="seccion-encabezado">
+                <span class="seccion-etiqueta">Módulos</span>
+                <h2 class="seccion-titulo">
+                    Tu negocio, dividido en
+                    <span class="resalte">áreas claras.</span>
+                </h2>
+                <p class="seccion-desc">
+                    Explora cada módulo de EFFIADMI y descubre cómo centraliza la operación de tu empresa.
+                </p>
+            </div>
+
+            <div class="panel-rejilla">
+                {% for modulo in modulos_destacados %}
+                    <a class="celda celda-enlace" href="{% url 'modulo' modulo.slug %}">
+                        <div class="icono" aria-hidden="true">{{ modulo.icono }}</div>
+                        <h3>{{ modulo.nombre }}</h3>
+                        <p>{{ modulo.resumen }}</p>
+                        <span class="celda-cta">Ver módulo <span class="flecha" aria-hidden="true">→</span></span>
+                    </a>
+                {% endfor %}
+            </div>
+
+            <div class="centro-cta">
+                <a class="btn btn-contorno" href="{% url 'modulos' %}">Ver todos los módulos</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================= CTA ======================= -->
+    <section class="seccion banda">
+        <div class="contenedor banda-fila">
+            <div>
+                <span class="seccion-etiqueta" style="color:#C9B6F0;">Empieza hoy</span>
+                <h2>
+                    Empezar con EFFIADMI
+                    <span class="resalte">es directo.</span>
+                </h2>
+                <p>
+                    Conoce cómo configurar tu empresa, organizar tu información y administrar a diario.
+                </p>
+            </div>
+            <div class="banda-acciones">
+                <a class="btn btn-primario" href="{% url 'proceso' %}">Cómo funciona</a>
+                <a class="btn btn-contorno-claro" href="{% url 'contacto' %}">Pedir información</a>
+            </div>
+        </div>
+    </section>
+{% endblock contenido %}

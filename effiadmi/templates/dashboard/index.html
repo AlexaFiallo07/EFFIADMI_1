@@ -133,7 +133,7 @@
     }
     .kpi-icon-box .material-symbols-outlined { font-size: 24px; }
     .geo-green { background-color: #e2fbf0; color: #10b981; }
-    .geo-blue { background-color: #eff6ff; color: #3b82f6; }
+    .geo-blue { background-color: #EDE7F7; color: #6A4DAB; }
     .geo-yellow { background-color: #fef9c3; color: #eab308; }
     .geo-purple { background-color: #f3e8ff; color: #a855f7; }
     .geo-teal { background-color: #ccfbf1; color: #14b8a6; }
@@ -161,7 +161,7 @@
     }
     .warn-alert { background-color: #fffbeb; color: #b45309; }
     .danger-alert { background-color: #fee2e2; color: #b91c1c; }
-    .info-alert { background-color: #eff6ff; color: #1e40af; }
+    .info-alert { background-color: #EDE7F7; color: #3A2370; }
 </style>
 {% endblock %}
 
@@ -183,7 +183,7 @@
                             data: productosVendidos.map(function (producto) {
                                 return producto.total_vendido;
                             }),
-                            backgroundColor: '#3b82f6',
+                            backgroundColor: '#6A4DAB',
                             borderRadius: 6
                         }]
                     },
@@ -209,7 +209,7 @@
                         labels: categoriasLabels,
                         datasets: [{
                             data: categoriasData,
-                            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
+                            backgroundColor: ['#6A4DAB', '#10b981', '#f59e0b', '#ef4444'],
                             borderWidth: 2,
                             borderColor: '#ffffff'
                         }]

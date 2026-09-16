@@ -13,7 +13,7 @@
 
     <style>
         body {
-            background-color: #f8fafc;
+            background-color: var(--color-bg-primary);
             margin: 0;
             padding: 0;
             font-family: var(--font-secondary), sans-serif;
@@ -28,7 +28,7 @@
         /* SIDEBAR COMPLETO (Panel izquierdo de la imagen) */
         .app-sidebar {
             width: 260px;
-            background-color: #1a2e40; /* Azul oscuro corporativo de tu captura */
+            background-color: var(--color-secondary); /* Vino: oscuro corporativo de la identidad EFFIADMI */
             color: white;
             display: flex;
             flex-direction: column;
@@ -63,7 +63,7 @@
         }
 
         .brand-logo {
-            width: 103px;
+            width: 140px;
             height: auto;
             object-fit: contain;
         }
@@ -86,10 +86,10 @@
             background-color: rgba(255, 255, 255, 0.05);
         }
 
-        /* Estado activo seleccionado (Azul brillante de la captura) */
+        /* Estado activo seleccionado (Iris de la identidad EFFIADMI) */
         .menu-link.active {
             color: white;
-            background-color: #3b82f6; 
+            background-color: var(--color-accent); 
         }
 
         .menu-link .material-symbols-outlined {
@@ -255,7 +255,7 @@
     <aside class="app-sidebar">
         <div class="sidebar-brand">
             <a href="{% url 'effiadmi:inicio' %}" class="brand-container">
-                <img src="{% static 'img/logoeffiadmi_1.png' %}" alt="EFFIADMI" class="brand-logo">
+                <img src="{% block sidebar_logo %}{% static 'img/logoeffiadmi_1.png' %}{% endblock %}" alt="EFFIADMI" class="brand-logo">
                 <span>EFFIADMI</span>
             </a>
 </div>

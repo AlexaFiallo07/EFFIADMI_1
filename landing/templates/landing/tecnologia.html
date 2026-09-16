@@ -1,0 +1,66 @@
+{% extends 'landing/base.html' %}
+{% load static %}
+
+{% block titulo %}Tecnología — EFFIADMI{% endblock %}
+
+{% block contenido %}
+    <!-- ======================= BANNER ======================= -->
+    <section class="pagina-banner">
+        <div class="contenedor">
+            <nav class="miga" aria-label="Ruta de navegación">
+                <a href="{% url 'landing' %}">Inicio</a>
+                <span>/</span>
+                <span>Tecnología</span>
+            </nav>
+            <span class="seccion-etiqueta">Detrás del sistema</span>
+            <h1>
+                Construido sobre una base
+                <span class="resalte">sólida y escalable.</span>
+            </h1>
+            <p class="pagina-banner-desc">
+                EFFIADMI está desarrollado con herramientas modernas y su arquitectura está orientada
+                a crecer junto a tu empresa, manteniendo un funcionamiento ordenado.
+            </p>
+        </div>
+    </section>
+
+    <!-- ======================= PUNTOS TECNOLÓGICOS ======================= -->
+    <section class="seccion">
+        <div class="contenedor dos-col">
+            <ul class="banda-puntos banda-puntos-claro">
+                <li><span class="punto">01</span> Backend robusto y flexible con Python y Django.</li>
+                <li><span class="punto">02</span> Base de datos estructurada para tu información.</li>
+                <li><span class="punto">03</span> Interfaz moderna, adaptable y enfocada en el usuario.</li>
+                <li><span class="punto">04</span> Diseñado para escalar junto a tu operación.</li>
+            </ul>
+            <div>
+                <h3 class="sobre-titulo">Confianza en los cimientos</h3>
+                <p class="sobre-parrafo">
+                    Una arquitectura limpia y tecnologías maduras permiten que la plataforma funcione de
+                    manera estable, que la información esté organizada y que las mejoras lleguen sin
+                    afectar lo que ya funciona.
+                </p>
+                <p class="sobre-parrafo">
+                    EFFIADMI está pensado para empresas que crecen: cuando tu operación suma puntos de
+                    venta, usuarios o procesos, la plataforma está preparada para acompañar ese cambio.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================= CTA ======================= -->
+    <section class="seccion seccion-alterna">
+        <div class="contenedor">
+            <div class="banda-cta">
+                <div>
+                    <h3>Conoce la plataforma en acción</h3>
+                    <p>Ingresa al sistema y recorre cada módulo de EFFIADMI.</p>
+                </div>
+                <a class="btn btn-primario" href="{{ sistema_login_url }}">
+                    Acceder al sistema
+                    <span class="flecha" aria-hidden="true">→</span>
+                </a>
+            </div>
+        </div>
+    </section>
+{% endblock contenido %}

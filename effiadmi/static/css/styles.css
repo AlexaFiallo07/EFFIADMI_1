@@ -13,14 +13,16 @@
 
     /* Uso               | Color               | HEX */
     /* Error             | Rojo               | #EB5757 */
-    /* Fondo             | Gris Claro         | #F7FAFC */
+    /* Fondo             | Lavanda Claro      | #F7F4FB */
     /* Tarjetas          | Blanco             | #FFFFFF */
-    /* Texto Principal   | Gris Oscuro        | #1F2937 */
-    /* Texto Secundario  | Gris Medio         | #6B7280 */
+    /* Texto Principal   | Tinta              | #241E33 */
+    /* Texto Secundario  | Gris               | #5E5870 */
 
-    /* Colores Principales */
-    --color-primary: #2F80ED;
-    --color-secondary: #14324A;
+    /* Colores Principales (paleta EFFIADMI/Landing) */
+    --color-primary: #3A2370;   /* uva       */
+    --color-primary-strong: #4A2E85; /* plum    */
+    --color-accent: #6A4DAB;    /* iris      */
+    --color-secondary: #1F1433; /* vino      */
 
     /* Estados */
     --color-success: #27AE60;
@@ -28,19 +30,19 @@
     --color-error: #EB5757;
 
     /* Fondos */
-    --color-bg-primary: #F7FAFC;
+    --color-bg-primary: #F7F4FB; /* arena (lavanda muy claro) */
     --color-bg-card: #FFFFFF;
 
     /* Texto */
-    --color-text-primary: #1F2937;
-    --color-text-secondary: #6B7280;
+    --color-text-primary: #241E33;   /* tinta   */
+    --color-text-secondary: #5E5870; /* gris    */
 
     /* Bordes */
-    --color-border: #E5E7EB;
-    --color-border-light: #F3F4F6;
+    --color-border: #D5C9E8;
+    --color-border-light: #E8E0F2;
 
     /* Variaciones de colores */
-    --color-primary-light: rgba(47, 128, 237, 0.1);
+    --color-primary-light: rgba(58, 35, 112, 0.1);
     --color-success-light: rgba(39, 174, 96, 0.1);
     --color-warning-light: rgba(242, 201, 76, 0.1);
     --color-error-light: rgba(235, 87, 87, 0.1);
@@ -150,7 +152,7 @@ a:hover {
 }
 
 .btn-primary:hover {
-    background-color: #1F5FBF;
+    background-color: var(--color-secondary);
     box-shadow: var(--shadow-lg);
 }
 
@@ -160,7 +162,7 @@ a:hover {
 }
 
 .btn-secondary:hover {
-    background-color: #0D1E2E;
+    background-color: #171021;
 }
 
 .btn-success {
@@ -264,7 +266,7 @@ a:hover {
 
 .alert-info {
     background-color: var(--color-primary-light);
-    color: #1F5FBF;
+    color: #3A2370;
     border-left-color: var(--color-primary);
 }
 

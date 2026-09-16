@@ -100,7 +100,7 @@
 
             <div style="background: #f8fafc; border-radius: 10px; padding: 20px; border: 1px solid #e2e8f0;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <span class="material-symbols-outlined" style="color: #3b82f6;">inventory</span>
+                    <span class="material-symbols-outlined" style="color: #6A4DAB;">inventory</span>
                     <h4 style="margin: 0; font-size: 15px; color: #1e293b;">Inventario General</h4>
                 </div>
                 <table style="width: 100%; font-size: 13px; color: #475569;">
@@ -149,12 +149,12 @@
                 <div class="effi-avatar">E</div>
                 <div>
                     <div style="font-weight: 700; color: white;">EFFI</div>
-                    <div style="font-size: 12px; color: #bfdbfe;">Asistente de tu negocio</div>
+                    <div style="font-size: 12px; color: #C9B6F0;">Asistente de tu negocio</div>
                 </div>
             </div>
             {% if es_admin and usuarios_disponibles %}
             <form method="GET" style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 12px; color: #bfdbfe;">Ver:</span>
+                <span style="font-size: 12px; color: #C9B6F0;">Ver:</span>
                 <select name="usuario" class="form-control" onchange="this.form.submit()" style="width: auto; padding: 4px 8px; font-size: 12px;">
                     <option value="">Todos</option>
                     {% for u in usuarios_disponibles %}
@@ -225,7 +225,7 @@
     }
     .kpi-icon-box .material-symbols-outlined { font-size: 24px; }
     .geo-green { background-color: #e2fbf0; color: #10b981; }
-    .geo-blue { background-color: #eff6ff; color: #3b82f6; }
+    .geo-blue { background-color: #EDE7F7; color: #6A4DAB; }
     .geo-yellow { background-color: #fef9c3; color: #eab308; }
     .geo-purple { background-color: #f3e8ff; color: #a855f7; }
     .geo-teal { background-color: #ccfbf1; color: #14b8a6; }
@@ -254,7 +254,7 @@
         font-weight: 500;
     }
     .warn-alert { background-color: #fffbeb; color: #b45309; }
-    .info-alert { background-color: #eff6ff; color: #1e40af; }
+    .info-alert { background-color: #EDE7F7; color: #3A2370; }
 
     .effi-widget {
         position: fixed;
@@ -289,7 +289,7 @@
         align-items: center;
         gap: 10px;
         padding: 14px 18px;
-        background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+        background: linear-gradient(135deg, #3A2370, #6A4DAB);
         color: white;
         flex-shrink: 0;
     }
@@ -298,7 +298,7 @@
         height: 38px;
         border-radius: 50%;
         background: white;
-        color: #1e3a8a;
+        color: #3A2370;
         font-weight: 800;
         font-size: 18px;
         display: flex;
@@ -313,7 +313,7 @@
         flex: 1;
         overflow-y: auto;
         padding: 16px;
-        background: #f1f5f9;
+        background: #F7F4FB;
         display: flex;
         flex-direction: column;
         gap: 10px;
@@ -335,7 +335,7 @@
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     .effi-bubble.user-bubble {
-        background-color: #3b82f6;
+        background-color: #3A2370;
         color: white;
         border-bottom-right-radius: 4px;
     }
@@ -385,13 +385,13 @@
         outline: none;
         max-height: 120px;
     }
-    .effi-inputbar textarea:focus { border-color: #3b82f6; }
+    .effi-inputbar textarea:focus { border-color: #6A4DAB; }
     .effi-send {
         width: 42px;
         height: 42px;
         border-radius: 50%;
         border: none;
-        background: #3b82f6;
+        background: #3A2370;
         color: white;
         display: flex;
         align-items: center;
@@ -399,15 +399,15 @@
         cursor: pointer;
         flex-shrink: 0;
     }
-    .effi-send:hover { background: #2563eb; }
+    .effi-send:hover { background: #4A2E85; }
     .effi-launcher {
         width: 58px;
         height: 58px;
         border-radius: 50%;
         border: none;
-        background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+        background: linear-gradient(135deg, #3A2370, #6A4DAB);
         color: white;
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+        box-shadow: 0 6px 20px rgba(58, 35, 112, 0.5);
         cursor: pointer;
         display: flex;
         align-items: center;
