@@ -420,24 +420,30 @@
 
 {% block js %}
 <script>
-    const ctxMov = document.getElementById('canvasMovimientos').getContext('2d');
-    new Chart(ctxMov, {
-        type: 'doughnut',
-        data: {
-            labels: ['Entradas', 'Salidas'],
-            datasets: [{
-                data: [{{ entradas }}, {{ salidas }}],
-                backgroundColor: ['#10b981', '#ef4444'],
-                borderWidth: 2,
-                borderColor: '#ffffff'
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } }
+    try {
+        const ctxMov = document.getElementById('canvasMovimientos');
+        if (ctxMov && typeof Chart !== 'undefined') {
+            new Chart(ctxMov, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Entradas', 'Salidas'],
+                    datasets: [{
+                        data: [{{ entradas }}, {{ salidas }}],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } }
+                }
+            });
         }
-    });
+    } catch (e) { console.warn('Chart no disponible:', e); }
+</script>
 
+<script>
     (function () {
         const widget = document.getElementById('effiWidget');
         const launcher = document.getElementById('effiLauncher');
