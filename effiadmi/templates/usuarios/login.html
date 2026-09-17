@@ -7,23 +7,64 @@
 
 {% block contenido %}
 <section class="login-page">
+    <div class="login-topbar">
+        <button class="theme-toggle" id="loginThemeToggle" type="button" aria-label="Cambiar tema">
+            <span class="material-symbols-outlined" id="loginThemeIcon">dark_mode</span>
+        </button>
+    </div>
+
     <div class="login-panel">
+        <div class="login-logo-wrap">
+            <img src="{% static 'img/logoeffiadmi_2.png' %}" alt="EFFIADMI">
+        </div>
+
         <h2>Iniciar sesión</h2>
         <p>Introduce tus credenciales para acceder al sistema EFFIADMI.</p>
+
         <form method="post" action="">
             {% csrf_token %}
             <div class="form-group">
                 <label for="username" class="form-label">Correo electrónico</label>
-                <input type="text" name="username" id="username" class="form-control" placeholder="usuario@ejemplo.com" required>
+                <input type="text" name="username" id="username" class="form-control"
+                       placeholder="usuario@ejemplo.com" autocomplete="username" required>
             </div>
 
             <div class="form-group">
                 <label for="password" class="form-label">Contraseña</label>
-                <input type="password" name="password" id="password" class="form-control" placeholder="Tu contraseña" required>
+                <input type="password" name="password" id="password" class="form-control"
+                       placeholder="Tu contraseña" autocomplete="current-password" required>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-lg">Iniciar Sesión</button>
+            <button type="submit" class="btn btn-primary btn-lg btn-block">Iniciar Sesión</button>
         </form>
+
+        <p class="login-hint">¿No tienes cuenta? Contacta al administrador.</p>
     </div>
 </section>
+{% endblock %}
+
+{% block js %}
+<script>
+    (function () {
+        const btn = document.getElementById('loginThemeToggle');
+        const icon = document.getElementById('loginThemeIcon');
+        const raiz = document.documentElement;
+
+        function sync() {
+            const dark = raiz.getAttribute('data-theme') === 'dark';
+            if (icon) icon.textContent = dark ? 'light_mode' : 'dark_mode';
+        }
+
+        sync();
+
+        if (btn) {
+            btn.addEventListener('click', function () {
+                const nuevo = raiz.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                raiz.setAttribute('data-theme', nuevo);
+                try { localStorage.setItem('effiadmi-theme', nuevo); } catch (e) {}
+                sync();
+            });
+        }
+    })();
+</script>
 {% endblock %}
