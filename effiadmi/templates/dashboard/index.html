@@ -3,12 +3,12 @@
 {% block titulo %}Dashboard Principal - EFFIADMI{% endblock %}
 
 {% block contenido %}
-<div class="dashboard-header" style="margin-bottom: 24px;">
-    <h1 style="font-size: 28px; font-weight: 600; color: #0f172a; margin: 0;">Dashboard Principal</h1>
-    <p style="color: #64748b; margin-top: 4px; font-size: 15px;">Resumen general de tu negocio</p>
+<div class="dashboard-header">
+    <h1>Dashboard Principal</h1>
+    <p>Resumen general de tu negocio</p>
 </div>
 
-<div class="kpi-matrix" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 32px;">
+<div class="kpi-matrix">
 
     <div class="kpi-card-custom">
         <div class="kpi-icon-box geo-green"><span class="material-symbols-outlined">attach_money</span></div>
@@ -59,115 +59,77 @@
     </div>
 </div>
 
-<div class="bottom-layout" style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start;">
+<div class="bottom-layout">
 
-    <div class="charts-section" style="display: flex; flex-direction: column; gap: 24px;">
+    <div class="charts-section">
         <div class="dashboard-panel-card">
             <h3 class="panel-card-title">Productos Mas Vendidos</h3>
             {% if productos_vendidos %}
-                <div style="height: 220px; width: 100%;"><canvas id="canvasProductosMasVendidos"></canvas></div>
+                <div class="chart-box"><canvas id="canvasProductosMasVendidos"></canvas></div>
             {% else %}
-                <p style="color: #64748b; text-align: center; padding: 40px 0;">No hay ventas registradas aun.</p>
+                <p class="empty-note">No hay ventas registradas aun.</p>
             {% endif %}
         </div>
 
         <div class="dashboard-panel-card">
             <h3 class="panel-card-title">Categorias Mas Rentables</h3>
             {% if categorias_data %}
-                <div style="max-width: 300px; margin: 0 auto;"><canvas id="canvasCategoriasRentables"></canvas></div>
+                <div class="chart-box-sm"><canvas id="canvasCategoriasRentables"></canvas></div>
             {% else %}
-                <p style="color: #64748b; text-align: center; padding: 40px 0;">No hay datos de categorias aun.</p>
+                <p class="empty-note">No hay datos de categorias aun.</p>
             {% endif %}
         </div>
     </div>
 
-    <div class="side-widgets-section" style="display: flex; flex-direction: column; gap: 24px;">
+    <div class="side-widgets-section">
 
         <div class="dashboard-panel-card">
             <h3 class="panel-card-title">Productos con Stock Bajo</h3>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="stack">
                 {% for inv in productos_bajo_stock %}
                     <div class="system-alert-row warn-alert">
                         {{ inv.product.nombre }} — {{ inv.cantidad_disponible }} / min {{ inv.stock_minimo }}
                     </div>
                 {% empty %}
-                    <p style="color: #64748b; font-size: 13px; margin: 0;">Todos los productos tienen stock suficiente.</p>
+                    <p class="empty-note sm">Todos los productos tienen stock suficiente.</p>
                 {% endfor %}
             </div>
         </div>
 
         <div class="dashboard-panel-card">
             <h3 class="panel-card-title">Movimientos Recientes</h3>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="stack">
                 {% for mov in movimientos_recientes %}
                     <div class="system-alert-row {% if mov.tipo_movimiento == 'ENTRADA' %}info-alert{% elif mov.tipo_movimiento == 'SALIDA' %}danger-alert{% else %}warn-alert{% endif %}">
                         {{ mov.tipo_movimiento }} — {{ mov.inventory.product.nombre }} x{{ mov.cantidad }}
                     </div>
                 {% empty %}
-                    <p style="color: #64748b; font-size: 13px; margin: 0;">No hay movimientos recientes.</p>
+                    <p class="empty-note sm">No hay movimientos recientes.</p>
                 {% endfor %}
             </div>
         </div>
     </div>
 </div>
-
-<style>
-    .kpi-card-custom {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 20px;
-        display: flex;
-        align-items: center;
-        position: relative;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-    }
-    .kpi-icon-box {
-        width: 46px;
-        height: 46px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 14px;
-    }
-    .kpi-icon-box .material-symbols-outlined { font-size: 24px; }
-    .geo-green { background-color: #e2fbf0; color: #10b981; }
-    .geo-blue { background-color: #EDE7F7; color: #6A4DAB; }
-    .geo-yellow { background-color: #fef9c3; color: #eab308; }
-    .geo-purple { background-color: #f3e8ff; color: #a855f7; }
-    .geo-teal { background-color: #ccfbf1; color: #14b8a6; }
-    .kpi-core-data { display: flex; flex-direction: column; }
-    .kpi-tag { font-size: 13px; color: #64748b; margin-bottom: 2px; }
-    .kpi-number { font-size: 22px; font-weight: 600; color: #0f172a; margin: 0; }
-    .dashboard-panel-card {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-    }
-    .panel-card-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #1e293b;
-        margin: 0 0 18px 0;
-    }
-    .system-alert-row {
-        padding: 12px 14px;
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 500;
-    }
-    .warn-alert { background-color: #fffbeb; color: #b45309; }
-    .danger-alert { background-color: #fee2e2; color: #b91c1c; }
-    .info-alert { background-color: #EDE7F7; color: #3A2370; }
-</style>
 {% endblock %}
 
 {% block js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const estilos = getComputedStyle(document.documentElement);
+        const varCss = function (nombre, fallback) {
+            const valor = estilos.getPropertyValue(nombre).trim();
+            return valor || fallback;
+        };
+
+        const colorIris = varCss('--iris', '#6A4DAB');
+        const colorUva = varCss('--uva', '#3A2370');
+        const colorGris = varCss('--gris', '#5E5870');
+        const colorAcero = varCss('--acero', '#E8E0F2');
+        const colorBlanco = varCss('--blanco', '#FFFFFF');
+        const colorVerde = varCss('--verde', '#27AE60');
+        const colorAmbar = varCss('--ambar', '#F2C94C');
+        const colorRojo = varCss('--rojo', '#EB5757');
+
         const productosChartElement = document.getElementById('canvasProductosMasVendidos');
         if (productosChartElement) {
             const productosVendidos = JSON.parse('{{ productos_vendidos|escapejs|default:"[]" }}');
@@ -183,7 +145,7 @@
                             data: productosVendidos.map(function (producto) {
                                 return producto.total_vendido;
                             }),
-                            backgroundColor: '#6A4DAB',
+                            backgroundColor: colorIris,
                             borderRadius: 6
                         }]
                     },
@@ -191,7 +153,10 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
-                        scales: { y: { grid: { color: '#f1f5f9' }, beginAtZero: true }, x: { grid: { display: false } } }
+                        scales: {
+                            y: { grid: { color: colorAcero }, beginAtZero: true, ticks: { color: colorGris } },
+                            x: { grid: { display: false }, ticks: { color: colorGris } }
+                        }
                     }
                 });
             }
@@ -209,14 +174,14 @@
                         labels: categoriasLabels,
                         datasets: [{
                             data: categoriasData,
-                            backgroundColor: ['#6A4DAB', '#10b981', '#f59e0b', '#ef4444'],
+                            backgroundColor: [colorIris, colorVerde, colorAmbar, colorRojo, colorUva],
                             borderWidth: 2,
-                            borderColor: '#ffffff'
+                            borderColor: colorBlanco
                         }]
                     },
                     options: {
                         responsive: true,
-                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } }
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 }, color: colorGris } } }
                     }
                 });
             }
