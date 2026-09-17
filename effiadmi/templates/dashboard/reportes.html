@@ -3,20 +3,20 @@
 {% block titulo %}Reportes{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 1200px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container">
+    <div class="page-head">
         <h1>{% if es_admin %}Reportes del Equipo{% else %}Mis Reportes{% endif %}</h1>
     </div>
 
     {% if not es_admin %}
-    <div class="card" style="margin-bottom: var(--spacing-xl);">
+    <div class="card block-xl">
         <div class="card-header">
             <h3 class="card-title">Nuevo Reporte</h3>
         </div>
         <form method="POST">
             {% csrf_token %}
             <div class="card-body">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                <div class="form-grid-2">
                     <div class="form-group">
                         <label for="titulo" class="form-label">Titulo</label>
                         <input type="text" id="titulo" name="titulo" class="form-control" placeholder="Ej: Solicitud de producto X" required>
@@ -44,10 +44,10 @@
     {% endif %}
 
     {% if es_admin %}
-    <div class="card" style="margin-bottom: var(--spacing-lg);">
+    <div class="card block-lg">
         <div class="card-body">
-            <form method="GET" style="display: flex; gap: var(--spacing-md); align-items: flex-end;">
-                <div class="form-group" style="flex: 1; min-width: 200px;">
+            <form method="GET" class="toolbar">
+                <div class="form-group">
                     <label class="form-label">Estado</label>
                     <select name="estado" class="form-control" onchange="this.form.submit()">
                         <option value="">Todos</option>
@@ -77,16 +77,16 @@
                 <tbody>
                     {% for r in reportes %}
                         <tr>
-                            <td><span style="font-size: 13px;">{{ r.get_tipo_display }}</span></td>
+                            <td class="cell-muted">{{ r.get_tipo_display }}</td>
                             <td>{{ r.titulo }}</td>
                             {% if es_admin %}<td>{{ r.usuario.first_name }} {{ r.usuario.last_name }}</td>{% endif %}
                             <td>
                                 {% if r.estado == 'pendiente' %}
-                                    <span style="color: #f59e0b; font-weight: 600;">Pendiente</span>
+                                    <span class="badge badge-warning">Pendiente</span>
                                 {% elif r.estado == 'visto' %}
-                                    <span style="color: #6A4DAB; font-weight: 600;">Visto</span>
+                                    <span class="badge badge-primary">Visto</span>
                                 {% else %}
-                                    <span style="color: #10b981; font-weight: 600;">Resuelto</span>
+                                    <span class="badge badge-success">Resuelto</span>
                                 {% endif %}
                             </td>
                             <td>{{ r.fecha_creacion|date:"d/m/Y H:i" }}</td>
@@ -96,7 +96,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">
+                            <td colspan="6" class="empty-row">
                                 No hay reportes {% if es_admin and filtro_estado %}con estado "{{ filtro_estado }}"{% endif %}.
                             </td>
                         </tr>

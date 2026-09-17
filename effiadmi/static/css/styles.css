@@ -770,6 +770,35 @@ textarea.form-control:focus {
 .empty-note { color: var(--gris); text-align: center; padding: 40px 0; font-size: var(--font-size-base); }
 .empty-note.sm { padding: 0; font-size: var(--font-size-sm); text-align: left; }
 
+/* Mini-reportes (estadisticas) */
+.report-block { margin-top: 32px; }
+.report-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.report-mini-card {
+    background-color: var(--arena);
+    border: 1px solid var(--acero);
+    border-radius: var(--radius-md);
+    padding: 20px;
+}
+.report-mini-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.report-mini-head .material-symbols-outlined { font-size: 22px; }
+.report-mini-head h4 { margin: 0; font-size: 15px; color: var(--tinta); font-family: var(--font-primary); }
+.report-table { width: 100%; font-size: 13px; color: var(--gris); }
+.report-table td { padding: 4px 0; }
+.report-table td:last-child { text-align: right; font-weight: 600; color: var(--tinta); }
+.report-table .is-warn { color: #B45309; }
+.report-table .is-ok { color: var(--verde); }
+[data-theme="dark"] .report-table .is-warn { color: var(--ambar); }
+.report-icon-violet { color: var(--iris); }
+.report-icon-green { color: var(--verde); }
+.report-icon-purple { color: #9333EA; }
+.icon-sm { font-size: 16px; vertical-align: text-bottom; }
+.kpi-number-sm { font-size: 16px; }
+.effi-select { width: auto; padding: 4px 8px; font-size: 12px; }
+.effi-header-label { font-weight: 700; color: #fff; }
+.effi-header-sub { font-size: 12px; color: #C9B6F0; }
+.effi-header-user { display: flex; align-items: center; gap: 6px; }
+.effi-header-user > .material-symbols-outlined { font-size: 22px; }
+
 /* ============================================================
    WIDGET CHAT EFFI
    ============================================================ */
@@ -905,6 +934,8 @@ textarea.form-control:focus {
     transition: transform 0.15s ease;
 }
 .effi-launcher:hover { transform: scale(1.05); }
+.effi-send .material-symbols-outlined { font-size: 22px; }
+.effi-launcher .material-symbols-outlined { font-size: 26px; }
 [data-theme="dark"] .effi-launcher { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55); }
 
 /* ============================================================
@@ -918,6 +949,48 @@ textarea.form-control:focus {
     text-align: center;
     border-top: 1px solid var(--acero);
 }
+
+/* ============================================================
+   PÁGINAS / UTILIDADES
+   ============================================================ */
+.page-head { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl); }
+.page-head h1 { margin: 0; }
+.row-between { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); }
+.container-narrow { max-width: 800px; margin: 0 auto; }
+.block-xl { margin-bottom: var(--spacing-xl); }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); margin-bottom: var(--spacing-lg); }
+.toolbar { display: flex; gap: var(--spacing-md); align-items: flex-end; }
+.toolbar .form-group { flex: 1; min-width: 200px; margin-bottom: 0; }
+.block-lg { margin-bottom: var(--spacing-lg); }
+.stack-lg { display: flex; flex-direction: column; gap: var(--spacing-lg); }
+.cell-muted { font-size: 13px; color: var(--gris); }
+.empty-row { text-align: center; padding: var(--spacing-xl); color: var(--gris); }
+.field-label-muted { font-size: 13px; color: var(--gris); margin-bottom: 4px; }
+.pre-wrap { white-space: pre-wrap; }
+
+.answer-box {
+    background-color: var(--verde-light);
+    border: 1px solid rgba(39, 174, 96, 0.35);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+.answer-box .answer-title { font-size: 13px; color: #1E8449; margin-bottom: 4px; font-weight: 600; }
+.answer-box .answer-date { font-size: 12px; color: var(--gris); margin-top: 8px; }
+[data-theme="dark"] .answer-box { background-color: rgba(39, 174, 96, 0.12); }
+[data-theme="dark"] .answer-box .answer-title { color: #4ADE80; }
+
+/* Chat IA */
+.chat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.panel-column { display: flex; flex-direction: column; height: 600px; }
+.history-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.hist-item { padding: 14px; border-radius: var(--radius-md); background-color: var(--arena); border: 1px solid var(--acero); }
+.hist-date { font-size: 12px; color: var(--humo); margin-bottom: 6px; }
+.hist-q { font-size: 14px; font-weight: 600; color: var(--tinta); margin-bottom: 4px; }
+.hist-a { font-size: 14px; color: var(--gris); }
+.chat-form { display: flex; flex-direction: column; gap: 16px; flex: 1; }
+.chat-form textarea { width: 100%; resize: vertical; min-height: 140px; }
+.chat-submit { align-self: flex-start; }
 
 /* ============================================================
    RESPONSIVE
@@ -938,6 +1011,11 @@ textarea.form-control:focus {
     .app-layout.sidebar-open .sidebar-overlay { display: block; }
 
     .bottom-layout { grid-template-columns: 1fr; }
+    .report-grid { grid-template-columns: 1fr; }
+    .chat-grid { grid-template-columns: 1fr; }
+    .form-grid-2 { grid-template-columns: 1fr; }
+    .panel-column { height: auto; }
+    .history-list { max-height: 420px; }
 
     .kpi-matrix { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 

@@ -3,12 +3,12 @@
 {% block titulo %}Estadísticas IA - EFFIADMI{% endblock %}
 
 {% block contenido %}
-<div class="dashboard-header" style="margin-bottom: 24px;">
-    <h1 style="font-size: 28px; font-weight: 600; color: #0f172a; margin: 0;">Estadísticas IA</h1>
-    <p style="color: #64748b; margin-top: 4px; font-size: 15px;">Métricas en tiempo real y asistente inteligente de EFFIADMI</p>
+<div class="dashboard-header">
+    <h1>Estadísticas IA</h1>
+    <p>Métricas en tiempo real y asistente inteligente de EFFIADMI</p>
 </div>
 
-<div class="kpi-matrix" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 32px;">
+<div class="kpi-matrix">
     <div class="kpi-card-custom">
         <div class="kpi-icon-box geo-blue"><span class="material-symbols-outlined">category</span></div>
         <div class="kpi-core-data">
@@ -53,87 +53,89 @@
         <div class="kpi-icon-box geo-blue"><span class="material-symbols-outlined">trending_up</span></div>
         <div class="kpi-core-data">
             <span class="kpi-tag">Más Vendido</span>
-            <h3 class="kpi-number" style="font-size: 16px;">
+            <h3 class="kpi-number kpi-number-sm">
                 {% if producto_mas_vendido %}{{ producto_mas_vendido.nombre }} ({{ producto_mas_vendido.unidades }}){% else %}Sin ventas{% endif %}
             </h3>
         </div>
     </div>
 </div>
 
-<div class="bottom-layout" style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start;">
-    <div class="ia-column" style="display: flex; flex-direction: column; gap: 24px;">
+<div class="bottom-layout">
+    <div class="ia-column">
         <div class="dashboard-panel-card">
             <h3 class="panel-card-title">Reposición Sugerida</h3>
             {% if productos_bajos %}
-                {% for producto in productos_bajos %}
-                <div class="system-alert-row warn-alert" style="margin-bottom: 10px;">
-                    <strong>{{ producto.product.nombre }}</strong> — stock actual {{ producto.cantidad_disponible }} / mínimo {{ producto.stock_minimo }}
+                <div class="stack">
+                    {% for producto in productos_bajos %}
+                    <div class="system-alert-row warn-alert">
+                        <strong>{{ producto.product.nombre }}</strong> — stock actual {{ producto.cantidad_disponible }} / mínimo {{ producto.stock_minimo }}
+                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             {% else %}
-                <p style="color: #64748b; font-size: 14px; margin: 0;">Todos los productos están por encima de su stock mínimo. ¡Buen trabajo!</p>
+                <p class="empty-note sm">Todos los productos están por encima de su stock mínimo. ¡Buen trabajo!</p>
             {% endif %}
         </div>
     </div>
 
-    <div class="side-widgets-section" style="display: flex; flex-direction: column; gap: 24px;">
+    <div class="side-widgets-section">
         <div class="dashboard-panel-card">
             <h3 class="panel-card-title">Movimientos de Inventario</h3>
-            <div style="max-width: 300px; margin: 0 auto;"><canvas id="canvasMovimientos"></canvas></div>
+            <div class="chart-box-sm"><canvas id="canvasMovimientos"></canvas></div>
         </div>
 
         <div class="dashboard-panel-card">
             <h3 class="panel-card-title">Resumen</h3>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <div class="system-alert-row info-alert"><span class="material-symbols-outlined" style="font-size: 16px; vertical-align: text-bottom;">arrow_downward</span> Entradas: {{ entradas }}</div>
-                <div class="system-alert-row info-alert"><span class="material-symbols-outlined" style="font-size: 16px; vertical-align: text-bottom;">arrow_upward</span> Salidas: {{ salidas }}</div>
-                <div class="system-alert-row info-alert"><span class="material-symbols-outlined" style="font-size: 16px; vertical-align: text-bottom;">manage_accounts</span> Usuarios: {{ total_usuarios }}</div>
+            <div class="stack">
+                <div class="system-alert-row info-alert"><span class="material-symbols-outlined icon-sm">arrow_downward</span> Entradas: {{ entradas }}</div>
+                <div class="system-alert-row info-alert"><span class="material-symbols-outlined icon-sm">arrow_upward</span> Salidas: {{ salidas }}</div>
+                <div class="system-alert-row info-alert"><span class="material-symbols-outlined icon-sm">manage_accounts</span> Usuarios: {{ total_usuarios }}</div>
             </div>
         </div>
     </div>
 </div>
 
-<div style="margin-top: 32px;">
+<div class="report-block">
     <div class="dashboard-panel-card">
         <h3 class="panel-card-title">Reportes</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+        <div class="report-grid">
 
-            <div style="background: #f8fafc; border-radius: 10px; padding: 20px; border: 1px solid #e2e8f0;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <span class="material-symbols-outlined" style="color: #6A4DAB;">inventory</span>
-                    <h4 style="margin: 0; font-size: 15px; color: #1e293b;">Inventario General</h4>
+            <div class="report-mini-card">
+                <div class="report-mini-head">
+                    <span class="material-symbols-outlined report-icon-violet">inventory</span>
+                    <h4>Inventario General</h4>
                 </div>
-                <table style="width: 100%; font-size: 13px; color: #475569;">
-                    <tr><td style="padding: 4px 0;">Productos registrados:</td><td style="text-align: right; font-weight: 600;">{{ total_productos }}</td></tr>
-                    <tr><td style="padding: 4px 0;">Unidades totales:</td><td style="text-align: right; font-weight: 600;">{{ unidades_totales }}</td></tr>
-                    <tr><td style="padding: 4px 0;">Valor total inventario:</td><td style="text-align: right; font-weight: 600;">{{ valor_inventario|cop }}</td></tr>
-                    <tr><td style="padding: 4px 0;">Productos bajo stock:</td><td style="text-align: right; font-weight: 600; color: {% if productos_bajos %}#b45309{% else %}#10b981{% endif %};">{{ productos_bajos|length }}</td></tr>
+                <table class="report-table">
+                    <tr><td>Productos registrados:</td><td>{{ total_productos }}</td></tr>
+                    <tr><td>Unidades totales:</td><td>{{ unidades_totales }}</td></tr>
+                    <tr><td>Valor total inventario:</td><td>{{ valor_inventario|cop }}</td></tr>
+                    <tr><td>Productos bajo stock:</td><td class="{% if productos_bajos %}is-warn{% else %}is-ok{% endif %}">{{ productos_bajos|length }}</td></tr>
                 </table>
             </div>
 
-            <div style="background: #f8fafc; border-radius: 10px; padding: 20px; border: 1px solid #e2e8f0;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <span class="material-symbols-outlined" style="color: #10b981;">point_of_sale</span>
-                    <h4 style="margin: 0; font-size: 15px; color: #1e293b;">Facturacion</h4>
+            <div class="report-mini-card">
+                <div class="report-mini-head">
+                    <span class="material-symbols-outlined report-icon-green">point_of_sale</span>
+                    <h4>Facturacion</h4>
                 </div>
-                <table style="width: 100%; font-size: 13px; color: #475569;">
-                    <tr><td style="padding: 4px 0;">Facturas emitidas:</td><td style="text-align: right; font-weight: 600;">{{ total_facturas }}</td></tr>
-                    <tr><td style="padding: 4px 0;">Mas vendido:</td><td style="text-align: right; font-weight: 600;">{% if producto_mas_vendido %}{{ producto_mas_vendido.nombre }}{% else %}-{% endif %}</td></tr>
-                    <tr><td style="padding: 4px 0;">Unidades vendidas:</td><td style="text-align: right; font-weight: 600;">{% if producto_mas_vendido %}{{ producto_mas_vendido.unidades }}{% else %}0{% endif %}</td></tr>
-                    <tr><td style="padding: 4px 0;">Entradas registradas:</td><td style="text-align: right; font-weight: 600;">{{ entradas }}</td></tr>
-                    <tr><td style="padding: 4px 0;">Salidas registradas:</td><td style="text-align: right; font-weight: 600;">{{ salidas }}</td></tr>
+                <table class="report-table">
+                    <tr><td>Facturas emitidas:</td><td>{{ total_facturas }}</td></tr>
+                    <tr><td>Mas vendido:</td><td>{% if producto_mas_vendido %}{{ producto_mas_vendido.nombre }}{% else %}-{% endif %}</td></tr>
+                    <tr><td>Unidades vendidas:</td><td>{% if producto_mas_vendido %}{{ producto_mas_vendido.unidades }}{% else %}0{% endif %}</td></tr>
+                    <tr><td>Entradas registradas:</td><td>{{ entradas }}</td></tr>
+                    <tr><td>Salidas registradas:</td><td>{{ salidas }}</td></tr>
                 </table>
             </div>
 
-            <div style="background: #f8fafc; border-radius: 10px; padding: 20px; border: 1px solid #e2e8f0;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <span class="material-symbols-outlined" style="color: #a855f7;">group</span>
-                    <h4 style="margin: 0; font-size: 15px; color: #1e293b;">Contactos</h4>
+            <div class="report-mini-card">
+                <div class="report-mini-head">
+                    <span class="material-symbols-outlined report-icon-purple">group</span>
+                    <h4>Contactos</h4>
                 </div>
-                <table style="width: 100%; font-size: 13px; color: #475569;">
-                    <tr><td style="padding: 4px 0;">Clientes registrados:</td><td style="text-align: right; font-weight: 600;">{{ total_clientes }}</td></tr>
-                    <tr><td style="padding: 4px 0;">Proveedores registrados:</td><td style="text-align: right; font-weight: 600;">{{ total_proveedores }}</td></tr>
-                    <tr><td style="padding: 4px 0;">Usuarios activos:</td><td style="text-align: right; font-weight: 600;">{{ total_usuarios }}</td></tr>
+                <table class="report-table">
+                    <tr><td>Clientes registrados:</td><td>{{ total_clientes }}</td></tr>
+                    <tr><td>Proveedores registrados:</td><td>{{ total_proveedores }}</td></tr>
+                    <tr><td>Usuarios activos:</td><td>{{ total_usuarios }}</td></tr>
                 </table>
             </div>
 
@@ -145,17 +147,17 @@
 <div class="effi-widget{% if respuesta_ia %} open{% endif %}" id="effiWidget" {% if respuesta_ia %}data-autoopen="1"{% endif %}>
     <div class="effi-panel" id="effiPanel">
         <div class="effi-header">
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="effi-header-user">
                 <div class="effi-avatar">E</div>
                 <div>
-                    <div style="font-weight: 700; color: white;">EFFI</div>
-                    <div style="font-size: 12px; color: #C9B6F0;">Asistente de tu negocio</div>
+                    <div class="effi-header-label">EFFI</div>
+                    <div class="effi-header-sub">Asistente de tu negocio</div>
                 </div>
             </div>
             {% if es_admin and usuarios_disponibles %}
-            <form method="GET" style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 12px; color: #C9B6F0;">Ver:</span>
-                <select name="usuario" class="form-control" onchange="this.form.submit()" style="width: auto; padding: 4px 8px; font-size: 12px;">
+            <form method="GET" class="effi-header-user">
+                <span class="effi-header-sub">Ver:</span>
+                <select name="usuario" class="form-control effi-select" onchange="this.form.submit()">
                     <option value="">Todos</option>
                     {% for u in usuarios_disponibles %}
                     <option value="{{ u.id }}" {% if request.GET.usuario == u.id|stringformat:"s" %}selected{% endif %}>{{ u.username }}</option>
@@ -193,229 +195,15 @@
             {% csrf_token %}
             <textarea id="effiInput" name="pregunta" rows="1" placeholder="Escribe a EFFI... (Enter para enviar)"></textarea>
             <button type="submit" class="effi-send" title="Enviar">
-                <span class="material-symbols-outlined" style="font-size: 22px;">send</span>
+                <span class="material-symbols-outlined">send</span>
             </button>
         </form>
     </div>
 
     <button class="effi-launcher" id="effiLauncher" type="button" aria-label="Abrir chat EFFI">
-        <span class="material-symbols-outlined" id="effiLauncherIcon" style="font-size: 26px;">chat</span>
+        <span class="material-symbols-outlined" id="effiLauncherIcon">chat</span>
     </button>
 </div>
-
-<style>
-    .kpi-card-custom {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 20px;
-        display: flex;
-        align-items: center;
-        position: relative;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-    }
-    .kpi-icon-box {
-        width: 46px;
-        height: 46px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 14px;
-    }
-    .kpi-icon-box .material-symbols-outlined { font-size: 24px; }
-    .geo-green { background-color: #e2fbf0; color: #10b981; }
-    .geo-blue { background-color: #EDE7F7; color: #6A4DAB; }
-    .geo-yellow { background-color: #fef9c3; color: #eab308; }
-    .geo-purple { background-color: #f3e8ff; color: #a855f7; }
-    .geo-teal { background-color: #ccfbf1; color: #14b8a6; }
-
-    .kpi-core-data { display: flex; flex-direction: column; }
-    .kpi-tag { font-size: 13px; color: #64748b; margin-bottom: 2px; }
-    .kpi-number { font-size: 22px; font-weight: 600; color: #0f172a; margin: 0; }
-
-    .dashboard-panel-card {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-    }
-    .panel-card-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #1e293b;
-        margin: 0 0 18px 0;
-    }
-    .system-alert-row {
-        padding: 12px 14px;
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 500;
-    }
-    .warn-alert { background-color: #fffbeb; color: #b45309; }
-    .info-alert { background-color: #EDE7F7; color: #3A2370; }
-
-    .effi-widget {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 12px;
-        font-family: var(--font-secondary), sans-serif;
-    }
-    .effi-panel {
-        display: none;
-        flex-direction: column;
-        width: 380px;
-        max-width: calc(100vw - 40px);
-        height: 560px;
-        max-height: calc(100vh - 120px);
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 12px 40px rgba(0,0,0,0.18);
-        overflow: hidden;
-        border: 1px solid #e2e8f0;
-    }
-    .effi-widget.open .effi-panel {
-        display: flex;
-    }
-    .effi-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
-        padding: 14px 18px;
-        background: linear-gradient(135deg, #3A2370, #6A4DAB);
-        color: white;
-        flex-shrink: 0;
-    }
-    .effi-avatar {
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        background: white;
-        color: #3A2370;
-        font-weight: 800;
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-    .effi-header select {
-        color: #0f172a;
-    }
-    .effi-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px;
-        background: #F7F4FB;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    .effi-msg {
-        display: flex;
-        width: 100%;
-    }
-    .effi-user { justify-content: flex-end; }
-    .effi-bot { justify-content: flex-start; }
-    .effi-bubble {
-        max-width: 82%;
-        padding: 10px 14px;
-        border-radius: 16px;
-        font-size: 14px;
-        line-height: 1.5;
-        white-space: pre-wrap;
-        word-break: break-word;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-    .effi-bubble.user-bubble {
-        background-color: #3A2370;
-        color: white;
-        border-bottom-right-radius: 4px;
-    }
-    .effi-bubble.ia-bubble {
-        background-color: white;
-        color: #1e293b;
-        border: 1px solid #e2e8f0;
-        border-bottom-left-radius: 4px;
-    }
-    .effi-bubble code {
-        background: #eef2f7;
-        padding: 1px 5px;
-        border-radius: 4px;
-        font-size: 12px;
-    }
-    .effi-meta {
-        font-size: 10px;
-        text-align: right;
-        margin-top: 4px;
-        opacity: 0.7;
-    }
-    .effi-empty {
-        margin: auto;
-        text-align: center;
-        color: #64748b;
-        padding: 10px;
-    }
-    .effi-empty p { margin: 0 0 6px 0; font-size: 15px; color: #334155; }
-    .effi-empty small { font-size: 13px; color: #94a3b8; line-height: 1.5; }
-    .effi-inputbar {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
-        border-top: 1px solid #e2e8f0;
-        background: white;
-        flex-shrink: 0;
-    }
-    .effi-inputbar textarea {
-        flex: 1;
-        resize: none;
-        padding: 11px 14px;
-        border: 1px solid #e2e8f0;
-        border-radius: 22px;
-        font-size: 14px;
-        font-family: inherit;
-        outline: none;
-        max-height: 120px;
-    }
-    .effi-inputbar textarea:focus { border-color: #6A4DAB; }
-    .effi-send {
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        border: none;
-        background: #3A2370;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        flex-shrink: 0;
-    }
-    .effi-send:hover { background: #4A2E85; }
-    .effi-launcher {
-        width: 58px;
-        height: 58px;
-        border-radius: 50%;
-        border: none;
-        background: linear-gradient(135deg, #3A2370, #6A4DAB);
-        color: white;
-        box-shadow: 0 6px 20px rgba(58, 35, 112, 0.5);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.15s ease;
-    }
-    .effi-launcher:hover { transform: scale(1.05); }
-</style>
 {% endblock %}
 
 {% block js %}
@@ -423,20 +211,25 @@
     try {
         const ctxMov = document.getElementById('canvasMovimientos');
         if (ctxMov && typeof Chart !== 'undefined') {
+            const estilos = getComputedStyle(document.documentElement);
+            const varCss = function (nombre, fallback) {
+                const valor = estilos.getPropertyValue(nombre).trim();
+                return valor || fallback;
+            };
             new Chart(ctxMov, {
                 type: 'doughnut',
                 data: {
                     labels: ['Entradas', 'Salidas'],
                     datasets: [{
                         data: [{{ entradas }}, {{ salidas }}],
-                        backgroundColor: ['#10b981', '#ef4444'],
+                        backgroundColor: [varCss('--verde', '#27AE60'), varCss('--rojo', '#EB5757')],
                         borderWidth: 2,
-                        borderColor: '#ffffff'
+                        borderColor: varCss('--blanco', '#FFFFFF')
                     }]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } }
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 }, color: varCss('--gris', '#5E5870') } } }
                 }
             });
         }
