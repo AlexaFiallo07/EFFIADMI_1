@@ -3,8 +3,8 @@
 {% block titulo %}Editar Usuario{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 720px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container-narrow">
+    <div class="page-head">
         <h1>Editar Usuario</h1>
         <a href="{% url 'effiadmi:perfil' %}" class="btn btn-outline">Volver</a>
     </div>
@@ -37,17 +37,17 @@
                     </select>
                 </div>
             </div>
-            <div class="card-footer" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="card-footer row-between">
                 <div>
                     {% if usuario.id != request.session.logueado.id %}
                         {% if usuario.is_active %}
-                            <a href="{% url 'effiadmi:eliminar_usuario' usuario.id %}" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); document.getElementById('formDesactivar').submit();">Desactivar</a>
+                            <a href="{% url 'effiadmi:eliminar_usuario' usuario.id %}" class="btn btn-error btn-sm" onclick="event.preventDefault(); document.getElementById('formDesactivar').submit();">Desactivar</a>
                         {% else %}
-                            <a href="{% url 'effiadmi:eliminar_usuario' usuario.id %}" class="btn btn-outline" style="color: #10b981; border-color: #10b981;" onclick="event.preventDefault(); document.getElementById('formActivar').submit();">Activar</a>
+                            <a href="{% url 'effiadmi:eliminar_usuario' usuario.id %}" class="btn btn-success btn-sm" onclick="event.preventDefault(); document.getElementById('formActivar').submit();">Activar</a>
                         {% endif %}
                     {% endif %}
                 </div>
-                <div style="display: flex; gap: var(--spacing-md);">
+                <div class="hstack">
                     <a href="{% url 'effiadmi:perfil' %}" class="btn btn-outline">Cancelar</a>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
@@ -56,9 +56,9 @@
 
         {% if usuario.id != request.session.logueado.id %}
             {% if usuario.is_active %}
-                <form id="formDesactivar" method="POST" action="{% url 'effiadmi:eliminar_usuario' usuario.id %}" style="display: none;">{% csrf_token %}</form>
+                <form id="formDesactivar" method="POST" action="{% url 'effiadmi:eliminar_usuario' usuario.id %}" hidden>{% csrf_token %}</form>
             {% else %}
-                <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_usuario' usuario.id %}" style="display: none;">{% csrf_token %}</form>
+                <form id="formActivar" method="POST" action="{% url 'effiadmi:eliminar_usuario' usuario.id %}" hidden>{% csrf_token %}</form>
             {% endif %}
         {% endif %}
     </div>

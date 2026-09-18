@@ -3,15 +3,15 @@
 {% block titulo %}Detalle Factura{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 900px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container container-narrow">
+    <div class="page-head">
         <h1>Factura #{{ factura.id }}</h1>
         <a href="{% url 'effiadmi:lista_facturas' %}" class="btn btn-outline">Volver</a>
     </div>
 
     <div class="card">
         <div class="card-body">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
+            <div class="form-grid-2">
                 <div>
                     <p><strong>Cliente:</strong> {{ factura.cliente.nombre }}</p>
                     <p><strong>Correo:</strong> {{ factura.cliente.correo }}</p>
@@ -27,16 +27,16 @@
                     </p>
                     <p><strong>Estado:</strong>
                         {% if factura.estado == "emitida" %}
-                            <span style="color: #10b981; font-weight: 600;">Emitida</span>
+                            <span class="badge badge-success">Emitida</span>
                         {% elif factura.estado == "anulada" %}
-                            <span style="color: #ef4444; font-weight: 600;">Anulada</span>
+                            <span class="badge badge-error">Anulada</span>
                         {% endif %}
                     </p>
                 </div>
             </div>
 
-            <div style="margin-top: var(--spacing-lg); border-top: 1px solid #e2e8f0; padding-top: var(--spacing-lg);">
-                <h3 style="font-size: 16px; margin-bottom: 12px;">Productos</h3>
+            <div class="block-lg">
+                <h3 class="card-title block-lg">Productos</h3>
                 <table class="table">
                     <thead>
                         <tr>
@@ -57,9 +57,9 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                <div style="text-align: right; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-                    <span style="font-size: 14px; color: #64748b;">Total:</span>
-                    <strong style="font-size: 20px; margin-left: 8px;">{{ factura.total|cop }}</strong>
+                <div class="row-between">
+                    <span class="text-muted">Total:</span>
+                    <strong>{{ factura.total|cop }}</strong>
                 </div>
             </div>
         </div>

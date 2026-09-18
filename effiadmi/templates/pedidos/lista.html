@@ -3,8 +3,8 @@
 {% block titulo %}Pedidos{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 1200px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container">
+    <div class="page-head">
         <h1>Ordenes de Pedido</h1>
         <a href="{% url 'effiadmi:crear_pedido' %}" class="btn btn-primary">+ Nuevo Pedido</a>
     </div>
@@ -30,13 +30,13 @@
                         <td>{{ pedido.total|cop }}</td>
                         <td>
                             {% if pedido.estado == "pendiente" %}
-                                <span style="color: #eab308; font-weight: 600;">Pendiente</span>
+                                <span class="badge badge-warning">Pendiente</span>
                             {% elif pedido.estado == "confirmado" %}
-                                <span style="color: #6A4DAB; font-weight: 600;">Confirmado</span>
+                                <span class="badge badge-primary">Confirmado</span>
                             {% elif pedido.estado == "pagado" %}
-                                <span style="color: #10b981; font-weight: 600;">Pagado</span>
+                                <span class="badge badge-success">Pagado</span>
                             {% elif pedido.estado == "cancelado" %}
-                                <span style="color: #ef4444; font-weight: 600;">Cancelado</span>
+                                <span class="badge badge-error">Cancelado</span>
                             {% endif %}
                         </td>
                         <td>
@@ -51,7 +51,7 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">No hay pedidos registrados.</td>
+                        <td colspan="6" class="empty-row">No hay pedidos registrados.</td>
                     </tr>
                 {% endfor %}
             </tbody>
