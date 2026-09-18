@@ -315,11 +315,37 @@ class Notificacion(models.Model):
 
 
 # ============================================================
+# Conversaciones (cada tema es una conversacion)
+# ============================================================
+
+class Conversacion(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="conversaciones")
+    titulo = models.CharField(max_length=200, default="Nueva conversacion")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Conversacion"
+        verbose_name_plural = "Conversaciones"
+        ordering = ["-fecha_actualizacion"]
+
+    def __str__(self):
+        return f"{self.titulo} ({self.usuario.username})"
+
+
+# ============================================================
 # Historial de chat con IA
 # ============================================================
 
 class ChatHistorial(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="chat_historial")
+    conversacion = models.ForeignKey(
+        "Conversacion",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="mensajes",
+    )
     mensaje = models.TextField()
     respuesta = models.TextField()
     fecha = models.DateTimeField(auto_now_add=True)

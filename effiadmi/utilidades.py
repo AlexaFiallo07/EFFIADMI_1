@@ -38,6 +38,19 @@ def notificaciones_no_leidas(request):
     return {"no_leidas_notificaciones": no_leidas}
 
 
+def _correo_configurado():
+    from django.conf import settings
+
+    return bool(getattr(settings, "EMAIL_HOST_USER", ""))
+
+
+def _backend_es_consola():
+    from django.conf import settings
+
+    backend = getattr(settings, "EMAIL_BACKEND", "") or ""
+    return "console" in backend.lower()
+
+
 def enviar_correo(destinatario, asunto, cuerpo):
     """Envia un correo real usando la configuracion SMTP del .env.
 
@@ -45,6 +58,14 @@ def enviar_correo(destinatario, asunto, cuerpo):
     """
     from django.conf import settings
     from django.core.mail import send_mail
+
+    if _backend_es_consola() or not _correo_configurado():
+        return (
+            False,
+            "Modo prueba: el SMTP no esta configurado (falta EMAIL_HOST_USER y "
+            "EMAIL_HOST_PASSWORD en el .env), por lo que el correo NO se envio. "
+            "Con Gmail usa una contrasena de aplicacion (gratis) y luego se enviara de verdad.",
+        )
 
     try:
         enviados = send_mail(
