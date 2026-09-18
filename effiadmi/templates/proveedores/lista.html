@@ -54,7 +54,16 @@
                                 {% endif %}
                             </td>
                             <td>
+                                <a href="{% url 'effiadmi:detalle_proveedor' proveedor.id %}" class="btn btn-outline btn-sm">Detalle</a>
+                                {% if request.session.logueado.rol == 'admin' %}
                                 <a href="{% url 'effiadmi:editar_proveedor' proveedor.id %}" class="btn btn-outline btn-sm">Editar</a>
+                                <form method="POST" action="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" class="inline-form">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline btn-sm">
+                                        {% if proveedor.activo %}Desactivar{% else %}Activar{% endif %}
+                                    </button>
+                                </form>
+                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}

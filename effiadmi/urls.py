@@ -60,8 +60,11 @@ urlpatterns = [
     # ==================== PROVEEDORES ====================
     path('proveedores/', views.lista_proveedores, name='lista_proveedores'),
     path('proveedores/crear/', views.crear_proveedor, name='crear_proveedor'),
+    path('proveedores/<int:id>/', views.detalle_proveedor, name='detalle_proveedor'),
     path('proveedores/<int:id>/editar/', views.editar_proveedor, name='editar_proveedor'),
     path('proveedores/<int:id>/eliminar/', views.eliminar_proveedor, name='eliminar_proveedor'),
+    path('proveedores/<int:id>/productos/agregar/', views.agregar_producto_proveedor, name='agregar_producto_proveedor'),
+    path('proveedores/<int:id>/productos/<int:rel_id>/quitar/', views.eliminar_producto_proveedor, name='eliminar_producto_proveedor'),
     
     # ==================== NOTIFICACIONES ====================
     path('notificaciones/', views.lista_notificaciones, name='lista_notificaciones'),
@@ -78,4 +81,12 @@ urlpatterns = [
     # ==================== REPORTES ====================
     path('reportes/', views.reportes, name='reportes'),
     path('reportes/<int:id>/', views.detalle_reporte, name='detalle_reporte'),
+
+    # ==================== CORREOS ====================
+    path('correos/', views.lista_correos, name='lista_correos'),
+
+    # ==================== FACTURAS DE COMPRA ====================
+    path('facturas-compra/', views.lista_facturas_compra, name='lista_facturas_compra'),
+    path('facturas-compra/crear/', views.crear_factura_compra, name='crear_factura_compra'),
+    path('facturas-compra/exportar/', views.exportar_facturas_compra_excel, name='exportar_facturas_compra_excel'),
 ]

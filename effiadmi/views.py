@@ -1,13 +1,19 @@
 from decimal import Decimal
+import io
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, F, Count
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django import template as django_template
+
+from openpyxl import Workbook
+from openpyxl.chart import BarChart, PieChart, Reference
+from openpyxl.styles import Font, PatternFill, Alignment
 
 register = django_template.Library()
 
@@ -46,10 +52,10 @@ from .models import (
     UserProfile, Branch, Product, Categoria, Inventory, InventoryLog,
     Cliente, Proveedor, ProveedorProducto,
     Factura, FacturaDetalle, Pedido, PedidoDetalle,
-    Notificacion, ChatHistorial, Reporte,
+    Notificacion, ChatHistorial, Reporte, CorreoEnviado, FacturaCompra,
 )
 from .servicio_ia import consultar_asistente_effiadmi
-from .utilidades import autorizacion, crear_notificacion, ids_admins
+from .utilidades import autorizacion, crear_notificacion, ids_admins, enviar_correo
 
 
 # ==================== LOGIN/LOGOUT ====================
@@ -1369,6 +1375,63 @@ def eliminar_proveedor(request, id):
         return redirect("effiadmi:lista_proveedores")
 
 
+@autorizacion(roles=['admin', 'operador'])
+def detalle_proveedor(request, id):
+    try:
+        proveedor = get_object_or_404(Proveedor, pk=id)
+        relaciones = (
+            ProveedorProducto.objects
+            .select_related("producto", "producto__categoria")
+            .filter(proveedor=proveedor)
+            .order_by("producto__nombre")
+        )
+        productos_disponibles = Product.objects.filter(activo=True).order_by("nombre")
+        facturas = FacturaCompra.objects.filter(proveedor=proveedor).order_by("-fecha")[:15]
+        return render(request, "proveedores/detalle.html", {
+            "proveedor": proveedor,
+            "relaciones": relaciones,
+            "productos_disponibles": productos_disponibles,
+            "facturas": facturas,
+        })
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:lista_proveedores")
+
+
+@autorizacion(roles=['admin'])
+def agregar_producto_proveedor(request, id):
+    proveedor = get_object_or_404(Proveedor, pk=id)
+    if request.method == "POST":
+        producto_id = request.POST.get("producto")
+        precio_str = (request.POST.get("precio_compra") or "").strip()
+        try:
+            producto = Product.objects.get(pk=producto_id)
+            precio = Decimal(precio_str)
+            if precio < 0:
+                raise ValueError
+        except (Product.DoesNotExist, Exception):
+            messages.error(request, "Selecciona un producto y un precio de compra valido.")
+            return redirect("effiadmi:detalle_proveedor", id=proveedor.id)
+
+        ProveedorProducto.objects.update_or_create(
+            proveedor=proveedor,
+            producto=producto,
+            defaults={"precio_compra": precio},
+        )
+        messages.success(request, f"Producto '{producto.nombre}' asociado al proveedor.")
+    return redirect("effiadmi:detalle_proveedor", id=proveedor.id)
+
+
+@autorizacion(roles=['admin'])
+def eliminar_producto_proveedor(request, id, rel_id):
+    proveedor = get_object_or_404(Proveedor, pk=id)
+    if request.method == "POST":
+        relacion = get_object_or_404(ProveedorProducto, pk=rel_id, proveedor=proveedor)
+        relacion.delete()
+        messages.success(request, "Producto quitado del proveedor.")
+    return redirect("effiadmi:detalle_proveedor", id=proveedor.id)
+
+
 # ==================== NOTIFICACIONES ====================
 
 def _notificar_stock_bajo(inventario):
@@ -1667,6 +1730,235 @@ def detalle_reporte(request, id):
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:reportes")
+
+
+# ==================== CORREOS ====================
+
+@autorizacion(roles=['admin', 'operador'])
+def lista_correos(request):
+    try:
+        enviados = CorreoEnviado.objects.select_related("usuario").order_by("-fecha")[:50]
+
+        if request.method == "POST":
+            destinatario = (request.POST.get("destinatario", "") or "").strip()
+            asunto = (request.POST.get("asunto", "") or "").strip()
+            cuerpo = (request.POST.get("cuerpo", "") or "").strip()
+
+            if not all([destinatario, asunto, cuerpo]):
+                messages.error(request, "Completa destinatario, asunto y mensaje.")
+                return render(request, "correos/lista.html", {"enviados": enviados})
+
+            usuario = None
+            if request.session.get("logueado"):
+                usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+
+            exitoso, error = enviar_correo(destinatario, asunto, cuerpo)
+            CorreoEnviado.objects.create(
+                usuario=usuario,
+                destinatario=destinatario,
+                asunto=asunto,
+                cuerpo=cuerpo,
+                exitoso=exitoso,
+                error=error,
+            )
+            if exitoso:
+                messages.success(request, f"Correo enviado a {destinatario}.")
+            else:
+                messages.error(request, f"No se pudo enviar el correo: {error}")
+            return redirect("effiadmi:lista_correos")
+
+        return render(request, "correos/lista.html", {"enviados": enviados})
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:inicio")
+
+
+# ==================== FACTURAS DE COMPRA ====================
+
+
+def _aplicar_filtros_facturas_compra(request, qs):
+    mes_seleccionado = (request.GET.get("mes", "") or "").strip()
+    proveedor_id = (request.GET.get("proveedor", "") or "").strip()
+    if proveedor_id and proveedor_id.isdigit():
+        qs = qs.filter(proveedor_id=int(proveedor_id))
+    if mes_seleccionado and "-" in mes_seleccionado:
+        partes = mes_seleccionado.split("-")
+        if len(partes) == 2 and partes[0].isdigit() and partes[1].isdigit():
+            qs = qs.filter(
+                fecha__year=int(partes[0]),
+                fecha__month=int(partes[1]),
+            )
+    return qs, mes_seleccionado, proveedor_id
+
+
+@autorizacion(roles=['admin', 'operador'])
+def lista_facturas_compra(request):
+    try:
+        qs = FacturaCompra.objects.select_related("proveedor", "usuario").all()
+        qs, mes_seleccionado, proveedor_id = _aplicar_filtros_facturas_compra(request, qs)
+        facturas = qs.order_by("-fecha", "-id")
+
+        total_general = facturas.aggregate(total=Sum("monto"))["total"] or 0
+
+        meses_disponibles = (
+            FacturaCompra.objects
+            .values("fecha__year", "fecha__month")
+            .annotate(meses_total=Sum("monto"), cantidad=Count("id"))
+            .order_by("-fecha__year", "-fecha__month")[:12]
+        )
+        etiquetas = []
+        datos = []
+        for m in reversed(list(meses_disponibles)):
+            etiquetas.append(f"{m['fecha__month']:02d}/{m['fecha__year']}")
+            datos.append(float(m["meses_total"]))
+
+        proveedores = Proveedor.objects.filter(activo=True).order_by("nombre")
+
+        return render(request, "facturas_compra/lista.html", {
+            "facturas": facturas,
+            "proveedores": proveedores,
+            "meses_disponibles": meses_disponibles,
+            "mes_seleccionado": mes_seleccionado,
+            "proveedor_seleccionado": proveedor_id,
+            "total_general": total_general,
+            "etiquetas": etiquetas,
+            "datos": datos,
+        })
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:lista_facturas_compra")
+
+
+@autorizacion(roles=['admin'])
+def crear_factura_compra(request):
+    proveedores = Proveedor.objects.filter(activo=True).order_by("nombre")
+    ctx_base = {"proveedores": proveedores}
+
+    if request.method == "POST":
+        try:
+            proveedor_id = request.POST.get("proveedor", "")
+            numero = (request.POST.get("numero", "") or "").strip()
+            fecha_str = (request.POST.get("fecha", "") or "").strip()
+            monto_str = (request.POST.get("monto", "0") or "").strip()
+            notas = (request.POST.get("notas", "") or "").strip()
+            archivo = request.FILES.get("archivo")
+
+            if not fecha_str:
+                messages.error(request, "La fecha es obligatoria.")
+                return render(request, "facturas_compra/crear.html", ctx_base)
+
+            try:
+                fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+            except ValueError:
+                messages.error(request, "La fecha no es valida.")
+                return render(request, "facturas_compra/crear.html", ctx_base)
+
+            try:
+                monto = Decimal(monto_str)
+            except (TypeError, ValueError):
+                messages.error(request, "El monto no es valido.")
+                return render(request, "facturas_compra/crear.html", ctx_base)
+
+            if monto < 0:
+                messages.error(request, "El monto no puede ser negativo.")
+                return render(request, "facturas_compra/crear.html", ctx_base)
+
+            proveedor = (
+                Proveedor.objects.filter(id=proveedor_id, activo=True).first()
+                if proveedor_id else None
+            )
+
+            usuario = None
+            if request.session.get("logueado"):
+                usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+
+            FacturaCompra.objects.create(
+                proveedor=proveedor,
+                usuario=usuario,
+                numero=numero,
+                fecha=fecha,
+                monto=monto,
+                archivo=archivo,
+                notas=notas,
+            )
+            messages.success(request, "Factura de compra registrada exitosamente.")
+            return redirect("effiadmi:lista_facturas_compra")
+        except Exception as e:
+            messages.error(request, f"Error: {e}")
+
+    return render(request, "facturas_compra/crear.html", ctx_base)
+
+
+@autorizacion(roles=['admin', 'operador'])
+def exportar_facturas_compra_excel(request):
+    try:
+        qs = FacturaCompra.objects.select_related("proveedor").all()
+        qs, mes_seleccionado, proveedor_id = _aplicar_filtros_facturas_compra(request, qs)
+        qs = qs.order_by("fecha", "id")
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Facturas de Compra"
+
+        ws.cell(row=1, column=1, value="Facturas de Compra EFFIADMI").font = Font(bold=True, size=14)
+        headers = ["Numero", "Fecha", "Proveedor", "Monto", "Notas"]
+        for col, titulo in enumerate(headers, start=1):
+            celda = ws.cell(row=3, column=col, value=titulo)
+            celda.font = Font(bold=True, color="FFFFFF")
+            celda.fill = PatternFill(start_color="6A0DAD", end_color="6A0DAD", fill_type="solid")
+            celda.alignment = Alignment(horizontal="center")
+
+        fila = 4
+        total = Decimal("0")
+        for fc in qs:
+            ws.cell(row=fila, column=1, value=fc.numero or "")
+            ws.cell(row=fila, column=2, value=fc.fecha.strftime("%d/%m/%Y"))
+            ws.cell(row=fila, column=3, value=fc.proveedor.nombre if fc.proveedor else "-")
+            ws.cell(row=fila, column=4, value=float(fc.monto))
+            ws.cell(row=fila, column=5, value=fc.notas or "")
+            total += fc.monto
+            fila += 1
+
+        ws.cell(row=fila + 1, column=3, value="Total").font = Font(bold=True)
+        ws.cell(row=fila + 1, column=4, value=float(total)).font = Font(bold=True)
+
+        ws2 = wb.create_sheet("Compras por Mes")
+        mensual = (
+            FacturaCompra.objects
+            .values("fecha__year", "fecha__month")
+            .annotate(meses_total=Sum("monto"))
+            .order_by("fecha__year", "fecha__month")
+        )
+        ws2.cell(row=1, column=1, value="Mes").font = Font(bold=True)
+        ws2.cell(row=1, column=2, value="Monto").font = Font(bold=True)
+        fila_mes = 2
+        for m in mensual:
+            ws2.cell(row=fila_mes, column=1, value=f"{m['fecha__month']:02d}/{m['fecha__year']}")
+            ws2.cell(row=fila_mes, column=2, value=float(m["meses_total"]))
+            fila_mes += 1
+
+        chart = BarChart()
+        chart.type = "col"
+        chart.title = "Compras por Mes"
+        chart.add_data(
+            Reference(ws2, min_col=2, min_row=1, max_row=fila_mes - 1, max_col=2),
+            titles_from_data=True,
+        )
+        chart.set_categories(
+            Reference(ws2, min_col=1, min_row=2, max_row=fila_mes - 1)
+        )
+        ws2.add_chart(chart, "D2")
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        nombre_archivo = f"facturas_compra_{mes_seleccionado}" if mes_seleccionado else "facturas_compra"
+        response["Content-Disposition"] = f'attachment; filename="{nombre_archivo}.xlsx"'
+        wb.save(response)
+        return response
+    except Exception as e:
+        messages.error(request, f"Error al exportar: {e}")
+        return redirect("effiadmi:lista_facturas_compra")
 
 
 # ==================== BACKEND DE AUTENTICACION ====================

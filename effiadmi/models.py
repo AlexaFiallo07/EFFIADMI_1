@@ -365,3 +365,55 @@ class Reporte(models.Model):
 
     def __str__(self):
         return f"[{self.get_tipo_display()}] {self.titulo} - {self.usuario.username}"
+
+
+# ============================================================
+# Correos enviados (historial)
+# ============================================================
+
+class CorreoEnviado(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    destinatario = models.EmailField(db_index=True)
+    asunto = models.CharField(max_length=200)
+    cuerpo = models.TextField()
+    exitoso = models.BooleanField(default=False)
+    error = models.TextField(blank=True, default="")
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Correo Enviado"
+        verbose_name_plural = "Correos Enviados"
+        ordering = ["-fecha"]
+
+    def __str__(self):
+        return f"{self.destinatario} - {self.asunto}"
+
+
+# ============================================================
+# Facturas de compra (carga mensual)
+# ============================================================
+
+def _ruta_factura_compra(instance, filename):
+    return f"facturas_compra/{instance.fecha:%Y/%m}/{filename}"
+
+
+class FacturaCompra(models.Model):
+    proveedor = models.ForeignKey(
+        Proveedor, on_delete=models.SET_NULL, null=True, blank=True, related_name="facturas_compra"
+    )
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    numero = models.CharField(max_length=80, blank=True, default="")
+    fecha = models.DateField(db_index=True)
+    monto = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    archivo = models.FileField(upload_to=_ruta_factura_compra, blank=True, null=True)
+    notas = models.TextField(blank=True, default="")
+    fecha_subida = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Factura de Compra"
+        verbose_name_plural = "Facturas de Compra"
+        ordering = ["-fecha", "-id"]
+        indexes = [models.Index(fields=["-fecha"])]
+
+    def __str__(self):
+        return f"Compra {self.numero or self.id} - {self.fecha:%d/%m/%Y}"

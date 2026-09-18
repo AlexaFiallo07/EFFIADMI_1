@@ -38,6 +38,29 @@ def notificaciones_no_leidas(request):
     return {"no_leidas_notificaciones": no_leidas}
 
 
+def enviar_correo(destinatario, asunto, cuerpo):
+    """Envia un correo real usando la configuracion SMTP del .env.
+
+    Devuelve (exitoso, mensaje_error).
+    """
+    from django.conf import settings
+    from django.core.mail import send_mail
+
+    try:
+        enviados = send_mail(
+            asunto,
+            cuerpo,
+            settings.DEFAULT_FROM_EMAIL,
+            [destinatario],
+            fail_silently=False,
+        )
+        if enviados:
+            return True, ""
+        return False, "El servidor de correo no confirmo el envio."
+    except Exception as e:
+        return False, str(e)
+
+
 def autorizacion(roles=[]):
     def verificar_autenticacion(func):
         def envoltorio_func(request, *args, **kwargs):
