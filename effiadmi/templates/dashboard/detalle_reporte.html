@@ -3,47 +3,47 @@
 {% block titulo %}Reporte: {{ reporte.titulo }}{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 800px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container container-narrow">
+    <div class="page-head">
         <h1>Detalle del Reporte</h1>
         <a href="{% url 'effiadmi:reportes' %}" class="btn btn-outline">Volver</a>
     </div>
 
-    <div class="card" style="margin-bottom: var(--spacing-xl);">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="card block-xl">
+        <div class="card-header row-between">
             <h3 class="card-title">{{ reporte.titulo }}</h3>
             {% if reporte.estado == 'pendiente' %}
-                <span style="color: #f59e0b; font-weight: 600;">Pendiente</span>
+                <span class="badge badge-warning">Pendiente</span>
             {% elif reporte.estado == 'visto' %}
-                <span style="color: #6A4DAB; font-weight: 600;">Visto</span>
+                <span class="badge badge-primary">Visto</span>
             {% else %}
-                <span style="color: #10b981; font-weight: 600;">Resuelto</span>
+                <span class="badge badge-success">Resuelto</span>
             {% endif %}
         </div>
         <div class="card-body">
-            <div style="margin-bottom: var(--spacing-lg);">
-                <p style="font-size: 13px; color: #64748b; margin-bottom: 4px;">Tipo</p>
+            <div class="block-lg">
+                <p class="field-label-muted">Tipo</p>
                 <p>{{ reporte.get_tipo_display }}</p>
             </div>
-            <div style="margin-bottom: var(--spacing-lg);">
-                <p style="font-size: 13px; color: #64748b; margin-bottom: 4px;">Enviado por</p>
+            <div class="block-lg">
+                <p class="field-label-muted">Enviado por</p>
                 <p>{{ reporte.usuario.first_name }} {{ reporte.usuario.last_name }} ({{ reporte.usuario.email }})</p>
             </div>
-            <div style="margin-bottom: var(--spacing-lg);">
-                <p style="font-size: 13px; color: #64748b; margin-bottom: 4px;">Fecha de creacion</p>
+            <div class="block-lg">
+                <p class="field-label-muted">Fecha de creacion</p>
                 <p>{{ reporte.fecha_creacion|date:"d/m/Y H:i" }}</p>
             </div>
-            <div style="margin-bottom: var(--spacing-lg);">
-                <p style="font-size: 13px; color: #64748b; margin-bottom: 4px;">Descripcion</p>
-                <p style="white-space: pre-wrap;">{{ reporte.descripcion }}</p>
+            <div class="block-lg">
+                <p class="field-label-muted">Descripcion</p>
+                <p class="pre-wrap">{{ reporte.descripcion }}</p>
             </div>
 
             {% if reporte.respuesta %}
-            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: var(--spacing-md); margin-bottom: var(--spacing-lg);">
-                <p style="font-size: 13px; color: #166534; margin-bottom: 4px; font-weight: 600;">Respuesta del Administrador</p>
-                <p style="white-space: pre-wrap;">{{ reporte.respuesta }}</p>
+            <div class="answer-box">
+                <p class="answer-title">Respuesta del Administrador</p>
+                <p class="pre-wrap">{{ reporte.respuesta }}</p>
                 {% if reporte.fecha_respuesta %}
-                <p style="font-size: 12px; color: #64748b; margin-top: 8px;">{{ reporte.fecha_respuesta|date:"d/m/Y H:i" }}</p>
+                <p class="answer-date">{{ reporte.fecha_respuesta|date:"d/m/Y H:i" }}</p>
                 {% endif %}
             </div>
             {% endif %}
@@ -58,7 +58,7 @@
         <form method="POST">
             {% csrf_token %}
             <div class="card-body">
-                <div class="form-group" style="margin-bottom: var(--spacing-lg);">
+                <div class="form-group block-lg">
                     <label for="estado" class="form-label">Estado</label>
                     <select id="estado" name="estado" class="form-control">
                         <option value="pendiente" {% if reporte.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>

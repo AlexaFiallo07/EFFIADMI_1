@@ -3,36 +3,152 @@
 {% block titulo %}Detalle Proveedor{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 760px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container">
+    <div class="page-head">
         <h1>{{ proveedor.nombre }}</h1>
         <a href="{% url 'effiadmi:lista_proveedores' %}" class="btn btn-outline">Volver</a>
     </div>
 
-    <div class="card">
+    <div class="card block-lg">
         <div class="card-body">
-            <div class="form-group">
-                <label class="form-label">Nombre Proveedor</label>
-                <p>{{ proveedor.nombre }}</p>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Correo</label>
-                <p>{{ proveedor.correo }}</p>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Telefono</label>
-                <p>{{ proveedor.telefono }}</p>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Direccion</label>
-                <p>{{ proveedor.direccion }}</p>
+            <div class="grid-2">
+                <div>
+                    <div class="form-group">
+                        <label class="form-label">Nombre Proveedor</label>
+                        <p>{{ proveedor.nombre }}</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Correo</label>
+                        <p>{{ proveedor.correo }}</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Telefono</label>
+                        <p>{{ proveedor.telefono }}</p>
+                    </div>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label class="form-label">Direccion</label>
+                        <p>{{ proveedor.direccion }}</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estado</label>
+                        <p>
+                            {% if proveedor.activo %}
+                                <span class="badge badge-success">Activo</span>
+                            {% else %}
+                                <span class="badge badge-error">Inactivo</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="card-footer">
+            {% if request.session.logueado.rol == 'admin' %}
             <a href="{% url 'effiadmi:editar_proveedor' proveedor.id %}" class="btn btn-primary">Editar</a>
+            <form method="POST" action="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" class="inline-form">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline">
+                    {% if proveedor.activo %}Desactivar{% else %}Activar{% endif %}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Productos Asignados</h3>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio Compra</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rel in relaciones %}
+                            <tr>
+                                <td>{{ rel.producto.nombre }}</td>
+                                <td>{{ rel.precio_compra|cop }}</td>
+                                <td>
+                                    <form method="POST" action="{% url 'effiadmi:eliminar_producto_proveedor' proveedor.id rel.id %}" class="inline-form">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline btn-sm">Quitar</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3" class="empty-row">Este proveedor aún no tiene productos asignados.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Asignar Producto</h3>
+            </div>
+            <form method="POST" action="{% url 'effiadmi:agregar_producto_proveedor' proveedor.id %}">
+                {% csrf_token %}
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Producto</label>
+                        <select name="producto" class="form-control" required>
+                            <option value="">Selecciona un producto</option>
+                            {% for p in productos_disponibles %}
+                                <option value="{{ p.id }}">{{ p.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Precio de Compra (COP)</label>
+                        <input type="number" name="precio_compra" class="form-control" min="0" step="0.01" placeholder="0" required>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary">Asignar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card block-lg">
+        <div class="card-header">
+            <h3 class="card-title">Facturas de Compra</h3>
+            <a href="{% url 'effiadmi:lista_facturas_compra' %}?proveedor={{ proveedor.id }}" class="btn btn-outline btn-sm">Ver todas</a>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Numero</th>
+                        <th>Fecha</th>
+                        <th>Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fc in facturas %}
+                        <tr>
+                            <td>{{ fc.numero|default:"-" }}</td>
+                            <td>{{ fc.fecha|date:"d/m/Y" }}</td>
+                            <td>{{ fc.monto|cop }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="3" class="empty-row">No hay facturas de compra para este proveedor.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

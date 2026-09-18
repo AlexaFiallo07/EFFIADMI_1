@@ -3,15 +3,15 @@
 {% block titulo %}Facturas{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 1200px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container">
+    <div class="page-head">
         <h1>Gestion de Facturas</h1>
     </div>
 
-    <div class="card" style="margin-bottom: var(--spacing-lg);">
+    <div class="card block-lg">
         <div class="card-body">
-            <form method="GET" style="display: flex; gap: var(--spacing-md); align-items: flex-end;">
-                <div class="form-group" style="flex: 1; min-width: 200px;">
+            <form method="GET" class="toolbar">
+                <div class="form-group">
                     <label class="form-label">Estado</label>
                     <select name="estado" class="form-control" onchange="this.form.submit()">
                         <option value="">Todas</option>
@@ -46,9 +46,9 @@
                         <td>{{ factura.total|cop }}</td>
                         <td>
                             {% if factura.estado == "emitida" %}
-                                <span style="color: #10b981; font-weight: 600;">Emitida</span>
+                                <span class="badge badge-success">Emitida</span>
                             {% elif factura.estado == "anulada" %}
-                                <span style="color: #ef4444; font-weight: 600;">Anulada</span>
+                                <span class="badge badge-error">Anulada</span>
                             {% endif %}
                         </td>
                         <td>
@@ -56,14 +56,14 @@
                             {% if factura.estado == "emitida" %}
                                 <form method="post" action="{% url 'effiadmi:anular_factura' factura.id %}" style="display: inline;" onsubmit="return confirm('Anular esta factura?');">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-ghost btn-sm" style="color: #ef4444;">Anular</button>
+                                    <button type="submit" class="btn btn-error btn-sm">Anular</button>
                                 </form>
                             {% endif %}
                         </td>
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="7" style="text-align: center; padding: var(--spacing-xl);">No hay facturas {% if filtro_estado %}con estado "{{ filtro_estado }}"{% endif %} registradas.</td>
+                        <td colspan="7" class="empty-row">No hay facturas {% if filtro_estado %}con estado "{{ filtro_estado }}"{% endif %} registradas.</td>
                     </tr>
                 {% endfor %}
             </tbody>

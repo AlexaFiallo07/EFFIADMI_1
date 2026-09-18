@@ -3,13 +3,13 @@
 {% block titulo %}Detalle Inventario{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 760px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container">
+    <div class="page-head">
         <h1>{{ inventario.product.nombre }}</h1>
         <a href="{% url 'effiadmi:lista_inventario' %}" class="btn btn-outline">Volver</a>
     </div>
 
-    <div class="card">
+    <div class="card block-lg">
         <div class="card-body">
             <div class="form-group">
                 <label class="form-label">ID</label>
@@ -30,8 +30,7 @@
                 <label class="form-label">Stock Disponible</label>
                 <p>
                     {% if inventario.cantidad_disponible <= inventario.stock_minimo %}
-                        <span style="color: #ef4444; font-weight: bold;">{{ inventario.cantidad_disponible }}</span>
-                        <span style="color: #ef4444;">(Bajo minimo)</span>
+                        <span class="badge badge-warning">{{ inventario.cantidad_disponible }} (Bajo minimo)</span>
                     {% else %}
                         {{ inventario.cantidad_disponible }}
                     {% endif %}
@@ -60,7 +59,7 @@
         </div>
     </div>
 
-    <div class="card" style="margin-top: var(--spacing-lg);">
+    <div class="card">
         <div class="card-header">
             <h2>Movimientos Recientes</h2>
             <a href="{% url 'effiadmi:registrar_movimiento' inventario.id %}" class="btn btn-primary btn-sm">+ Nuevo Movimiento</a>
@@ -83,11 +82,11 @@
                             <td>{{ mov.fecha|date:"d/m/Y H:i" }}</td>
                             <td>
                                 {% if mov.tipo_movimiento == "ENTRADA" %}
-                                    <span style="color: #22c55e; font-weight: bold;">Entrada</span>
+                                    <span class="badge badge-success">Entrada</span>
                                 {% elif mov.tipo_movimiento == "SALIDA" %}
-                                    <span style="color: #ef4444; font-weight: bold;">Salida</span>
+                                    <span class="badge badge-error">Salida</span>
                                 {% else %}
-                                    <span style="color: #f59e0b; font-weight: bold;">Ajuste</span>
+                                    <span class="badge badge-warning">Ajuste</span>
                                 {% endif %}
                             </td>
                             <td>{{ mov.cantidad }}</td>
@@ -97,7 +96,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: var(--spacing-lg);">
+                            <td colspan="6" class="empty-row">
                                 No hay movimientos registrados.
                             </td>
                         </tr>

@@ -3,15 +3,15 @@
 {% block titulo %}Detalle Pedido{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 900px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container container-narrow">
+    <div class="page-head">
         <h1>Pedido PED-{{ pedido.id }}</h1>
         <a href="{% url 'effiadmi:lista_pedidos' %}" class="btn btn-outline">Volver</a>
     </div>
 
     <div class="card">
         <div class="card-body">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
+            <div class="form-grid-2">
                 <div>
                     <p><strong>Cliente:</strong> {{ pedido.cliente.nombre }}</p>
                     <p><strong>Correo:</strong> {{ pedido.cliente.correo }}</p>
@@ -22,20 +22,20 @@
                     <p><strong>Usuario:</strong> {% if pedido.usuario %}{{ pedido.usuario.first_name|default:pedido.usuario.username }}{% else %}Sistema{% endif %}</p>
                     <p><strong>Estado:</strong>
                         {% if pedido.estado == "pendiente" %}
-                            <span style="color: #eab308; font-weight: 600;">Pendiente</span>
+                            <span class="badge badge-warning">Pendiente</span>
                         {% elif pedido.estado == "confirmado" %}
-                            <span style="color: #6A4DAB; font-weight: 600;">Confirmado</span>
+                            <span class="badge badge-primary">Confirmado</span>
                         {% elif pedido.estado == "pagado" %}
-                            <span style="color: #10b981; font-weight: 600;">Pagado</span>
+                            <span class="badge badge-success">Pagado</span>
                         {% elif pedido.estado == "cancelado" %}
-                            <span style="color: #ef4444; font-weight: 600;">Cancelado</span>
+                            <span class="badge badge-error">Cancelado</span>
                         {% endif %}
                     </p>
                 </div>
             </div>
 
-            <div style="margin-top: var(--spacing-lg); border-top: 1px solid #e2e8f0; padding-top: var(--spacing-lg);">
-                <h3 style="font-size: 16px; margin-bottom: 12px;">Productos</h3>
+            <div class="block-lg">
+                <h3 class="card-title block-lg">Productos</h3>
                 <table class="table">
                     <thead>
                         <tr>
@@ -56,21 +56,21 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                <div style="text-align: right; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-                    <span style="font-size: 14px; color: #64748b;">Total:</span>
-                    <strong style="font-size: 20px; margin-left: 8px;">{{ pedido.total|cop }}</strong>
+                <div class="row-between">
+                    <span class="text-muted">Total:</span>
+                    <strong>{{ pedido.total|cop }}</strong>
                 </div>
             </div>
 
             {% if factura_asociada %}
-            <div style="margin-top: var(--spacing-lg); padding: 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
-                <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: text-bottom; color: #10b981;">check_circle</span>
+            <div class="answer-box">
+                <span class="material-symbols-outlined icon-sm">check_circle</span>
                 <a href="{% url 'effiadmi:detalle_factura' factura_asociada.id %}">Factura #{{ factura_asociada.id }}</a>
                 - {{ factura_asociada.get_estado_display }}
             </div>
             {% endif %}
         </div>
-        <div class="card-footer" style="display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
+        <div class="card-footer">
             {% if pedido.estado == "pendiente" %}
                 <form method="POST" action="{% url 'effiadmi:confirmar_pedido' pedido.id %}" style="display: inline;" onsubmit="return confirm('Confirmar este pedido? Se descontara el inventario.');">
                     {% csrf_token %}
@@ -78,7 +78,7 @@
                 </form>
                 <form method="POST" action="{% url 'effiadmi:cancelar_pedido' pedido.id %}" style="display: inline;" onsubmit="return confirm('Cancelar este pedido?');">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;">Cancelar Pedido</button>
+                    <button type="submit" class="btn btn-error">Cancelar Pedido</button>
                 </form>
             {% elif pedido.estado == "confirmado" %}
                 <form method="POST" action="{% url 'effiadmi:pagar_pedido' pedido.id %}" style="display: inline;" onsubmit="return confirm('Marcar como pagado? Se generara la factura.');">
@@ -87,7 +87,7 @@
                 </form>
                 <form method="POST" action="{% url 'effiadmi:cancelar_pedido' pedido.id %}" style="display: inline;" onsubmit="return confirm('Cancelar este pedido?');">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;">Cancelar Pedido</button>
+                    <button type="submit" class="btn btn-error">Cancelar Pedido</button>
                 </form>
             {% endif %}
         </div>

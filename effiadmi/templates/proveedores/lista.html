@@ -3,18 +3,18 @@
 {% block titulo %}Proveedores{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 1200px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container">
+    <div class="page-head">
         <h1>Listado de Proveedores</h1>
         {% if request.session.logueado.rol == 'admin' %}
         <a href="{% url 'effiadmi:crear_proveedor' %}" class="btn btn-primary">+ Nuevo Proveedor</a>
         {% endif %}
     </div>
 
-    <div class="card" style="margin-bottom: var(--spacing-lg);">
+    <div class="card block-lg">
         <div class="card-body">
-            <form method="GET" style="display: flex; gap: var(--spacing-md); align-items: flex-end;">
-                <div class="form-group" style="flex: 1; min-width: 200px;">
+            <form method="GET" class="hstack">
+                <div class="form-group">
                     <label class="form-label">Estado</label>
                     <select name="estado" class="form-control" onchange="this.form.submit()">
                         <option value="">Todos</option>
@@ -48,18 +48,27 @@
                             <td>{{ proveedor.direccion }}</td>
                             <td>
                                 {% if proveedor.activo %}
-                                    <span style="color: #10b981; font-weight: 600;">Activo</span>
+                                    <span class="badge badge-success">Activo</span>
                                 {% else %}
-                                    <span style="color: #ef4444; font-weight: 600;">Inactivo</span>
+                                    <span class="badge badge-error">Inactivo</span>
                                 {% endif %}
                             </td>
                             <td>
+                                <a href="{% url 'effiadmi:detalle_proveedor' proveedor.id %}" class="btn btn-outline btn-sm">Detalle</a>
+                                {% if request.session.logueado.rol == 'admin' %}
                                 <a href="{% url 'effiadmi:editar_proveedor' proveedor.id %}" class="btn btn-outline btn-sm">Editar</a>
+                                <form method="POST" action="{% url 'effiadmi:eliminar_proveedor' proveedor.id %}" class="inline-form">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline btn-sm">
+                                        {% if proveedor.activo %}Desactivar{% else %}Activar{% endif %}
+                                    </button>
+                                </form>
+                                {% endif %}
                             </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">
+                            <td colspan="6" class="empty-row">
                                 No hay proveedores {% if filtro_estado %}con estado "{{ filtro_estado }}"{% endif %} registrados.
                             </td>
                         </tr>

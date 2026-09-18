@@ -73,6 +73,14 @@
                     <span class="material-symbols-outlined">description</span> Facturación
                 </a>
                 {% if request.session.logueado.rol == 'admin' %}
+                <a href="{% url 'effiadmi:lista_facturas_compra' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_facturas_compra' %}active{% endif %}">
+                    <span class="material-symbols-outlined">receipt_long</span> Facturas Compra
+                </a>
+                {% endif %}
+                <a href="{% url 'effiadmi:lista_correos' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_correos' %}active{% endif %}">
+                    <span class="material-symbols-outlined">mail</span> Correos
+                </a>
+                {% if request.session.logueado.rol == 'admin' %}
                 <a href="{% url 'effiadmi:estadisticas_ia' %}" class="menu-link {% if request.resolver_match.url_name == 'estadisticas_ia' %}active{% endif %}">
                     <span class="material-symbols-outlined">psychology</span> Estadisticas IA
                 </a>
@@ -113,6 +121,19 @@
             <span class="material-symbols-outlined">menu</span>
         </button>
         <div class="contenedor-dinamico">
+
+            {% if request.session.logueado %}
+            <div class="topbar">
+                <div class="topbar-greet">
+                    <span class="topbar-hello">Bienvenido de nuevo</span>
+                    <strong class="topbar-name">{{ request.session.logueado.nombre|default:"Usuario" }}</strong>
+                </div>
+                <div class="topbar-actions">
+                    <span class="topbar-role">{{ request.session.logueado.rol|default:"usuario" }}</span>
+                    <span class="topbar-date">{% now "j \d\e F, Y" %}</span>
+                </div>
+            </div>
+            {% endif %}
 
             {% if messages %}
                 {% for message in messages %}

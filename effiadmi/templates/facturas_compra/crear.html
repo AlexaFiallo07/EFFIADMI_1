@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Nueva Factura de Compra{% endblock %}
+
+{% block contenido %}
+<div class="container container-narrow">
+    <div class="page-head">
+        <h1>Nueva Factura de Compra</h1>
+        <a href="{% url 'effiadmi:lista_facturas_compra' %}" class="btn btn-outline">Volver</a>
+    </div>
+
+    <div class="card block-xl">
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="card-body">
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="numero" class="form-label">Numero de Factura</label>
+                        <input type="text" id="numero" name="numero" class="form-control" placeholder="Ej: FC-001">
+                    </div>
+                    <div class="form-group">
+                        <label for="proveedor" class="form-label">Proveedor</label>
+                        <select id="proveedor" name="proveedor" class="form-control">
+                            <option value="">Sin proveedor</option>
+                            {% for p in proveedores %}
+                                <option value="{{ p.id }}">{{ p.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="fecha" class="form-label">Fecha</label>
+                        <input type="date" id="fecha" name="fecha" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="monto" class="form-label">Monto (COP)</label>
+                        <input type="number" id="monto" name="monto" class="form-control" min="0" step="0.01" placeholder="0" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="archivo" class="form-label">Archivo (PDF/Imagen)</label>
+                    <input type="file" id="archivo" name="archivo" class="form-control" accept=".pdf,.png,.jpg,.jpeg">
+                </div>
+                <div class="form-group">
+                    <label for="notas" class="form-label">Notas</label>
+                    <textarea id="notas" name="notas" class="form-control" rows="3" placeholder="Observaciones sobre la compra..."></textarea>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">Guardar Factura</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

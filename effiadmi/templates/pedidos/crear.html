@@ -3,8 +3,8 @@
 {% block titulo %}Crear Pedido{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 900px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container container-narrow">
+    <div class="page-head">
         <h1>Crear Pedido</h1>
         <a href="{% url 'effiadmi:lista_pedidos' %}" class="btn btn-outline">Volver</a>
     </div>
@@ -23,9 +23,9 @@
                     </select>
                 </div>
 
-                <div class="form-group" style="margin-top: var(--spacing-lg);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <label class="form-label" style="margin: 0;">Productos</label>
+                <div class="form-group">
+                    <div class="row-between block-lg">
+                        <label class="form-label">Productos</label>
                         <button type="button" class="btn btn-outline btn-sm" onclick="agregarProducto()">+ Agregar producto</button>
                     </div>
 
@@ -33,23 +33,21 @@
                         <thead>
                             <tr>
                                 <th>Producto</th>
-                                <th style="width: 100px;">Cantidad</th>
-                                <th style="width: 120px;">Precio</th>
-                                <th style="width: 120px;">Subtotal</th>
-                                <th style="width: 50px;"></th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                                <th>Subtotal</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody id="cuerpoProductos">
                         </tbody>
                     </table>
-                    <p id="mensajeVacio" style="color: #64748b; font-size: 13px; text-align: center; padding: 20px 0;">Haz clic en "+ Agregar producto" para comenzar.</p>
+                    <p id="mensajeVacio" class="empty-note">Haz clic en "+ Agregar producto" para comenzar.</p>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; margin-top: var(--spacing-lg); border-top: 1px solid #e2e8f0; padding-top: var(--spacing-lg);">
-                    <div style="text-align: right;">
-                        <span style="font-size: 14px; color: #64748b;">Total:</span>
-                        <h2 id="totalPedido" style="margin: 0; font-size: 24px; font-weight: 600; color: #0f172a;">$ 0</h2>
-                    </div>
+                <div class="row-between block-lg">
+                    <span class="text-muted">Total:</span>
+                    <h2 id="totalPedido">$ 0</h2>
                 </div>
             </div>
             <div class="card-footer">

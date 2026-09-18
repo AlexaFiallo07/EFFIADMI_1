@@ -3,8 +3,8 @@
 {% block titulo %}Detalle Notificación{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 720px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container-narrow">
+    <div class="page-head">
         <h1>Detalle de Notificación</h1>
         <a href="{% url 'effiadmi:lista_notificaciones' %}" class="btn btn-outline">Volver</a>
     </div>
@@ -13,7 +13,7 @@
         <div class="card-body">
             <div class="form-group">
                 <label class="form-label">Mensaje</label>
-                <p style="padding: var(--spacing-md); background-color: #f8fafc; border-radius: 8px;">
+                <p class="pre-wrap">
                     {{ notificacion.mensaje }}
                 </p>
             </div>
@@ -34,7 +34,7 @@
                 </p>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+            <div class="card-footer">
                 <a href="{% url 'effiadmi:lista_notificaciones' %}" class="btn btn-outline">Volver</a>
                 <form method="POST" action="{% url 'effiadmi:eliminar_notificacion' notificacion.id %}" style="display: inline;">
                     {% csrf_token %}

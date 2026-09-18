@@ -3,8 +3,8 @@
 {% block titulo %}Clientes{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 1200px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container">
+    <div class="page-head">
         <h1>Listado de Clientes</h1>
         <a href="{% url 'effiadmi:crear_cliente' %}" class="btn btn-primary">+ Nuevo Cliente</a>
     </div>
@@ -31,9 +31,9 @@
                             <td>{{ cliente.direccion }}</td>
                             <td>
                                 {% if cliente.activo %}
-                                    <span style="color: #10b981; font-weight: 600;">Activo</span>
+                                    <span class="badge badge-success">Activo</span>
                                 {% else %}
-                                    <span style="color: #ef4444; font-weight: 600;">Inactivo</span>
+                                    <span class="badge badge-error">Inactivo</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -42,7 +42,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: var(--spacing-xl);">
+                            <td colspan="6" class="empty-row">
                                 No hay clientes registrados.
                             </td>
                         </tr>

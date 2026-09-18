@@ -3,8 +3,8 @@
 {% block titulo %}Nuevo Usuario{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 720px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container-narrow">
+    <div class="page-head">
         <h1>Nuevo Usuario</h1>
         <a href="{% url 'effiadmi:perfil' %}" class="btn btn-outline">Volver</a>
     </div>
@@ -68,7 +68,7 @@
                     </select>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+                <div class="card-footer">
                     <a href="{% url 'effiadmi:perfil' %}" class="btn btn-outline">Cancelar</a>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>

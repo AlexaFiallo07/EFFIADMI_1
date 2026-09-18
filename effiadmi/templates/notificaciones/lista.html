@@ -3,8 +3,8 @@
 {% block titulo %}Notificaciones{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 1200px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container">
+    <div class="page-head">
         <h1>Listado de Notificaciones</h1>
         <form method="POST" action="{% url 'effiadmi:marcar_todas_leidas' %}">
             {% csrf_token %}
@@ -48,7 +48,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="4" style="text-align: center; padding: var(--spacing-xl);">
+                            <td colspan="4" class="empty-row">
                                 No hay notificaciones.
                             </td>
                         </tr>

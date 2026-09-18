@@ -3,8 +3,8 @@
 {% block titulo %}Productos{% endblock %}
 
 {% block contenido %}
-<div class="container" style="max-width: 1200px; margin: 0 auto;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+<div class="container">
+    <div class="page-head">
         <h1>Listado de Productos</h1>
         {% if request.session.logueado.rol == 'admin' %}
         <a href="{% url 'effiadmi:crear_producto' %}" class="btn btn-primary">+ Nuevo Producto</a>
@@ -35,22 +35,22 @@
                             <td>{{ item.stock }}</td>
                             <td>
                                 {% if item.producto.activo %}
-                                    <span style="color: #10b981; font-weight: 600;">Activo</span>
+                                    <span class="badge badge-success">Activo</span>
                                 {% else %}
-                                    <span style="color: #ef4444; font-weight: 600;">Inactivo</span>
+                                    <span class="badge badge-error">Inactivo</span>
                                 {% endif %}
                             </td>
                             <td>
                                 <a href="{% url 'effiadmi:editar_producto' item.producto.id %}" class="btn btn-outline btn-sm">Editar</a>
                                 {% if request.session.logueado.rol == 'admin' %}
-                                <a href="{% url 'effiadmi:eliminar_producto' item.producto.id %}" class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #ef4444;" onclick="event.preventDefault(); if (confirm('Esta seguro de eliminar el producto \'{{ item.producto.nombre }}\'? Esta accion no se puede deshacer.')) { document.getElementById('formEliminar{{ item.producto.id }}').submit(); }">Eliminar</a>
-                                <form id="formEliminar{{ item.producto.id }}" method="POST" action="{% url 'effiadmi:eliminar_producto' item.producto.id %}" style="display: none;">{% csrf_token %}</form>
+                                <a href="{% url 'effiadmi:eliminar_producto' item.producto.id %}" class="btn btn-error btn-sm" onclick="event.preventDefault(); if (confirm('Esta seguro de eliminar el producto \'{{ item.producto.nombre }}\'? Esta accion no se puede deshacer.')) { document.getElementById('formEliminar{{ item.producto.id }}').submit(); }">Eliminar</a>
+                                <form id="formEliminar{{ item.producto.id }}" method="POST" action="{% url 'effiadmi:eliminar_producto' item.producto.id %}" hidden>{% csrf_token %}</form>
                                 {% endif %}
                             </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: var(--spacing-xl);">
+                            <td colspan="7" class="empty-row">
                                 No hay productos registrados.
                             </td>
                         </tr>

@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Correos{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <div class="page-head">
+        <h1>Correos</h1>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Enviar Correo</h3>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="destinatario" class="form-label">Destinatario</label>
+                        <input type="email" id="destinatario" name="destinatario" class="form-control" placeholder="correo@ejemplo.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="asunto" class="form-label">Asunto</label>
+                        <input type="text" id="asunto" name="asunto" class="form-control" placeholder="Asunto del correo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cuerpo" class="form-label">Mensaje</label>
+                        <textarea id="cuerpo" name="cuerpo" class="form-control" rows="5" placeholder="Escribe el contenido del correo..." required></textarea>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary">Enviar Correo</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Envíos Recientes</h3>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Destinatario</th>
+                            <th>Asunto</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in enviados %}
+                        <tr>
+                            <td>{{ c.fecha|date:"d/m/Y H:i" }}</td>
+                            <td>{{ c.destinatario }}</td>
+                            <td>{{ c.asunto }}</td>
+                            <td>
+                                {% if c.exitoso %}
+                                    <span class="badge badge-success">Enviado</span>
+                                {% else %}
+                                    <span class="badge badge-error" title="{{ c.error }}">Fallido</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="empty-row">Aún no se han enviado correos.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
