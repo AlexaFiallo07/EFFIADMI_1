@@ -1407,3 +1407,55 @@ textarea.form-control:focus {
         scroll-behavior: auto !important;
     }
 }
+
+/* ============================================================
+   SECCION DE PESTAÑAS (FACTURACIÓN UNIFICADA)
+   ============================================================ */
+.seccion-tabs {
+    display: flex;
+    gap: var(--spacing-sm);
+    background: var(--color-border-light);
+    padding: 6px;
+    border-radius: var(--radius-pill);
+    margin-bottom: var(--spacing-lg);
+    width: max-content;
+    max-width: 100%;
+    flex-wrap: wrap;
+}
+.seccion-tabs a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--radius-pill);
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.seccion-tabs a:hover {
+    color: var(--color-text-primary);
+    background: var(--color-primary-lighter);
+}
+.seccion-tabs a.active {
+    background: var(--color-primary);
+    color: #FFFFFF;
+    box-shadow: var(--glow-focus);
+}
+.seccion-tabs a.active .material-symbols-outlined {
+    color: #FFFFFF;
+}
+.seccion-tabs a .material-symbols-outlined {
+    font-size: 20px;
+}
+@media (max-width: 640px) {
+    .seccion-tabs {
+        width: 100%;
+        justify-content: stretch;
+    }
+    .seccion-tabs a {
+        flex: 1;
+        justify-content: center;
+        white-space: nowrap;
+    }
+}

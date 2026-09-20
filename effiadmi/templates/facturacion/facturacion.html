@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block titulo %}Facturación - EFFIADMI{% endblock %}
+
+{% block contenido %}
+<div class="container">
+    <div class="page-head">
+        <h1>Facturación</h1>
+        {% if tab == 'compras' and request.session.logueado.rol == 'admin' %}
+        <div class="hstack gap-sm">
+            <a href="{% url 'effiadmi:exportar_facturas_compra_excel' %}?mes={{ mes_seleccionado }}&proveedor={{ proveedor_seleccionado }}" class="btn btn-outline">Exportar Excel</a>
+            <a href="{% url 'effiadmi:crear_factura_compra' %}" class="btn btn-primary">+ Nueva Factura</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="seccion-tabs">
+        <a href="?tab=ventas" class="{% if tab == 'ventas' %}active{% endif %}">
+            <span class="material-symbols-outlined">description</span> Facturas (Ventas)
+        </a>
+        {% if es_admin %}
+        <a href="?tab=compras" class="{% if tab == 'compras' %}active{% endif %}">
+            <span class="material-symbols-outlined">receipt_long</span> Facturas de Compra
+        </a>
+        {% endif %}
+    </div>
+
+    {% if tab == 'compras' %}
+    {% if etiquetas %}
+    <div class="card block-lg">
+        <div class="card-body">
+            <div class="chart-box">
+                <canvas id="canvasCompras"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card block-lg">
+        <div class="card-body">
+            <form method="GET" class="toolbar">
+                <input type="hidden" name="tab" value="compras">
+                <div class="form-group">
+                    <label class="form-label">Proveedor</label>
+                    <select name="proveedor" class="form-control">
+                        <option value="">Todos</option>
+                        {% for p in proveedores %}
+                            <option value="{{ p.id }}" {% if proveedor_seleccionado == p.id|stringformat:"d" %}selected{% endif %}>{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mes</label>
+                    <input type="month" name="mes" class="form-control" value="{{ mes_seleccionado }}">
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Registros</h3>
+            <span class="badge badge-primary">Total: {{ total_general|cop }}</span>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Numero</th>
+                        <th>Fecha</th>
+                        <th>Proveedor</th>
+                        <th>Monto</th>
+                        <th>Archivo</th>
+                        <th>Registrado por</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fc in facturas %}
+                        <tr>
+                            <td>{{ fc.numero|default:"-" }}</td>
+                            <td>{{ fc.fecha|date:"d/m/Y" }}</td>
+                            <td>{{ fc.proveedor.nombre|default:"-" }}</td>
+                            <td>{{ fc.monto|cop }}</td>
+                            <td>
+                                {% if fc.archivo %}
+                                    <a href="{{ fc.archivo.url }}" target="_blank" class="btn btn-outline btn-sm">Ver</a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ fc.usuario.get_full_name|default:fc.usuario.username|default:"Sistema" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="empty-row">No hay facturas de compra registradas.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card block-lg">
+        <div class="card-body">
+            <form method="GET" class="toolbar">
+                <input type="hidden" name="tab" value="ventas">
+                <div class="form-group">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" class="form-control" onchange="this.form.submit()">
+                        <option value="">Todas</option>
+                        <option value="emitida" {% if filtro_estado == 'emitida' %}selected{% endif %}>Emitidas</option>
+                        <option value="anulada" {% if filtro_estado == 'anulada' %}selected{% endif %}>Anuladas</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Cliente</th>
+                    <th>Pedido</th>
+                    <th>Fecha</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for factura in facturas %}
+                    <tr>
+                        <td>#{{ factura.id }}</td>
+                        <td>{{ factura.cliente.nombre }}</td>
+                        <td>{% if factura.pedido %}PED-{{ factura.pedido.id }}{% else %}-{% endif %}</td>
+                        <td>{{ factura.fecha_emision|date:"Y-m-d H:i" }}</td>
+                        <td>{{ factura.total|cop }}</td>
+                        <td>
+                            {% if factura.estado == "emitida" %}
+                                <span class="badge badge-success">Emitida</span>
+                            {% elif factura.estado == "anulada" %}
+                                <span class="badge badge-error">Anulada</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'effiadmi:detalle_factura' factura.id %}" class="btn btn-ghost btn-sm">Ver</a>
+                            {% if factura.estado == "emitida" %}
+                                <form method="post" action="{% url 'effiadmi:anular_factura' factura.id %}" style="display: inline;" onsubmit="return confirm('Anular esta factura?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-error btn-sm">Anular</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="empty-row">No hay facturas {% if filtro_estado %}con estado "{{ filtro_estado }}"{% endif %} registradas.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block js %}
+{% if tab == 'compras' %}
+<script>
+    try {
+        const ctx = document.getElementById('canvasCompras');
+        if (ctx && typeof Chart !== 'undefined') {
+            const estilos = getComputedStyle(document.documentElement);
+            const varCss = function (nombre, fallback) {
+                const valor = estilos.getPropertyValue(nombre).trim();
+                return valor || fallback;
+            };
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: {{ etiquetas|safe }},
+                    datasets: [{
+                        label: 'Compras por mes',
+                        data: {{ datos|safe }},
+                        backgroundColor: varCss('--morado', '#6A0DAD'),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: varCss('--gris', '#5E5870') }
+                        },
+                        x: {
+                            ticks: { color: varCss('--gris', '#5E5870') }
+                        }
+                    }
+                }
+            });
+        }
+    } catch (e) { console.warn('Chart no disponible:', e); }
+</script>
+{% endif %}
+{% endblock %}

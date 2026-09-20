@@ -8,6 +8,18 @@
         <h1>Correos</h1>
     </div>
 
+    {% if not smtp_configurado %}
+    <div class="card block-lg">
+        <div class="system-alert-row warn-alert">
+            <strong>Correos en modo prueba.</strong>
+            El SMTP no esta configurado en el archivo .env (faltan EMAIL_HOST_USER y
+            EMAIL_HOST_PASSWORD). Los correos NO se envian de verdad: se imprimen en la
+            consola donde corre el servidor. Para enviarlos realmente, configura una
+            contrasena de aplicacion de Gmail (gratis) en el .env y reinicia el servidor.
+        </div>
+    </div>
+    {% endif %}
+
     <div class="grid-2">
         <div class="card">
             <div class="card-header">

@@ -1,10 +1,12 @@
 from decimal import Decimal
 import io
+import json
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, F, Count
 from django.utils import timezone
@@ -52,7 +54,7 @@ from .models import (
     UserProfile, Branch, Product, Categoria, Inventory, InventoryLog,
     Cliente, Proveedor, ProveedorProducto,
     Factura, FacturaDetalle, Pedido, PedidoDetalle,
-    Notificacion, ChatHistorial, Reporte, CorreoEnviado, FacturaCompra,
+    Notificacion, Conversacion, ChatHistorial, Reporte, CorreoEnviado, FacturaCompra,
 )
 from .servicio_ia import consultar_asistente_effiadmi
 from .utilidades import autorizacion, crear_notificacion, ids_admins, enviar_correo
@@ -1126,7 +1128,7 @@ def detalle_factura(request, id):
         })
     except Exception as e:
         messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas")
+        return redirect("effiadmi:facturacion")
 
 
 @autorizacion(roles=['admin'])
@@ -1155,7 +1157,7 @@ def anular_factura(request, id):
 
     except Exception as e:
         messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas")
+        return redirect("effiadmi:facturacion")
 
 
 @autorizacion(roles=['admin'])
@@ -1169,10 +1171,10 @@ def eliminar_factura(request, id):
                 messages.success(request, "Factura anulada.")
             else:
                 messages.warning(request, "La factura ya esta anulada.")
-        return redirect("effiadmi:lista_facturas")
+        return redirect("effiadmi:facturacion")
     except Exception as e:
         messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas")
+        return redirect("effiadmi:facturacion")
 
 
 @autorizacion(roles=['admin'])
@@ -1439,15 +1441,16 @@ def _notificar_stock_bajo(inventario):
         f"ALERTA: Stock bajo para '{inventario.product.nombre}' "
         f"({inventario.cantidad_disponible}/{inventario.stock_minimo})."
     )
+    destinatarios = User.objects.filter(is_active=True).values_list("id", flat=True)
     ya_notificado = Notificacion.objects.filter(
-        usuario_id__in=ids_admins(),
+        usuario_id__in=destinatarios,
         mensaje=mensaje,
         leido=False,
     ).exists()
     if ya_notificado:
         return
     crear_notificacion(
-        ids_admins(),
+        list(destinatarios),
         mensaje,
         enlace=f"inventario/{inventario.id}/",
     )
@@ -1613,12 +1616,7 @@ def estadisticas_ia(request):
         if request.method == "POST":
             pregunta = request.POST.get("pregunta", "").strip()
             if pregunta:
-                respuesta = consultar_asistente_effiadmi(pregunta, contexto_negocio=contexto_negocio)
-                ChatHistorial.objects.create(
-                    usuario=usuario,
-                    mensaje=pregunta,
-                    respuesta=respuesta,
-                )
+                conversacion, respuesta = _responder_chat(usuario, pregunta)
                 contexto["respuesta_ia"] = respuesta
                 contexto["pregunta"] = pregunta
             else:
@@ -1632,9 +1630,91 @@ def estadisticas_ia(request):
 
 # ==================== CHAT IA ====================
 
-@autorizacion(roles=['admin'])
-def chat_ia(request):
-    return redirect("effiadmi:estadisticas_ia")
+def _contexto_negocio_effiadmi():
+    """Datos reales del negocio para el asistente IA."""
+    total_productos = Product.objects.filter(activo=True).count()
+    total_proveedores = Proveedor.objects.filter(activo=True).count()
+    total_clientes = Cliente.objects.filter(activo=True).count()
+    total_facturas = Factura.objects.filter(estado="emitida").count()
+
+    inventario = Inventory.objects.select_related("product").all()
+    unidades_totales = inventario.aggregate(total=Sum("cantidad_disponible"))["total"] or 0
+
+    precios_compra = {
+        pp.producto_id: float(pp.precio_compra)
+        for pp in ProveedorProducto.objects.select_related("producto")
+    }
+    proveedor_de = {}
+    for pp in ProveedorProducto.objects.select_related("proveedor"):
+        proveedor_de.setdefault(pp.producto_id, pp.proveedor.nombre)
+
+    valor_inventario = 0
+    productos_bajos = []
+    for inv in inventario:
+        valor_inventario += float(inv.product.precio_venta) * inv.cantidad_disponible
+        if inv.cantidad_disponible <= inv.stock_minimo:
+            productos_bajos.append(inv)
+
+    ventas_por_producto = (
+        FacturaDetalle.objects
+        .values("producto__id", "producto__nombre")
+        .annotate(total=Sum("cantidad"))
+        .order_by("-total")
+    )
+
+    productos_str = []
+    for v in ventas_por_producto[:15]:
+        pid = v["producto__id"]
+        margen = ""
+        if pid in precios_compra:
+            margen = f", margen={round(float(Product.objects.get(pk=pid).precio_venta) - precios_compra[pid], 2)}"
+        productos_str.append(f"{v['producto__nombre']}: {v['total']} uds vendidas{margen}")
+
+    bajos_str = []
+    for inv in productos_bajos:
+        prov = proveedor_de.get(inv.product_id, "sin proveedor asignado")
+        bajos_str.append(
+            f"{inv.product.nombre}: stock {inv.cantidad_disponible}/{inv.stock_minimo}, proveedor={prov}"
+        )
+
+    return {
+        "Productos activos": total_productos,
+        "Proveedores": total_proveedores,
+        "Clientes": total_clientes,
+        "Facturas emitidas": total_facturas,
+        "Valor del inventario": round(valor_inventario, 2),
+        "Unidades totales en inventario": unidades_totales,
+        "Ventas por producto": "; ".join(productos_str) if productos_str else "Sin ventas registradas",
+        "Productos bajo stock": "; ".join(bajos_str) if bajos_str else "Ninguno",
+        "Entradas de inventario": InventoryLog.objects.filter(tipo_movimiento="ENTRADA").count(),
+        "Salidas de inventario": InventoryLog.objects.filter(tipo_movimiento="SALIDA").count(),
+    }
+
+
+def _titulo_conversacion(mensaje):
+    texto = " ".join(str(mensaje).split())
+    return (texto[:60] + "…") if len(texto) > 60 else texto or "Historial"
+
+
+def _responder_chat(usuario, mensaje, conversacion=None):
+    """Guarda el intercambio en una conversacion y devuelve (conversacion, respuesta)."""
+    if conversacion is None:
+        conversacion = Conversacion.objects.create(usuario=usuario)
+    es_primero = not conversacion.mensajes.exists()
+    respuesta = consultar_asistente_effiadmi(mensaje, contexto_negocio=_contexto_negocio_effiadmi())
+    ChatHistorial.objects.create(
+        usuario=usuario,
+        conversacion=conversacion,
+        mensaje=mensaje,
+        respuesta=respuesta,
+    )
+    if es_primero and conversacion.titulo == "Nueva conversacion":
+        conversacion.titulo = _titulo_conversacion(mensaje)
+    conversacion.save()
+    return conversacion, respuesta
+
+
+
 
 
 # ==================== REPORTES ====================
@@ -1711,9 +1791,13 @@ def detalle_reporte(request, id):
                 nombre_admin = f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username
             except Exception:
                 nombre_admin = "Administrador"
+            mensaje_notif = f"Tu reporte '{reporte.titulo}' fue respondido por {nombre_admin}."
+            Notificacion.objects.filter(
+                usuario_id=reporte.usuario_id, mensaje=mensaje_notif, leido=False
+            ).delete()
             crear_notificacion(
                 [reporte.usuario_id],
-                f"Tu reporte '{reporte.titulo}' fue respondido por {nombre_admin}.",
+                mensaje_notif,
                 enlace=f"reportes/{reporte.id}/",
             )
             messages.success(request, "Reporte actualizado exitosamente.")
@@ -1737,6 +1821,10 @@ def detalle_reporte(request, id):
 @autorizacion(roles=['admin', 'operador'])
 def lista_correos(request):
     try:
+        from .utilidades import _correo_configurado, _backend_es_consola
+
+        smtp_configurado = _correo_configurado()
+        backend_consola = _backend_es_consola()
         enviados = CorreoEnviado.objects.select_related("usuario").order_by("-fecha")[:50]
 
         if request.method == "POST":
@@ -1746,7 +1834,10 @@ def lista_correos(request):
 
             if not all([destinatario, asunto, cuerpo]):
                 messages.error(request, "Completa destinatario, asunto y mensaje.")
-                return render(request, "correos/lista.html", {"enviados": enviados})
+                return render(request, "correos/lista.html", {
+                    "enviados": enviados,
+                    "smtp_configurado": smtp_configurado,
+                })
 
             usuario = None
             if request.session.get("logueado"):
@@ -1767,7 +1858,11 @@ def lista_correos(request):
                 messages.error(request, f"No se pudo enviar el correo: {error}")
             return redirect("effiadmi:lista_correos")
 
-        return render(request, "correos/lista.html", {"enviados": enviados})
+        return render(request, "correos/lista.html", {
+            "enviados": enviados,
+            "smtp_configurado": smtp_configurado,
+            "backend_consola": backend_consola,
+        })
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
@@ -1826,7 +1921,7 @@ def lista_facturas_compra(request):
         })
     except Exception as e:
         messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas_compra")
+        return redirect(reverse('effiadmi:facturacion') + '?tab=compras')
 
 
 @autorizacion(roles=['admin'])
@@ -1882,7 +1977,7 @@ def crear_factura_compra(request):
                 notas=notas,
             )
             messages.success(request, "Factura de compra registrada exitosamente.")
-            return redirect("effiadmi:lista_facturas_compra")
+            return redirect(reverse('effiadmi:facturacion') + '?tab=compras')
         except Exception as e:
             messages.error(request, f"Error: {e}")
 
@@ -1958,7 +2053,73 @@ def exportar_facturas_compra_excel(request):
         return response
     except Exception as e:
         messages.error(request, f"Error al exportar: {e}")
-        return redirect("effiadmi:lista_facturas_compra")
+        return redirect("effiadmi:facturacion")
+
+
+# ==================== FACTURACION UNIFICADA ====================
+
+
+@autorizacion(roles=['admin', 'operador'])
+def facturacion(request):
+    try:
+        tab = request.GET.get("tab", "ventas")
+        es_admin = request.session["logueado"]["rol"] == "admin"
+        if tab not in ("ventas", "compras"):
+            tab = "ventas"
+        if tab == "compras" and not es_admin:
+            tab = "ventas"
+
+        if tab == "compras":
+            qs = FacturaCompra.objects.select_related("proveedor", "usuario").all()
+            qs, mes_seleccionado, proveedor_id = _aplicar_filtros_facturas_compra(request, qs)
+            facturas = qs.order_by("-fecha", "-id")
+
+            total_general = facturas.aggregate(total=Sum("monto"))["total"] or 0
+
+            meses_disponibles = (
+                FacturaCompra.objects
+                .values("fecha__year", "fecha__month")
+                .annotate(meses_total=Sum("monto"), cantidad=Count("id"))
+                .order_by("-fecha__year", "-fecha__month")[:12]
+            )
+            etiquetas = []
+            datos = []
+            for m in reversed(list(meses_disponibles)):
+                etiquetas.append(f"{m['fecha__month']:02d}/{m['fecha__year']}")
+                datos.append(float(m["meses_total"]))
+
+            proveedores = Proveedor.objects.filter(activo=True).order_by("nombre")
+
+            contexto = {
+                "tab": tab,
+                "es_admin": es_admin,
+                "facturas": facturas,
+                "proveedores": proveedores,
+                "mes_seleccionado": mes_seleccionado,
+                "proveedor_seleccionado": proveedor_id,
+                "total_general": total_general,
+                "etiquetas": etiquetas,
+                "datos": datos,
+            }
+        else:
+            estado = request.GET.get("estado", "")
+            facturas_qs = Factura.objects.select_related("cliente", "pedido").all().order_by("-id")
+            if estado == "emitida":
+                facturas_qs = facturas_qs.filter(estado="emitida")
+            elif estado == "anulada":
+                facturas_qs = facturas_qs.filter(estado="anulada")
+
+            contexto = {
+                "tab": tab,
+                "es_admin": es_admin,
+                "facturas": facturas_qs,
+                "filtro_estado": estado,
+            }
+
+        return render(request, "facturacion/facturacion.html", contexto)
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:inicio")
 
 
 # ==================== BACKEND DE AUTENTICACION ====================
