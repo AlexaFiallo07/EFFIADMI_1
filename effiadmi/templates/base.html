@@ -69,14 +69,9 @@
                 <a href="{% url 'effiadmi:lista_proveedores' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_proveedores' %}active{% endif %}">
                     <span class="material-symbols-outlined">local_shipping</span> Proveedores
                 </a>
-                <a href="{% url 'effiadmi:lista_facturas' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_facturas' %}active{% endif %}">
+                <a href="{% url 'effiadmi:facturacion' %}" class="menu-link {% if '/factur' in request.path %}active{% endif %}">
                     <span class="material-symbols-outlined">description</span> Facturación
                 </a>
-                {% if request.session.logueado.rol == 'admin' %}
-                <a href="{% url 'effiadmi:lista_facturas_compra' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_facturas_compra' %}active{% endif %}">
-                    <span class="material-symbols-outlined">receipt_long</span> Facturas Compra
-                </a>
-                {% endif %}
                 <a href="{% url 'effiadmi:lista_correos' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_correos' %}active{% endif %}">
                     <span class="material-symbols-outlined">mail</span> Correos
                 </a>

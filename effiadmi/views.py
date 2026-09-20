@@ -6,6 +6,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout as aut
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, F, Count
 from django.utils import timezone
@@ -1127,7 +1128,7 @@ def detalle_factura(request, id):
         })
     except Exception as e:
         messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas")
+        return redirect("effiadmi:facturacion")
 
 
 @autorizacion(roles=['admin'])
@@ -1156,7 +1157,7 @@ def anular_factura(request, id):
 
     except Exception as e:
         messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas")
+        return redirect("effiadmi:facturacion")
 
 
 @autorizacion(roles=['admin'])
@@ -1170,10 +1171,10 @@ def eliminar_factura(request, id):
                 messages.success(request, "Factura anulada.")
             else:
                 messages.warning(request, "La factura ya esta anulada.")
-        return redirect("effiadmi:lista_facturas")
+        return redirect("effiadmi:facturacion")
     except Exception as e:
         messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas")
+        return redirect("effiadmi:facturacion")
 
 
 @autorizacion(roles=['admin'])
@@ -1920,7 +1921,7 @@ def lista_facturas_compra(request):
         })
     except Exception as e:
         messages.error(request, f"Error: {e}")
-        return redirect("effiadmi:lista_facturas_compra")
+        return redirect(reverse('effiadmi:facturacion') + '?tab=compras')
 
 
 @autorizacion(roles=['admin'])
@@ -1976,7 +1977,7 @@ def crear_factura_compra(request):
                 notas=notas,
             )
             messages.success(request, "Factura de compra registrada exitosamente.")
-            return redirect("effiadmi:lista_facturas_compra")
+            return redirect(reverse('effiadmi:facturacion') + '?tab=compras')
         except Exception as e:
             messages.error(request, f"Error: {e}")
 
@@ -2052,7 +2053,73 @@ def exportar_facturas_compra_excel(request):
         return response
     except Exception as e:
         messages.error(request, f"Error al exportar: {e}")
-        return redirect("effiadmi:lista_facturas_compra")
+        return redirect("effiadmi:facturacion")
+
+
+# ==================== FACTURACION UNIFICADA ====================
+
+
+@autorizacion(roles=['admin', 'operador'])
+def facturacion(request):
+    try:
+        tab = request.GET.get("tab", "ventas")
+        es_admin = request.session["logueado"]["rol"] == "admin"
+        if tab not in ("ventas", "compras"):
+            tab = "ventas"
+        if tab == "compras" and not es_admin:
+            tab = "ventas"
+
+        if tab == "compras":
+            qs = FacturaCompra.objects.select_related("proveedor", "usuario").all()
+            qs, mes_seleccionado, proveedor_id = _aplicar_filtros_facturas_compra(request, qs)
+            facturas = qs.order_by("-fecha", "-id")
+
+            total_general = facturas.aggregate(total=Sum("monto"))["total"] or 0
+
+            meses_disponibles = (
+                FacturaCompra.objects
+                .values("fecha__year", "fecha__month")
+                .annotate(meses_total=Sum("monto"), cantidad=Count("id"))
+                .order_by("-fecha__year", "-fecha__month")[:12]
+            )
+            etiquetas = []
+            datos = []
+            for m in reversed(list(meses_disponibles)):
+                etiquetas.append(f"{m['fecha__month']:02d}/{m['fecha__year']}")
+                datos.append(float(m["meses_total"]))
+
+            proveedores = Proveedor.objects.filter(activo=True).order_by("nombre")
+
+            contexto = {
+                "tab": tab,
+                "es_admin": es_admin,
+                "facturas": facturas,
+                "proveedores": proveedores,
+                "mes_seleccionado": mes_seleccionado,
+                "proveedor_seleccionado": proveedor_id,
+                "total_general": total_general,
+                "etiquetas": etiquetas,
+                "datos": datos,
+            }
+        else:
+            estado = request.GET.get("estado", "")
+            facturas_qs = Factura.objects.select_related("cliente", "pedido").all().order_by("-id")
+            if estado == "emitida":
+                facturas_qs = facturas_qs.filter(estado="emitida")
+            elif estado == "anulada":
+                facturas_qs = facturas_qs.filter(estado="anulada")
+
+            contexto = {
+                "tab": tab,
+                "es_admin": es_admin,
+                "facturas": facturas_qs,
+                "filtro_estado": estado,
+            }
+
+        return render(request, "facturacion/facturacion.html", contexto)
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:inicio")
 
 
 # ==================== BACKEND DE AUTENTICACION ====================

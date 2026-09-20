@@ -35,6 +35,7 @@ urlpatterns = [
     path('inventario/<int:id>/movimiento/', views.registrar_movimiento, name='registrar_movimiento'),
     
     # ==================== FACTURAS ====================
+    path('facturacion/', views.facturacion, name='facturacion'),
     path('facturas/', views.lista_facturas, name='lista_facturas'),
     path('facturas/<int:id>/', views.detalle_factura, name='detalle_factura'),
     path('facturas/<int:id>/editar/', views.editar_factura, name='editar_factura'),
