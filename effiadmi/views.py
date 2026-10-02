@@ -47,6 +47,8 @@ def marklight(value):
     import re
 
     texto = escape(str(value) if value is not None else "")
+    # Las vinetas de markdown ("*   texto", "-   texto") se ven crudas si no.
+    texto = re.sub(r"(?m)^[ \t]*[*\-•]+[ \t]+", "• ", texto)
     texto = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", texto)
     texto = re.sub(r"`(.+?)`", r"<code>\1</code>", texto)
     return mark_safe(texto)
@@ -1562,25 +1564,37 @@ def estadisticas_ia(request):
             "valor_inventario": valor_inventario,
             "productos_bajos": productos_bajos,
             "producto_mas_vendido": producto_mas_vendido,
+            "top_productos": list(ventas_por_producto[:8]),
+            "top_productos_labels": [v["producto__nombre"] for v in ventas_por_producto[:8]],
+            "top_productos_valores": [v["total"] for v in ventas_por_producto[:8]],
             "entradas": InventoryLog.objects.filter(tipo_movimiento="ENTRADA").count(),
             "salidas": InventoryLog.objects.filter(tipo_movimiento="SALIDA").count(),
             "es_admin": es_admin,
         }
 
-        # Historial: admin ve todos (o filtra por usuario), operador ve solo el suyo
-        usuarios_disponibles = []
-        query_historial = ChatHistorial.objects.select_related("usuario")
-        if es_admin:
-            usuarios_disponibles = User.objects.filter(
-                id__in=ChatHistorial.objects.values("usuario_id").distinct()
-            ).order_by("username")
-            filtro_usuario = request.GET.get("usuario", "")
-            if filtro_usuario:
-                query_historial = query_historial.filter(usuario_id=filtro_usuario)
+        # Conversaciones del usuario: la activa manda, si no hay se toma la mas reciente.
+        conversacion_activa = None
+        # "nueva" fuerza a arrancar un hilo limpio en vez de retomar el ultimo.
+        if request.method == "POST":
+            arranquenueva = "nueva_conversacion" in request.POST or request.POST.get("nueva") == "1"
         else:
-            query_historial = query_historial.filter(usuario=usuario)
-        contexto["historial"] = query_historial.order_by("-fecha")[:30]
-        contexto["usuarios_disponibles"] = usuarios_disponibles
+            arranquenueva = False
+
+        if not arranquenueva:
+            conversacion_id = str(
+                request.POST.get("conversacion") or request.GET.get("conversacion", "")
+            ).strip()
+            if conversacion_id.isdigit():
+                conversacion_activa = Conversacion.objects.filter(
+                    id=conversacion_id, usuario=usuario
+                ).first()
+            if conversacion_activa is None:
+                conversacion_activa = (
+                    Conversacion.objects
+                    .filter(usuario=usuario, mensajes__isnull=False)
+                    .order_by("-fecha_actualizacion")
+                    .first()
+                )
 
         # Contexto de negocio para la IA
         productos_str = []
@@ -1613,14 +1627,38 @@ def estadisticas_ia(request):
             "Salidas de inventario": contexto["salidas"],
         }
 
+        # ==================== CHAT IA ====================
+        # La conversacion se crea sola con el primer mensaje, para no dejar hilos vacios.
         if request.method == "POST":
-            pregunta = request.POST.get("pregunta", "").strip()
-            if pregunta:
-                conversacion, respuesta = _responder_chat(usuario, pregunta)
-                contexto["respuesta_ia"] = respuesta
-                contexto["pregunta"] = pregunta
+            if "nueva_conversacion" in request.POST:
+                conversacion_activa = None
             else:
-                messages.warning(request, "Escribe una pregunta para el asistente IA.")
+                pregunta = request.POST.get("pregunta", "").strip()
+                if pregunta:
+                    conversacion_activa, respuesta = _responder_chat(
+                        usuario, pregunta,
+                        conversacion=conversacion_activa,
+                        contexto_negocio=contexto_negocio,
+                    )
+                    if _es_error_ia(respuesta):
+                        messages.error(request, respuesta)
+                else:
+                    messages.warning(request, "Escribe una pregunta para el asistente IA.")
+
+        # Unicamente los mensajes de la conversacion activa, en orden cronologico.
+        contexto["historial"] = (
+            conversacion_activa.mensajes.order_by("fecha")
+            if conversacion_activa
+            else ChatHistorial.objects.none()
+        )
+        contexto["conversacion_activa"] = conversacion_activa
+        # Si arranco un hilo nuevo y sigue vacio, el siguiente envio no debe
+        # volver a retomar la conversacion anterior.
+        contexto["hilo_nuevo"] = arranquenueva and not conversacion_activa
+        # Se re-consulta para que la conversacion recien creada ya aparezca en la lista.
+        contexto["conversaciones"] = Conversacion.objects.filter(
+            usuario=usuario, mensajes__isnull=False
+        ).order_by("-fecha_actualizacion")[:8]
 
         return render(request, "dashboard/estadisticas.html", contexto)
     except Exception as e:
@@ -1696,12 +1734,29 @@ def _titulo_conversacion(mensaje):
     return (texto[:60] + "…") if len(texto) > 60 else texto or "Historial"
 
 
-def _responder_chat(usuario, mensaje, conversacion=None):
-    """Guarda el intercambio en una conversacion y devuelve (conversacion, respuesta)."""
+def _es_error_ia(respuesta):
+    """La IA devuelve los fallos como texto; asi se distinguen de una respuesta real."""
+    texto = (respuesta or "").strip()
+    return texto.startswith("Error:") or texto.startswith("No hay clave de Gemini")
+
+
+def _responder_chat(usuario, mensaje, conversacion=None, contexto_negocio=None):
+    """Guarda el intercambio en una conversacion y devuelve (conversacion, respuesta).
+
+    Si la IA falla no se guarda el mensaje: evita llenar el historial de errores
+    que el usuario no puede borrar desde la interfaz.
+    """
     if conversacion is None:
         conversacion = Conversacion.objects.create(usuario=usuario)
     es_primero = not conversacion.mensajes.exists()
-    respuesta = consultar_asistente_effiadmi(mensaje, contexto_negocio=_contexto_negocio_effiadmi())
+    if contexto_negocio is None:
+        contexto_negocio = _contexto_negocio_effiadmi()
+    respuesta = consultar_asistente_effiadmi(mensaje, contexto_negocio=contexto_negocio)
+    if _es_error_ia(respuesta):
+        if es_primero and not conversacion.mensajes.exists():
+            conversacion.delete()
+            conversacion = None
+        return conversacion, respuesta
     ChatHistorial.objects.create(
         usuario=usuario,
         conversacion=conversacion,

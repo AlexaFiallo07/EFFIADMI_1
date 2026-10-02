@@ -83,12 +83,6 @@
                 <a href="{% url 'effiadmi:reportes' %}" class="menu-link {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
                     <span class="material-symbols-outlined">feedback</span> Reportes
                 </a>
-                <a href="{% url 'effiadmi:lista_notificaciones' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_notificaciones' %}active{% endif %}">
-                    <span class="material-symbols-outlined">notifications</span> Notificaciones
-                    {% if no_leidas_notificaciones %}
-                    <span class="badge-notif">{{ no_leidas_notificaciones }}</span>
-                    {% endif %}
-                </a>
             {% else %}
                 <a href="{% url 'effiadmi:login' %}" class="menu-link active">
                     <span class="material-symbols-outlined">login</span> Iniciar Sesión
@@ -126,6 +120,14 @@
                 <div class="topbar-actions">
                     <span class="topbar-role">{{ request.session.logueado.rol|default:"usuario" }}</span>
                     <span class="topbar-date">{% now "j \d\e F, Y" %}</span>
+                    <a href="{% url 'effiadmi:lista_notificaciones' %}"
+                       class="topbar-bell{% if request.resolver_match.url_name == 'lista_notificaciones' %} active{% endif %}"
+                       title="Notificaciones" aria-label="Notificaciones">
+                        <span class="material-symbols-outlined">notifications</span>
+                        {% if no_leidas_notificaciones %}
+                        <span class="bell-count">{{ no_leidas_notificaciones }}</span>
+                        {% endif %}
+                    </a>
                 </div>
             </div>
             {% endif %}

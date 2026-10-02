@@ -248,7 +248,9 @@ img { max-width: 100%; }
 .hstack { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .hstack.gap-sm { gap: 8px; }
 .row-between { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); }
+/* align-items:start evita que una tarjeta corta se estire y deje un bloque
+   blanco vacio debajo de su contenido. */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); align-items: start; }
 .inline-form { display: inline; margin: 0; }
 .block-lg { margin-bottom: var(--spacing-lg); }
 .block-xl { margin-bottom: var(--spacing-xl); }
@@ -281,6 +283,14 @@ img { max-width: 100%; }
     font-weight: 700;
     letter-spacing: 0.34em;
     color: var(--oro-oscuro);
+}
+.section-title {
+    margin: 0;
+    font-family: var(--font-primary);
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--tinta);
 }
 .page-head::after {
     content: "";
@@ -542,22 +552,6 @@ textarea.form-control:focus {
 [data-theme="dark"] .badge-warning { color: var(--ambar); }
 [data-theme="dark"] .badge-error { color: #FF8A8A; }
 
-.badge-notif {
-    margin-left: auto;
-    background-image: linear-gradient(135deg, #F0655F, #EB5757);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 10px -3px rgba(235, 87, 87, 0.6);
-}
-
 .system-alert-row { padding: 12px 14px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; border-left: 3px solid transparent; }
 .warn-alert { background-color: var(--ambar-light); color: #8A6D00; border-left-color: var(--ambar); }
 .danger-alert { background-color: var(--rojo-light); color: #B42318; border-left-color: var(--rojo); }
@@ -772,6 +766,43 @@ textarea.form-control:focus {
 }
 .topbar-date { font-size: var(--font-size-sm); font-weight: 600; color: var(--gris); }
 
+/* Campana de notificaciones en el topbar */
+.topbar-bell {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #fff;
+    background-image: linear-gradient(135deg, var(--uva), var(--iris));
+    border: 1px solid rgba(196, 163, 90, 0.45);
+    box-shadow: 0 8px 18px -8px rgba(58, 35, 112, 0.7);
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.topbar-bell .material-symbols-outlined { font-size: 24px; }
+.topbar-bell:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -8px rgba(58, 35, 112, 0.85); }
+.topbar-bell.active { outline: 2px solid var(--oro); outline-offset: 2px; }
+.bell-count {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background-image: linear-gradient(135deg, #F0655F, #EB5757);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 22px;
+    text-align: center;
+    box-shadow: 0 4px 10px -3px rgba(235, 87, 87, 0.7);
+}
+
 /* Layout de autenticación (sin dock) */
 .app-layout.auth-layout { display: block; }
 .app-layout.auth-layout .app-sidebar { display: none; }
@@ -970,11 +1001,21 @@ textarea.form-control:focus {
 }
 .dashboard-header p { color: rgba(255, 255, 255, 0.74); margin-top: 6px; font-size: 15px; }
 
+/* Las dos matrices de KPI tienen 6 tarjetas: columnas fijas que dividen
+   exacto para que la ultima fila nunca quede con huecos. */
 .kpi-matrix {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 20px;
     margin-bottom: 34px;
+}
+
+@media (max-width: 1100px) {
+    .kpi-matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+    .kpi-matrix { grid-template-columns: minmax(0, 1fr); }
 }
 
 .kpi-card-custom {
@@ -1059,7 +1100,8 @@ textarea.form-control:focus {
 .side-widgets-section,
 .ia-column { display: flex; flex-direction: column; gap: 24px; }
 .chart-box { height: 220px; width: 100%; }
-.chart-box-sm { max-width: 300px; margin: 0 auto; }
+.chart-box-sm { width: 100%; height: 240px; }
+.chart-box-sm canvas { width: 100% !important; height: 100% !important; }
 
 /* Mini-reportes */
 .report-block { margin-top: 32px; }
@@ -1322,6 +1364,59 @@ textarea.form-control:focus {
 .effi-launcher .material-symbols-outlined { font-size: 26px; }
 .effi-launcher:hover { transform: scale(1.06) rotate(8deg); box-shadow: 0 16px 34px -8px rgba(58, 35, 112, 0.8); }
 .effi-select { width: auto; padding: 4px 8px; font-size: 12px; }
+
+/* Herramientas y selector de conversaciones del chat EFFI */
+.effi-header-tools { display: flex; align-items: center; gap: 8px; }
+.effi-conv-form { display: flex; }
+.effi-new-chat {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background-color: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.effi-new-chat .material-symbols-outlined { font-size: 20px; }
+.effi-new-chat:hover { background-color: rgba(255, 255, 255, 0.28); transform: translateY(-1px); }
+.effi-conv-bar {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px;
+    overflow-x: auto;
+    background-color: var(--color-primary-light);
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+    scrollbar-width: thin;
+}
+.effi-conv-chip {
+    flex: 0 0 auto;
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 6px 13px;
+    border-radius: var(--radius-pill);
+    background-color: var(--arena);
+    border: 1px solid var(--color-border);
+    color: var(--gris);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.effi-conv-chip:hover { background-color: var(--lavanda-clara); color: var(--uva); }
+.effi-conv-chip.active {
+    background-image: linear-gradient(135deg, var(--uva), var(--iris));
+    color: #fff;
+    border-color: transparent;
+}
+[data-theme="dark"] .effi-conv-bar { background-color: rgba(155, 127, 224, 0.08); }
+[data-theme="dark"] .effi-conv-chip:hover { color: var(--lavanda); }
 
 /* ============================================================
    PIE / ACCIONES

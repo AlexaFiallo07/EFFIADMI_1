@@ -4,8 +4,13 @@
 
 {% block contenido %}
 <div class="container">
+    <div class="dashboard-header">
+        <h1>Notificaciones</h1>
+        <p>{% if notificaciones %}{{ notificaciones|length }} aviso{{ notificaciones|length|pluralize }} en tu bandeja{% else %}Tu bandeja está al día{% endif %}</p>
+    </div>
+
     <div class="page-head">
-        <h1>Listado de Notificaciones</h1>
+        <h2 class="section-title">Bandeja de entrada</h2>
         <form method="POST" action="{% url 'effiadmi:marcar_todas_leidas' %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline">Marcar todas como leídas</button>

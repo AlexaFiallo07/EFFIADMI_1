@@ -61,7 +61,16 @@
 </div>
 
 <div class="bottom-layout">
-    <div class="ia-column">
+    <div class="charts-section">
+        <div class="dashboard-panel-card">
+            <h3 class="panel-card-title">Top Productos por Unidades Vendidas</h3>
+            {% if top_productos %}
+                <div class="chart-box"><canvas id="canvasTopProductos"></canvas></div>
+            {% else %}
+                <p class="empty-note">No hay ventas registradas aún.</p>
+            {% endif %}
+        </div>
+
         <div class="dashboard-panel-card">
             <h3 class="panel-card-title">Reposición Sugerida</h3>
             {% if productos_bajos %}
@@ -144,7 +153,7 @@
 </div>
 
 <!-- Widget flotante de chat EFFI -->
-<div class="effi-widget{% if respuesta_ia %} open{% endif %}" id="effiWidget" {% if respuesta_ia %}data-autoopen="1"{% endif %}>
+<div class="effi-widget{% if request.method == 'POST' %} open{% endif %}" id="effiWidget"{% if request.method == 'POST' %} data-autoopen="1"{% endif %}>
     <div class="effi-panel" id="effiPanel">
         <div class="effi-header">
             <div class="effi-header-user">
@@ -154,18 +163,24 @@
                     <div class="effi-header-sub">Asistente de tu negocio</div>
                 </div>
             </div>
-            {% if es_admin and usuarios_disponibles %}
-            <form method="GET" class="effi-header-user">
-                <span class="effi-header-sub">Ver:</span>
-                <select name="usuario" class="form-control effi-select" onchange="this.form.submit()">
-                    <option value="">Todos</option>
-                    {% for u in usuarios_disponibles %}
-                    <option value="{{ u.id }}" {% if request.GET.usuario == u.id|stringformat:"s" %}selected{% endif %}>{{ u.username }}</option>
-                    {% endfor %}
-                </select>
-            </form>
-            {% endif %}
+            <div class="effi-header-tools">
+                <button type="button" class="effi-new-chat" id="effiNuevaChat" title="Empezar una conversacion nueva">
+                    <span class="material-symbols-outlined">add_comment</span>
+                </button>
+            </div>
         </div>
+
+        {% if conversaciones and not hilo_nuevo %}
+        <div class="effi-conv-bar">
+            {% for c in conversaciones %}
+                <a href="?conversacion={{ c.id }}"
+                   class="effi-conv-chip{% if conversacion_activa and c.id == conversacion_activa.id %} active{% endif %}"
+                   title="{{ c.titulo }}">
+                    {{ c.titulo|truncatechars:26 }}
+                </a>
+            {% endfor %}
+        </div>
+        {% endif %}
 
         <div class="effi-messages" id="effiMessages">
             {% for h in historial %}
@@ -181,18 +196,12 @@
                     <small>Pregunta sobre tus productos, stock, ventas o proveedores.</small>
                 </div>
             {% endfor %}
-            {% if respuesta_ia %}
-                <div class="effi-msg effi-user">
-                    <div class="effi-bubble user-bubble">{{ pregunta }}<div class="effi-meta">Ahora</div></div>
-                </div>
-                <div class="effi-msg effi-bot">
-                    <div class="effi-bubble ia-bubble">{{ respuesta_ia|marklight }}<div class="effi-meta">Ahora</div></div>
-                </div>
-            {% endif %}
         </div>
 
-        <form method="post" class="effi-inputbar" id="effiForm">
+        <form method="post" action="{% url 'effiadmi:estadisticas_ia' %}" class="effi-inputbar" id="effiForm">
             {% csrf_token %}
+            <input type="hidden" name="conversacion" id="effiConvId" value="{% if hilo_nuevo %}{% else %}{{ conversacion_activa.id|default:'' }}{% endif %}">
+            <input type="hidden" name="nueva" id="effiConvNueva" value="{% if hilo_nuevo %}1{% else %}0{% endif %}">
             <textarea id="effiInput" name="pregunta" rows="1" placeholder="Escribe a EFFI... (Enter para enviar)"></textarea>
             <button type="submit" class="effi-send" title="Enviar">
                 <span class="material-symbols-outlined">send</span>
@@ -237,6 +246,40 @@
 </script>
 
 <script>
+    try {
+        const ctxTop = document.getElementById('canvasTopProductos');
+        if (ctxTop && typeof Chart !== 'undefined') {
+            const estilos = getComputedStyle(document.documentElement);
+            const varCss = function (nombre, fallback) {
+                const valor = estilos.getPropertyValue(nombre).trim();
+                return valor || fallback;
+            };
+            new Chart(ctxTop, {
+                type: 'bar',
+                data: {
+                    labels: JSON.parse('{{ top_productos_labels|escapejs|default:"[]" }}'),
+                    datasets: [{
+                        label: 'Unidades vendidas',
+                        data: JSON.parse('{{ top_productos_valores|escapejs|default:"[]" }}'),
+                        backgroundColor: varCss('--iris', '#6A4DAB'),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: varCss('--acero', '#E8E0F2') }, beginAtZero: true, ticks: { color: varCss('--gris', '#5E5870') } },
+                        x: { grid: { display: false }, ticks: { color: varCss('--gris', '#5E5870') } }
+                    }
+                }
+            });
+        }
+    } catch (e) { console.warn('Chart no disponible:', e); }
+</script>
+
+<script>
     (function () {
         const widget = document.getElementById('effiWidget');
         const launcher = document.getElementById('effiLauncher');
@@ -270,8 +313,33 @@
             input.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    if (form) form.submit();
+                    if (form) form.requestSubmit ? form.requestSubmit() : form.submit();
                 }
+            });
+        }
+
+        // "Nueva conversacion" se resuelve en el navegador: limpia el hilo visible
+        // y marca el envio siguiente para que arranque uno limpio.
+        const nuevaChat = document.getElementById('effiNuevaChat');
+        const convId = document.getElementById('effiConvId');
+        const convNueva = document.getElementById('effiConvNueva');
+
+        if (nuevaChat) {
+            nuevaChat.addEventListener('click', function () {
+                if (convId) convId.value = '';
+                if (convNueva) convNueva.value = '1';
+
+                const barra = document.querySelector('.effi-conv-bar');
+                if (barra) barra.remove();
+
+                if (messages) {
+                    messages.innerHTML =
+                        '<div class="effi-empty">' +
+                        '<p>Conversacion nueva</p>' +
+                        '<small>Escribe tu pregunta para iniciar un hilo limpio.</small>' +
+                        '</div>';
+                }
+                if (input) input.focus();
             });
         }
     })();
