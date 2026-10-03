@@ -189,6 +189,29 @@
                 try { localStorage.setItem('effiadmi-theme', nuevo); } catch (e) {}
             });
         }
+
+        // Confirmaciones con datos del usuario (nombre de producto, categoria...).
+        // El texto viaja como atributo data-*, escapado por Django, y se lee con
+        // dataset: nunca queda dentro de un literal JS, que era el vector de XSS
+        // de los onclick inline.
+        document.addEventListener('click', function (e) {
+            const disparador = e.target.closest('[data-confirmar]');
+            if (!disparador) return;
+
+            if (!window.confirm(disparador.dataset.confirmar)) {
+                e.preventDefault();
+                return;
+            }
+
+            const idForm = disparador.dataset.confirmarForm;
+            if (idForm) {
+                const form = document.getElementById(idForm);
+                if (form) {
+                    e.preventDefault();
+                    form.submit();
+                }
+            }
+        });
     });
 </script>
 {% block js %}

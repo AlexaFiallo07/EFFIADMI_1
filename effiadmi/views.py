@@ -4,7 +4,7 @@ import json
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.db import IntegrityError, transaction
@@ -46,11 +46,19 @@ def marklight(value):
     from django.utils.safestring import mark_safe
     import re
 
-    texto = escape(str(value) if value is not None else "")
+    texto = str(value) if value is not None else ""
+    texto = texto.replace("\r\n", "\n").replace("\r", "\n")
+    texto = re.sub(r"[ \t]+\n", "\n", texto)
+    # El modelo devuelve bloques de 3 o mas lineas en blanco: sin normalizar
+    # dejan huecos grandes dentro de la burbuja.
+    texto = re.sub(r"\n{3,}", "\n\n", texto).strip()
+
+    texto = escape(texto)
     # Las vinetas de markdown ("*   texto", "-   texto") se ven crudas si no.
-    texto = re.sub(r"(?m)^[ \t]*[*\-•]+[ \t]+", "• ", texto)
+    texto = re.sub(r"(?m)^[ \t]*[*\-]+[ \t]+", "&bull; ", texto)
     texto = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", texto)
     texto = re.sub(r"`(.+?)`", r"<code>\1</code>", texto)
+    texto = texto.replace("\n\n", "<br><br>").replace("\n", "<br>")
     return mark_safe(texto)
 from .models import (
     UserProfile, Branch, Product, Categoria, Inventory, InventoryLog,
@@ -1472,13 +1480,20 @@ def lista_notificaciones(request):
 @autorizacion(roles=['admin', 'operador'])
 def detalle_notificacion(request, id):
     try:
-        notif = get_object_or_404(Notificacion, pk=id)
-        
+        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+        # El filtro por usuario evita leer (y marcar como leida) la
+        # notificacion de otra cuenta recorriendo los ids.
+        notif = get_object_or_404(Notificacion, pk=id, usuario=usuario)
+
         if not notif.leido:
             notif.leido = True
             notif.save()
-        
+
         return render(request, "notificaciones/detalle.html", {"notificacion": notif})
+    except Http404:
+        # Http404 hereda de Exception: sin este raise el except la convertiria
+        # en un redirect y un id ajeno devolveria 302 en vez de 404.
+        raise
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_notificaciones")
@@ -1487,11 +1502,16 @@ def detalle_notificacion(request, id):
 @autorizacion(roles=['admin', 'operador'])
 def eliminar_notificacion(request, id):
     try:
-        notif = get_object_or_404(Notificacion, pk=id)
+        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+        # Sin el filtro por usuario un operador podria borrar las
+        # notificaciones de los administradores.
+        notif = get_object_or_404(Notificacion, pk=id, usuario=usuario)
         if request.method == "POST":
             notif.delete()
             messages.success(request, "¡Notificacion eliminada exitosamente!")
         return redirect("effiadmi:lista_notificaciones")
+    except Http404:
+        raise
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_notificaciones")

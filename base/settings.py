@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'effiadmi',
     'landing',
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
 ]
 
@@ -168,14 +169,25 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ),
+    # Sin esto la API quedaba con CRUD publico para cualquiera sin login.
+    # Los endpoints /api/token/ y /api/token/refresh/ tienen sus propios
+    # permission_classes vacios, asi que siguen siendo publicos.
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS: solo los origenes explicitos del .env (CORS_ALLOWED_ORIGINS=url1,url2).
+# Antes era CORS_ALLOW_ALL_ORIGINS = True, que dejaba leer la API desde
+# cualquier pagina. Vacio = ningun origen permitido.
+CORS_ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    if o.strip()
+]
+CORS_ALLOW_CREDENTIALS = False
 
 from datetime import timedelta
 

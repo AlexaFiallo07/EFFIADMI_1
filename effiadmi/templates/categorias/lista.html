@@ -37,7 +37,7 @@
                                 {% if cat.total_productos %}
                                     <span class="btn btn-ghost btn-sm" title="No se puede eliminar porque tiene {{ cat.total_productos }} producto(s) asignado(s)">Eliminar</span>
                                 {% else %}
-                                    <a href="{% url 'effiadmi:eliminar_categoria' cat.id %}" class="btn btn-error btn-sm" onclick="event.preventDefault(); if (confirm('Esta seguro de eliminar la categoria \'{{ cat.nombre }}\'? Esta accion no se puede deshacer.')) { document.getElementById('formEliminar{{ cat.id }}').submit(); }">Eliminar</a>
+                                    <a href="{% url 'effiadmi:eliminar_categoria' cat.id %}" class="btn btn-error btn-sm" data-confirmar="Esta seguro de eliminar la categoria '{{ cat.nombre }}'? Esta accion no se puede deshacer." data-confirmar-form="formEliminar{{ cat.id }}">Eliminar</a>
                                     <form id="formEliminar{{ cat.id }}" method="POST" action="{% url 'effiadmi:eliminar_categoria' cat.id %}" hidden>{% csrf_token %}</form>
                                 {% endif %}
                             </td>

@@ -43,7 +43,7 @@
                             <td>
                                 <a href="{% url 'effiadmi:editar_producto' item.producto.id %}" class="btn btn-outline btn-sm">Editar</a>
                                 {% if request.session.logueado.rol == 'admin' %}
-                                <a href="{% url 'effiadmi:eliminar_producto' item.producto.id %}" class="btn btn-error btn-sm" onclick="event.preventDefault(); if (confirm('Esta seguro de eliminar el producto \'{{ item.producto.nombre }}\'? Esta accion no se puede deshacer.')) { document.getElementById('formEliminar{{ item.producto.id }}').submit(); }">Eliminar</a>
+                                <a href="{% url 'effiadmi:eliminar_producto' item.producto.id %}" class="btn btn-error btn-sm" data-confirmar="Esta seguro de eliminar el producto '{{ item.producto.nombre }}'? Esta accion no se puede deshacer." data-confirmar-form="formEliminar{{ item.producto.id }}">Eliminar</a>
                                 <form id="formEliminar{{ item.producto.id }}" method="POST" action="{% url 'effiadmi:eliminar_producto' item.producto.id %}" hidden>{% csrf_token %}</form>
                                 {% endif %}
                             </td>
