@@ -420,7 +420,9 @@ class CorreoEnviado(models.Model):
 # ============================================================
 
 def _ruta_factura_compra(instance, filename):
-    return f"facturas_compra/{instance.fecha:%Y/%m}/{filename}"
+    from .utilidades import _nombre_seguro
+
+    return f"facturas_compra/{instance.fecha:%Y/%m}/{_nombre_seguro(filename)}"
 
 
 class FacturaCompra(models.Model):

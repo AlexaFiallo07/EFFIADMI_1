@@ -39,38 +39,12 @@
     --rojo-light: rgba(235, 87, 87, 0.12);
 
     --color-primary: var(--uva);
-    --color-primary-strong: var(--plum);
-    --color-accent: var(--iris);
-    --color-secondary: var(--uva);
-    --color-secondary-light: var(--vino);
     --color-primary-light: rgba(106, 77, 171, 0.10);
     --color-primary-lighter: rgba(106, 77, 171, 0.16);
-    --color-royal: var(--oro);
-    --color-bg-primary: var(--arena);
-    --color-bg-card: var(--blanco);
-    --color-bg-elevated: var(--blanco);
-    --color-success: var(--verde);
-    --color-success-light: var(--verde-light);
-    --color-warning: var(--ambar);
-    --color-warning-light: var(--ambar-light);
-    --color-error: var(--rojo);
-    --color-error-light: var(--rojo-light);
     --color-text-primary: var(--tinta);
     --color-text-secondary: var(--gris);
-    --color-text-tertiary: var(--humo);
     --color-border: var(--acero);
     --color-border-light: var(--lavanda-clara);
-    --color-border-strong: var(--acero-oscuro);
-    --color-oro: var(--oro);
-    --color-oro-oscuro: var(--oro-oscuro);
-    --color-vino: var(--vino);
-    --color-uva: var(--uva);
-    --color-plum: var(--plum);
-    --color-iris: var(--iris);
-    --color-lavanda: var(--lavanda);
-    --color-lavanda-clara: var(--lavanda-clara);
-    --color-arena: var(--arena);
-    --color-tinta: var(--tinta);
 
     /* El dock lateral siempre es oscuro: su texto en claro */
     --color-sidebar-border: rgba(255, 255, 255, 0.10);
@@ -80,9 +54,7 @@
     --color-sidebar-active: linear-gradient(90deg, rgba(196, 163, 90, 0.28), rgba(196, 163, 90, 0.05));
     --color-sidebar-active-text: #FFFFFF;
 
-    --glass-bg: rgba(255, 255, 255, 0.60);
     --glass-bg-strong: rgba(255, 255, 255, 0.90);
-    --glass-border: rgba(255, 255, 255, 0.85);
     --glass-blur: 18px;
 
     --bg-mesh-a: var(--lavanda-clara);
@@ -90,25 +62,20 @@
     --bg-mesh-c: var(--lavanda-suave);
 
     --font-primary: 'Poppins', 'Segoe UI', sans-serif;
-    --font-secondary: 'Roboto', 'Segoe UI', sans-serif;
     --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
-    --font-size-xs: 12px;
     --font-size-sm: 13px;
     --font-size-base: 15px;
     --font-size-md: 16px;
     --font-size-lg: 18px;
     --font-size-xl: 22px;
-    --font-size-2xl: 28px;
 
-    --spacing-xs: 4px;
     --spacing-sm: 8px;
     --spacing-md: 16px;
     --spacing-lg: 24px;
     --spacing-xl: 32px;
     --spacing-2xl: 44px;
 
-    --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 18px;
     --radius-xl: 26px;
@@ -157,18 +124,11 @@
     --rojo: #F87171;
     --rojo-light: rgba(248, 113, 113, 0.16);
 
-    --color-bg-primary: var(--arena);
-    --color-bg-card: var(--blanco);
-    --color-bg-elevated: #2A1C4C;
     --color-border: var(--acero);
     --color-border-light: var(--acero-oscuro);
-    --color-border-strong: var(--acero-oscuro);
     --color-text-primary: var(--tinta);
     --color-text-secondary: var(--gris);
-    --color-text-tertiary: var(--humo);
     --color-primary: var(--iris);
-    --color-primary-strong: var(--lavanda);
-    --color-accent: var(--iris);
     --color-primary-light: rgba(155, 127, 224, 0.18);
     --color-primary-lighter: rgba(155, 127, 224, 0.28);
 
@@ -177,9 +137,7 @@
     --color-sidebar-hover: rgba(255, 255, 255, 0.08);
     --color-sidebar-active-text: #FFFFFF;
 
-    --glass-bg: rgba(30, 21, 56, 0.60);
     --glass-bg-strong: rgba(34, 24, 64, 0.88);
-    --glass-border: rgba(255, 255, 255, 0.10);
 
     --bg-mesh-a: rgba(106, 77, 171, 0.30);
     --bg-mesh-b: rgba(196, 163, 90, 0.10);
@@ -241,10 +199,10 @@ img { max-width: 100%; }
 .container-narrow { max-width: 800px; margin: 0 auto; }
 
 .text-muted { color: var(--gris) !important; }
-.text-tertiary { color: var(--humo) !important; }
+
 .form-text { display: block; margin-top: 6px; font-size: var(--font-size-sm); color: var(--humo); }
 .stack { display: flex; flex-direction: column; gap: 10px; }
-.stack-lg { display: flex; flex-direction: column; gap: var(--spacing-lg); }
+
 .hstack { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .hstack.gap-sm { gap: 8px; }
 .row-between { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-md); }
@@ -354,12 +312,10 @@ img { max-width: 100%; }
     border-color: var(--oro);
     box-shadow: 0 18px 34px -14px rgba(74, 46, 133, 0.7);
 }
-.btn-secondary { background-color: var(--vino); color: #fff; border-color: rgba(196, 163, 90, 0.35); }
-.btn-secondary:hover { background-color: #120b22; }
+
 .btn-success { background-color: var(--verde); background-image: linear-gradient(135deg, #2ECC71, var(--verde)); color: #fff; }
 .btn-success:hover { background-color: #1E8449; box-shadow: 0 12px 26px -10px rgba(39, 174, 96, 0.55); }
-.btn-warning { background-color: var(--ambar); background-image: linear-gradient(135deg, #F7D94F, var(--ambar)); color: var(--tinta); }
-.btn-warning:hover { background-color: #E0B73D; }
+
 .btn-error { background-color: var(--rojo); background-image: linear-gradient(135deg, #EF6B6B, var(--rojo)); color: #fff; }
 .btn-error:hover { box-shadow: 0 12px 26px -10px rgba(235, 87, 87, 0.55); }
 .btn-outline { background-color: transparent; border-color: var(--lavanda); color: var(--uva); }
@@ -450,13 +406,6 @@ textarea.form-control {
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-.form-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235E5870' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    padding-right: 38px;
-}
-
 .form-control::placeholder { color: var(--humo); }
 
 .form-control:focus,
@@ -469,8 +418,6 @@ textarea.form-control:focus {
 }
 
 .form-control:disabled { background-color: var(--arena); cursor: not-allowed; opacity: 0.65; }
-.form-help { display: block; margin-top: 6px; font-size: var(--font-size-sm); color: var(--humo); }
-.form-error { display: block; margin-top: 6px; font-size: var(--font-size-sm); color: var(--rojo); }
 
 /* Interruptor iOS */
 .switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -500,13 +447,6 @@ textarea.form-control:focus {
 .switch input:focus-visible + .switch-track { box-shadow: 0 0 0 3px var(--color-primary-light); }
 .switch-label { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-sidebar-text); }
 
-/* Control segmentado */
-.segmented { display: inline-flex; padding: 3px; gap: 2px; background-color: var(--arena); border: 1px solid var(--color-border); border-radius: var(--radius-pill); }
-.segmented-item {
-    padding: 7px 16px; border: none; background: none; border-radius: var(--radius-pill);
-    font-family: var(--font-primary); font-size: var(--font-size-sm); font-weight: 600;
-    color: var(--gris); cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease;
-}
 .segmented-item.active { background-color: var(--blanco); color: var(--uva); box-shadow: var(--shadow-sm); }
 
 /* ============================================================
@@ -561,11 +501,6 @@ textarea.form-control:focus {
 [data-theme="dark"] .danger-alert { color: #FF8A8A; }
 [data-theme="dark"] .info-alert { color: var(--lavanda); }
 
-/* ============================================================
-   ALERTAS Y MENSAJES
-   ============================================================ */
-.alertas { margin-bottom: var(--spacing-lg); }
-
 .mensaje,
 .alert {
     border-radius: var(--radius-md);
@@ -583,8 +518,6 @@ textarea.form-control:focus {
 .mensaje.error, .alert-error, .alert-danger { background-color: var(--rojo-light); color: #A83C3C; border-left-color: var(--rojo); }
 .mensaje.warning, .alert-warning { background-color: var(--ambar-light); color: #9B7C00; border-left-color: var(--ambar); }
 .mensaje.info, .alert-info { background-color: var(--color-primary-light); color: var(--uva); border-left-color: var(--iris); }
-
-.alert-close { margin-left: auto; background: none; border: none; color: inherit; cursor: pointer; font-size: var(--font-size-lg); line-height: 1; }
 
 [data-theme="dark"] .mensaje.success, [data-theme="dark"] .alert-success { color: #4ADE80; }
 [data-theme="dark"] .mensaje.error, [data-theme="dark"] .alert-error, [data-theme="dark"] .alert-danger { color: #FF8A8A; }
@@ -652,17 +585,8 @@ textarea.form-control:focus {
 }
 
 .brand-logo { width: 148px; max-width: 100%; height: auto; object-fit: contain; }
-.brand-emblem { width: 38px; height: 38px; object-fit: contain; }
 
 [data-theme="dark"] .brand-container { background-color: #fff; }
-
-.brand-text {
-    font-family: var(--font-primary);
-    font-weight: 700;
-    font-size: 19px;
-    color: var(--color-sidebar-text-strong);
-    letter-spacing: 0.4px;
-}
 
 .sidebar-menu {
     flex: 1;
@@ -949,8 +873,6 @@ textarea.form-control:focus {
 .login-form-side .form-group { margin-bottom: var(--spacing-md); }
 .login-form-side .btn { width: 100%; }
 
-.login-logo-wrap { display: none; }
-
 .login-topbar { position: absolute; top: 20px; right: 24px; display: flex; align-items: center; gap: 10px; z-index: 10; }
 .login-hint { text-align: center; margin-top: var(--spacing-md); font-size: var(--font-size-sm); color: var(--humo); }
 
@@ -1198,17 +1120,6 @@ textarea.form-control:focus {
 [data-theme="dark"] .answer-box { background-color: rgba(52, 211, 153, 0.10); }
 [data-theme="dark"] .answer-box .answer-title { color: #4ADE80; }
 
-.chat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-.panel-column { display: flex; flex-direction: column; height: 620px; }
-.history-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-.hist-item { padding: 14px; border-radius: var(--radius-md); background-color: var(--arena); border: 1px solid var(--color-border); border-left: 3px solid var(--lavanda); }
-.hist-date { font-size: 12px; color: var(--humo); margin-bottom: 6px; }
-.hist-q { font-size: 14px; font-weight: 700; color: var(--tinta); margin-bottom: 4px; }
-.hist-a { font-size: 14px; color: var(--gris); }
-.chat-form { display: flex; flex-direction: column; gap: 16px; flex: 1; }
-.chat-form textarea { width: 100%; resize: vertical; min-height: 140px; }
-.chat-submit { align-self: flex-start; }
-
 /* Toolbar de filtros */
 .toolbar { display: flex; gap: var(--spacing-md); align-items: flex-end; }
 .toolbar .form-group { flex: 1; min-width: 200px; margin-bottom: 0; }
@@ -1373,11 +1284,10 @@ textarea.form-control:focus {
 }
 .effi-launcher .material-symbols-outlined { font-size: 26px; }
 .effi-launcher:hover { transform: scale(1.06) rotate(8deg); box-shadow: 0 16px 34px -8px rgba(58, 35, 112, 0.8); }
-.effi-select { width: auto; padding: 4px 8px; font-size: 12px; }
 
 /* Herramientas y selector de conversaciones del chat EFFI */
 .effi-header-tools { display: flex; align-items: center; gap: 8px; }
-.effi-conv-form { display: flex; }
+
 .effi-new-chat {
     width: 34px;
     height: 34px;
@@ -1429,18 +1339,6 @@ textarea.form-control:focus {
 [data-theme="dark"] .effi-conv-chip:hover { color: var(--lavanda); }
 
 /* ============================================================
-   PIE / ACCIONES
-   ============================================================ */
-.user-actions { display: flex; gap: var(--spacing-md); align-items: center; }
-.app-footer {
-    color: #fff;
-    background-color: var(--vino);
-    padding: var(--spacing-lg);
-    text-align: center;
-    border-top: 1px solid var(--color-border);
-}
-
-/* ============================================================
    RESPONSIVE
    ============================================================ */
 @media (max-width: 1024px) {
@@ -1457,10 +1355,8 @@ textarea.form-control:focus {
 
     .bottom-layout { grid-template-columns: 1fr; }
     .report-grid { grid-template-columns: 1fr; }
-    .chat-grid { grid-template-columns: 1fr; }
+
     .form-grid-2 { grid-template-columns: 1fr; }
-    .panel-column { height: auto; }
-    .history-list { max-height: 420px; }
 
     /* Debe coincidir con las columnas fijas de escritorio: con auto-fit la
        6a tarjeta queda sola y deja media fila vacia. */

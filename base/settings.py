@@ -26,12 +26,41 @@ load_dotenv(BASE_DIR / ".env")
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=)n5&q_vz5y(*xxvv_s-sh6%7sr6m#nk8tolly1ydu)_gx_0b3'
+# La clave estaba hardcodeada en el repositorio: cualquiera con el codigo podia
+# firmar cookies de sesion y publicar la app. Ahora sale del .env y, si no esta,
+# se genera una aleatoria solo para desarrollo.
+SECRET_KEY = os.getenv("SECRET_KEY")
+_DEBUG_ACTIVO = os.getenv("DEBUG", "1") == "1"
+if not SECRET_KEY:
+    if _DEBUG_ACTIVO:
+        SECRET_KEY = "django-insecure-solo-desarrollo-no-usar-en-produccion"
+    else:
+        raise RuntimeError(
+            "Falta SECRET_KEY en el .env. Sin ella no se puede arrancar en produccion."
+        )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _DEBUG_ACTIVO
 
-ALLOWED_HOSTS = ["*"]
+# En desarrollo acepta todo para no tener que configurar el host; con DEBUG
+# apagado hay que declararlos en el .env (ALLOWED_HOSTS=localhost,midominio.com).
+ALLOWED_HOSTS = (
+    ["*"]
+    if DEBUG
+    else [h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()]
+)
+
+# Cabeceras y cookies seguras. Solo tiene efecto sobre HTTPS, asi que en
+# desarrollo (http://localhost) no rompen nada.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "0") == "1"
+SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
+SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
 
 
 # Application definition

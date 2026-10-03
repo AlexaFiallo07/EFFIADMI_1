@@ -98,6 +98,16 @@ def consultar_asistente_effiadmi(mensaje_usuario, contexto_negocio=None):
                 {"role": "user", "content": mensaje_usuario}
             ]
         )
-        return respuesta.choices[0].message.content
+        contenido = respuesta.choices[0].message.content
+        # Cuando el filtro de seguridad de Gemini bloquea el tema devuelve
+        # content=None. Si eso sale sin comprobar, ChatHistorial.respuesta es
+        # NOT NULL y la vista reventaba con IntegrityError.
+        if contenido is None or not str(contenido).strip():
+            return (
+                "No pude responder eso por politicas de contenido de la IA. "
+                "Prueba con una consulta sobre inventario, productos, clientes, "
+                "pedidos o facturacion."
+            )
+        return contenido
     except Exception as e:
         return f"Error: {str(e)}"

@@ -8,7 +8,9 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.db import IntegrityError, transaction
-from django.db.models import Sum, F, Count
+from django.db.models import Sum, F, Count, Max
+from django.db.models.functions import Cast
+from django.db.models import IntegerField
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django import template as django_template
@@ -67,7 +69,9 @@ from .models import (
     Notificacion, Conversacion, ChatHistorial, Reporte, CorreoEnviado, FacturaCompra,
 )
 from .servicio_ia import consultar_asistente_effiadmi
-from .utilidades import autorizacion, crear_notificacion, ids_admins, enviar_correo
+from .utilidades import (
+    autorizacion, crear_notificacion, ids_admins, enviar_correo, validar_adjunto,
+)
 
 
 # ==================== LOGIN/LOGOUT ====================
@@ -196,7 +200,18 @@ def inicio(request):
         return render(request, "dashboard/index.html", contexto)
     except Exception as e:
         messages.error(request, f"Error: {e}")
-        return render(request, "dashboard/index.html")
+        return redirect("effiadmi:lista_pedidos")
+
+
+def _motivo_salida_confirmacion(pedido_id):
+    """Motivo exacto del movimiento de salida que genera confirmar_pedido.
+
+    cancelar_pedido busca este texto para devolver el stock a la misma sucursal
+    de la que salio, asi que ambos sitios deben usar esta misma funcion: con un
+    'motivo__contains' escrito a mano, el pedido #1 tambien encuentra el
+    movimiento del #11.
+    """
+    return f"Salida por confirmacion de Pedido #{pedido_id}"
 
 
 @autorizacion(roles=['admin', 'operador'])
@@ -318,19 +333,19 @@ def lista_productos(request):
         else:
             productos_registrados = Product.objects.filter(activo=True).order_by("-id")
 
-        stock_map = {}
-        for inv in Inventory.objects.select_related("branch").all():
-            pid = inv.product.id
-            if pid not in stock_map:
-                stock_map[pid] = 0
-            stock_map[pid] += inv.cantidad_disponible
+        # La suma por producto la hace la base de datos; antes se recorría
+        # Inventory entera en Python.
+        stock_map = dict(
+            Inventory.objects
+            .values("product_id")
+            .annotate(total=Sum("cantidad_disponible"))
+            .values_list("product_id", "total")
+        )
 
-        productos_con_stock = []
-        for p in productos_registrados:
-            productos_con_stock.append({
-                "producto": p,
-                "stock": stock_map.get(p.id, 0),
-            })
+        productos_con_stock = [
+            {"producto": p, "stock": stock_map.get(p.id, 0)}
+            for p in productos_registrados
+        ]
 
         return render(request, "productos/lista.html", {"productos": productos_con_stock})
     except Exception as e:
@@ -339,11 +354,14 @@ def lista_productos(request):
 
 
 def _siguiente_id_producto():
-    maximo = 0
-    for sku in Product.objects.values_list("sku", flat=True):
-        if str(sku).isdigit():
-            maximo = max(maximo, int(sku))
-    return str(maximo + 1)
+    # Max() sobre el cast a entero: recorrer todos los sku en Python era un
+    # escaneo completo de la tabla solo para sacar el mayor.
+    maximo = (
+        Product.objects
+        .filter(sku__regex=r"^[0-9]+$")
+        .aggregate(maximo=Max(Cast("sku", IntegerField())))
+    )["maximo"]
+    return str((maximo or 0) + 1)
 
 
 @autorizacion(roles=['admin'])
@@ -688,7 +706,10 @@ def detalle_inventario(request, id):
         inventario = get_object_or_404(
             Inventory.objects.select_related("product", "branch"), pk=id
         )
-        movimientos = InventoryLog.objects.filter(inventory=inventario).order_by("-fecha")[:50]
+        # select_related evita una consulta por cada mov.usuario de la tabla.
+        movimientos = InventoryLog.objects.filter(
+            inventory=inventario
+        ).select_related("usuario").order_by("-fecha")[:50]
 
         contexto = {
             "inventario": inventario,
@@ -945,7 +966,7 @@ def confirmar_pedido(request, id):
                     tipo_movimiento="SALIDA",
                     cantidad=det.cantidad,
                     cantidad_resultante=inv.cantidad_disponible,
-                    motivo=f"Salida por confirmacion de Pedido #{pedido.id}",
+                    motivo=_motivo_salida_confirmacion(pedido.id),
                     usuario=usuario,
                 )
                 if inv.cantidad_disponible <= inv.stock_minimo:
@@ -982,6 +1003,20 @@ def cancelar_pedido(request, id):
             messages.warning(request, "El pedido ya esta cancelado.")
             return redirect("effiadmi:detalle_pedido", id=pedido.id)
 
+        if pedido.estado == "pagado":
+            messages.warning(
+                request,
+                "No se puede cancelar un pedido ya pagado. Anula la factura desde Facturacion.",
+            )
+            return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+        # Solo confirmar_pedido descuenta stock, asi que solo un pedido
+        # confirmado tiene algo que devolver. Un pedido pendiente nunca lo
+        # desconto y devolverlo inflaba el inventario.
+        devolver_stock = pedido.estado == "confirmado"
+
+        branch = Branch.objects.filter(es_principal=True).first() or Branch.objects.first()
+
         with transaction.atomic():
             pedido.estado = "cancelado"
             pedido.save()
@@ -992,18 +1027,42 @@ def cancelar_pedido(request, id):
                 factura.save()
 
             detalles = PedidoDetalle.objects.filter(pedido=pedido).select_related("producto")
-            for det in detalles:
-                inv = Inventory.objects.filter(
-                    product=det.producto
-                ).first()
-                if inv:
+            if devolver_stock and branch:
+                usuario = None
+                if request.session.get("logueado"):
+                    usuario = User.objects.filter(
+                        id=request.session["logueado"]["id"]
+                    ).first()
+                for det in detalles:
+                    # Se devuelve al inventario exacto del que salio el stock,
+                    # rastreandolo por el movimiento de kardex. Elegir la
+                    # sucursal principal aqui no servia: si entre la
+                    # confirmacion y la cancelacion cambiaba la principal (o
+                    # hay varias marcadas), el stock se iba a otra sucursal.
+                    # El motivo se compara EXACTO (no 'contains') porque
+                    # "Pedido #1" tambien esta dentro de "Pedido #11".
+                    salida = (
+                        InventoryLog.objects
+                        .filter(
+                            inventory__product=det.producto,
+                            tipo_movimiento="SALIDA",
+                            motivo=_motivo_salida_confirmacion(pedido.id),
+                        )
+                        .select_related("inventory")
+                        .order_by("-fecha")
+                        .first()
+                    )
+                    if salida:
+                        inv = salida.inventory
+                    else:
+                        # Sin rastro en kardex: cae a la sucursal principal.
+                        inv = Inventory.objects.filter(
+                            product=det.producto, branch=branch
+                        ).first()
+                    if not inv:
+                        continue
                     inv.cantidad_disponible += det.cantidad
                     inv.save()
-                    usuario = None
-                    if request.session.get("logueado"):
-                        usuario = User.objects.filter(
-                            id=request.session["logueado"]["id"]
-                        ).first()
                     InventoryLog.objects.create(
                         inventory=inv,
                         tipo_movimiento="ENTRADA",
@@ -1223,15 +1282,17 @@ def crear_usuario(request):
                 messages.error(request, "El correo ya esta registrado.")
                 return render(request, "usuarios/crear.html")
 
-            user = User.objects.create_user(
-                username=email,
-                email=email,
-                password=contrasena,
-                first_name=nombre,
-                last_name=apellido or "",
-            )
-
-            UserProfile.objects.create(user=user, cargo=cargo)
+            # Atomicidad: si el UserProfile falla, tampoco debe quedar el User
+            # huérfano (o al revés). Antes se guardaban por separado.
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=contrasena,
+                    first_name=nombre,
+                    last_name=apellido or "",
+                )
+                UserProfile.objects.create(user=user, cargo=cargo)
 
             messages.success(request, "¡Usuario creado exitosamente!")
             return redirect("effiadmi:lista_usuarios")
@@ -1252,18 +1313,22 @@ def editar_usuario(request, id):
         perfil, _ = UserProfile.objects.get_or_create(user=user)
 
         if request.method == "POST":
-            user.first_name = request.POST.get("nombre_usuario", "")
-            user.last_name = request.POST.get("apellido_usuario", "")
-            user.email = request.POST.get("email", "")
-
             nueva_contrasena = request.POST.get("contraseña")
-            if nueva_contrasena:
-                user.set_password(nueva_contrasena)
 
-            user.save()
+            # Atomicidad: el User y su UserProfile se guardan juntos, para que
+            # un fallo a mitad no deje el cargo desactualizado.
+            with transaction.atomic():
+                user.first_name = request.POST.get("nombre_usuario", "")
+                user.last_name = request.POST.get("apellido_usuario", "")
+                user.email = request.POST.get("email", "")
 
-            perfil.cargo = request.POST.get("cargo", perfil.cargo)
-            perfil.save()
+                if nueva_contrasena:
+                    user.set_password(nueva_contrasena)
+
+                user.save()
+
+                perfil.cargo = request.POST.get("cargo", perfil.cargo)
+                perfil.save()
 
             messages.success(request, "¡Usuario actualizado exitosamente!")
             return redirect("effiadmi:lista_usuarios")
@@ -1560,18 +1625,22 @@ def estadisticas_ia(request):
             if inv.cantidad_disponible <= inv.stock_minimo:
                 productos_bajos.append(inv)
 
-        ventas_por_producto = (
+        # Solo las facturas emitidas cuentan como venta: sin este filtro las
+        # anuladas inflaban el ranking de productos y los totales que ve la IA.
+        top_ventas = list(
             FacturaDetalle.objects
+            .filter(factura__estado="emitida")
             .values("producto__id", "producto__nombre")
             .annotate(total=Sum("cantidad"))
             .order_by("-total")
         )
+        top_8 = top_ventas[:8]
+
         producto_mas_vendido = None
-        if ventas_por_producto:
-            mejor = ventas_por_producto.first()
+        if top_8:
             producto_mas_vendido = {
-                "nombre": mejor["producto__nombre"],
-                "unidades": mejor["total"],
+                "nombre": top_8[0]["producto__nombre"],
+                "unidades": top_8[0]["total"],
             }
 
         contexto = {
@@ -1584,9 +1653,9 @@ def estadisticas_ia(request):
             "valor_inventario": valor_inventario,
             "productos_bajos": productos_bajos,
             "producto_mas_vendido": producto_mas_vendido,
-            "top_productos": list(ventas_por_producto[:8]),
-            "top_productos_labels": [v["producto__nombre"] for v in ventas_por_producto[:8]],
-            "top_productos_valores": [v["total"] for v in ventas_por_producto[:8]],
+            "top_productos": top_8,
+            "top_productos_labels": [v["producto__nombre"] for v in top_8],
+            "top_productos_valores": [v["total"] for v in top_8],
             "entradas": InventoryLog.objects.filter(tipo_movimiento="ENTRADA").count(),
             "salidas": InventoryLog.objects.filter(tipo_movimiento="SALIDA").count(),
             "es_admin": es_admin,
@@ -1617,14 +1686,21 @@ def estadisticas_ia(request):
                 )
 
         # Contexto de negocio para la IA
+        # Una sola consulta para los precios de los productos del ranking: antes
+        # se hacia Product.objects.filter(pk=pid) dentro del bucle (una query
+        # por producto, hasta 15). Solo se lanza si hay margenes que calcular.
+        ids_top = {v["producto__id"] for v in top_ventas[:15]} & precios_compra.keys()
+        precios_venta = (
+            {p.id: float(p.precio_venta) for p in Product.objects.filter(pk__in=ids_top)}
+            if ids_top else {}
+        )
+
         productos_str = []
-        for v in ventas_por_producto[:15]:
+        for v in top_ventas[:15]:
             pid = v["producto__id"]
             margen = ""
-            if pid in precios_compra:
-                pv = {p.id: float(p.precio_venta) for p in Product.objects.filter(pk=pid)}
-                if pid in pv:
-                    margen = f", margen={round(pv[pid] - precios_compra[pid], 2)}"
+            if pid in precios_compra and pid in precios_venta:
+                margen = f", margen={round(precios_venta[pid] - precios_compra[pid], 2)}"
             productos_str.append(
                 f"{v['producto__nombre']}: {v['total']} uds vendidas{margen}"
             )
@@ -1713,19 +1789,29 @@ def _contexto_negocio_effiadmi():
         if inv.cantidad_disponible <= inv.stock_minimo:
             productos_bajos.append(inv)
 
-    ventas_por_producto = (
+    # Solo las facturas emitidas son ventas: las anuladas no se le reportan a la IA.
+    ventas_por_producto = list(
         FacturaDetalle.objects
+        .filter(factura__estado="emitida")
         .values("producto__id", "producto__nombre")
         .annotate(total=Sum("cantidad"))
-        .order_by("-total")
+        .order_by("-total")[:15]
+    )
+
+    # Una sola consulta de precios: antes Product.objects.get(pk=pid) por producto.
+    # Solo se lanza si hay margenes que calcular.
+    ids_top = {v["producto__id"] for v in ventas_por_producto} & precios_compra.keys()
+    precios_venta = (
+        {p.id: float(p.precio_venta) for p in Product.objects.filter(pk__in=ids_top)}
+        if ids_top else {}
     )
 
     productos_str = []
-    for v in ventas_por_producto[:15]:
+    for v in ventas_por_producto:
         pid = v["producto__id"]
         margen = ""
-        if pid in precios_compra:
-            margen = f", margen={round(float(Product.objects.get(pk=pid).precio_venta) - precios_compra[pid], 2)}"
+        if pid in precios_compra and pid in precios_venta:
+            margen = f", margen={round(precios_venta[pid] - precios_compra[pid], 2)}"
         productos_str.append(f"{v['producto__nombre']}: {v['total']} uds vendidas{margen}")
 
     bajos_str = []
@@ -1757,7 +1843,11 @@ def _titulo_conversacion(mensaje):
 def _es_error_ia(respuesta):
     """La IA devuelve los fallos como texto; asi se distinguen de una respuesta real."""
     texto = (respuesta or "").strip()
-    return texto.startswith("Error:") or texto.startswith("No hay clave de Gemini")
+    return (
+        not texto
+        or texto.startswith("Error:")
+        or texto.startswith("No hay clave de Gemini")
+    )
 
 
 def _responder_chat(usuario, mensaje, conversacion=None, contexto_negocio=None):
@@ -2042,15 +2132,24 @@ def crear_factura_compra(request):
             if request.session.get("logueado"):
                 usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
 
-            FacturaCompra.objects.create(
-                proveedor=proveedor,
-                usuario=usuario,
-                numero=numero,
-                fecha=fecha,
-                monto=monto,
-                archivo=archivo,
-                notas=notas,
-            )
+            archivo, error_adjunto = validar_adjunto(archivo)
+            if error_adjunto:
+                messages.error(request, error_adjunto)
+                return render(request, "facturas_compra/crear.html", ctx_base)
+
+            # Atomicidad: la escritura del archivo en disco y la fila en la BD
+            # no son atomicas entre si, pero al menos la fila no queda sin
+            # guardar si algo falla despues.
+            with transaction.atomic():
+                FacturaCompra.objects.create(
+                    proveedor=proveedor,
+                    usuario=usuario,
+                    numero=numero,
+                    fecha=fecha,
+                    monto=monto,
+                    archivo=archivo,
+                    notas=notas,
+                )
             messages.success(request, "Factura de compra registrada exitosamente.")
             return redirect(reverse('effiadmi:facturacion') + '?tab=compras')
         except Exception as e:
