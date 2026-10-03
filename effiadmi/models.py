@@ -397,10 +397,13 @@ class Reporte(models.Model):
 # Correos enviados (historial)
 # ============================================================
 
+MAX_ASUNTO_CORREO = 200
+
+
 class CorreoEnviado(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     destinatario = models.EmailField(db_index=True)
-    asunto = models.CharField(max_length=200)
+    asunto = models.CharField(max_length=MAX_ASUNTO_CORREO)
     cuerpo = models.TextField()
     exitoso = models.BooleanField(default=False)
     error = models.TextField(blank=True, default="")

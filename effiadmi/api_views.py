@@ -167,6 +167,10 @@ class FacturaViewSet(viewsets.ModelViewSet):
     queryset = Factura.objects.select_related("cliente").prefetch_related("detalles__producto").all()
     serializer_class = FacturaSerializer
 
+    def perform_create(self, serializer):
+        # 'usuario' es solo lectura en el serializer; el emisor es quien llama.
+        serializer.save(usuario=self.request.user)
+
 
 # ============================================================
 # Pedido (with detalles)
@@ -176,14 +180,33 @@ class PedidoViewSet(viewsets.ModelViewSet):
     queryset = Pedido.objects.select_related("cliente").prefetch_related("detalles__producto").all()
     serializer_class = PedidoSerializer
 
+    def perform_create(self, serializer):
+        serializer.save(usuario=self.request.user)
+
 
 # ============================================================
 # Notificacion
 # ============================================================
 
 class NotificacionViewSet(viewsets.ModelViewSet):
-    queryset = Notificacion.objects.all().order_by("-fecha_creacion")
+    # El atributo queryset lo usa el router para derivar el basename; el
+    # scoping real esta en get_queryset.
+    queryset = Notificacion.objects.all()
     serializer_class = NotificacionSerializer
+    # Las notificaciones las crea la aplicacion, no el cliente. Sin esto un
+    # POST llegaba a la BD sin 'usuario' y reventaba con IntegrityError (500),
+    # porque el serializer ya no acepta ese campo.
+    http_method_names = ["get", "patch", "delete", "head", "options"]
+
+    def get_queryset(self):
+        # Antes era .all(): cualquier usuario autenticado listaba, leia, borraba
+        # y reasignaba las notificaciones de los demas. La web ya las filtra por
+        # usuario (views.lista_notificaciones); aqui se hacia lo mismo.
+        return (
+            Notificacion.objects
+            .filter(usuario=self.request.user)
+            .order_by("-fecha_creacion")
+        )
 
 
 # ============================================================
@@ -203,7 +226,9 @@ class DashboardViewSet(viewsets.ViewSet):
         valor_inventario = 0
         productos_bajo_stock = []
 
-        for inv in inventario.select_related("product"):
+        for inv in inventario.select_related("product", "branch"):
+            # 'branch' faltaba en el select_related y se usaba abajo: una
+            # consulta por cada inventario para sacar el nombre de la sucursal.
             valor_inventario += float(inv.product.precio_venta or 0) * inv.cantidad_disponible
             if inv.cantidad_disponible <= inv.stock_minimo:
                 productos_bajo_stock.append({
@@ -216,6 +241,7 @@ class DashboardViewSet(viewsets.ViewSet):
 
         ventas_por_producto = (
             FacturaDetalle.objects
+            .filter(factura__estado="emitida")
             .values("producto__id", "producto__nombre")
             .annotate(total_vendido=Sum("cantidad"), total_facturado=Sum("subtotal"))
             .order_by("-total_vendido")[:10]
@@ -273,11 +299,20 @@ class DashboardViewSet(viewsets.ViewSet):
 # ============================================================
 
 class AsistenteIAView(APIView):
+    # Cada consulta consume la cuota de Gemini, asi que va con throttle: sin el,
+    # un cliente autenticado podia vaciar la cuota con un bucle.
+    throttle_scope = "ia"
+
     def post(self, request):
         mensaje = request.data.get("mensaje", "")
         if not mensaje:
             return Response(
                 {"detail": "El campo mensaje es obligatorio"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not isinstance(mensaje, str) or len(mensaje) > 2000:
+            return Response(
+                {"detail": "El mensaje debe ser texto y de 2000 caracteres como maximo"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         respuesta = consultar_asistente_effiadmi(mensaje)

@@ -4,6 +4,8 @@ import json
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -67,10 +69,12 @@ from .models import (
     Cliente, Proveedor, ProveedorProducto,
     Factura, FacturaDetalle, Pedido, PedidoDetalle,
     Notificacion, Conversacion, ChatHistorial, Reporte, CorreoEnviado, FacturaCompra,
+    MAX_ASUNTO_CORREO,
 )
 from .servicio_ia import consultar_asistente_effiadmi
 from .utilidades import (
     autorizacion, crear_notificacion, ids_admins, enviar_correo, validar_adjunto,
+    _correo_configurado,
 )
 
 
@@ -328,10 +332,13 @@ def eliminar_cliente(request, id):
 def lista_productos(request):
     try:
         mostrar_inactivos = request.GET.get("inactivos") == "1"
+        # select_related("categoria"): la lista muestra el nombre de la categoria
+        # de cada producto. Sin esto Django hacia una consulta por producto (con
+        # 60 productos, 60 consultas extra).
         if mostrar_inactivos:
-            productos_registrados = Product.objects.all().order_by("-id")
+            productos_registrados = Product.objects.select_related("categoria").all().order_by("-id")
         else:
-            productos_registrados = Product.objects.filter(activo=True).order_by("-id")
+            productos_registrados = Product.objects.select_related("categoria").filter(activo=True).order_by("-id")
 
         # La suma por producto la hace la base de datos; antes se recorría
         # Inventory entera en Python.
@@ -1986,27 +1993,45 @@ def detalle_reporte(request, id):
 @autorizacion(roles=['admin', 'operador'])
 def lista_correos(request):
     try:
-        from .utilidades import _correo_configurado, _backend_es_consola
-
         smtp_configurado = _correo_configurado()
-        backend_consola = _backend_es_consola()
-        enviados = CorreoEnviado.objects.select_related("usuario").order_by("-fecha")[:50]
+        logueado = request.session.get("logueado") or {}
+
+        enviados = CorreoEnviado.objects.select_related("usuario").order_by("-fecha")
+        if logueado.get("rol") != "admin":
+            # Un operador solo ve lo que ha enviado el mismo. La lista completa
+            # revela a que clientes y proveedores escribieron los demas.
+            enviados = enviados.filter(usuario_id=logueado.get("id"))
+        enviados = enviados[:50]
 
         if request.method == "POST":
             destinatario = (request.POST.get("destinatario", "") or "").strip()
             asunto = (request.POST.get("asunto", "") or "").strip()
             cuerpo = (request.POST.get("cuerpo", "") or "").strip()
 
+            # El <input type="email"> del formulario solo valida en el navegador:
+            # un POST directo permite mandar cualquier texto como destinatario.
             if not all([destinatario, asunto, cuerpo]):
-                messages.error(request, "Completa destinatario, asunto y mensaje.")
+                error = "Completa destinatario, asunto y mensaje."
+            elif len(asunto) > MAX_ASUNTO_CORREO:
+                error = f"El asunto no puede superar los {MAX_ASUNTO_CORREO} caracteres."
+            else:
+                try:
+                    validate_email(destinatario)
+                except ValidationError:
+                    error = "Ingresa un correo electronico valido."
+                else:
+                    error = ""
+
+            if error:
+                messages.error(request, error)
                 return render(request, "correos/lista.html", {
                     "enviados": enviados,
                     "smtp_configurado": smtp_configurado,
                 })
 
             usuario = None
-            if request.session.get("logueado"):
-                usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+            if logueado.get("id"):
+                usuario = User.objects.filter(id=logueado["id"]).first()
 
             exitoso, error = enviar_correo(destinatario, asunto, cuerpo)
             CorreoEnviado.objects.create(
@@ -2026,7 +2051,6 @@ def lista_correos(request):
         return render(request, "correos/lista.html", {
             "enviados": enviados,
             "smtp_configurado": smtp_configurado,
-            "backend_consola": backend_consola,
         })
     except Exception as e:
         messages.error(request, f"Error: {e}")

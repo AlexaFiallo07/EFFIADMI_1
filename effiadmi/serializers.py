@@ -31,7 +31,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "id", "user", "username", "email", "first_name", "last_name",
             "telefono", "direccion", "cargo",
         ]
-        read_only_fields = ["user"]
+        # 'cargo' editable permitiria escalarse a admin a uno mismo.
+        read_only_fields = ["user", "cargo"]
 
 
 class BranchSerializer(serializers.ModelSerializer):
@@ -51,6 +52,21 @@ class ProductSerializer(serializers.ModelSerializer):
             "id", "sku", "nombre", "descripcion", "categoria", "precio_venta",
             "sucursal_id", "stock_inicial", "stock_minimo_inicial",
         ]
+
+    def validate_sku(self, value):
+        # Product.clean() existe pero DRF no lo llama, asi que por la API se
+        # colaba un sku no numerico (el que genera _siguiente_id_producto
+        # descarta) y la web lo rechazaba con un error distinto.
+        if not str(value).isdigit():
+            raise serializers.ValidationError(
+                "El ID del producto debe contener solo numeros."
+            )
+        return value
+
+    def validate_precio_venta(self, value):
+        if value is not None and value <= 0:
+            raise serializers.ValidationError("El precio de venta debe ser mayor a 0.")
+        return value
 
     def create(self, validated_data):
         from django.db import transaction
@@ -106,6 +122,10 @@ class InventorySerializer(serializers.ModelSerializer):
             "id", "product", "branch", "cantidad_disponible", "stock_minimo",
             "product_nombre", "product_sku", "branch_nombre",
         ]
+        # 'cantidad_disponible' solo se cambia por la accion ajustar_stock, que
+        # valida que haya stock y deja el InventoryLog correspondiente. Aceptarlo
+        # aqui dejaba cambiar el stock sin kardex y sin comprobar existencias.
+        read_only_fields = ["cantidad_disponible"]
 
 
 class InventoryLogSerializer(serializers.ModelSerializer):
@@ -175,7 +195,8 @@ class FacturaSerializer(serializers.ModelSerializer):
             "id", "cliente", "cliente_nombre", "usuario", "usuario_username",
             "fecha_emision", "total", "detalles",
         ]
-        read_only_fields = ["fecha_emision", "total"]
+        # 'usuario' writable dejaba emitir facturas a nombre de otro usuario.
+        read_only_fields = ["fecha_emision", "total", "usuario"]
 
 
 class PedidoDetalleSerializer(serializers.ModelSerializer):
@@ -201,14 +222,21 @@ class PedidoSerializer(serializers.ModelSerializer):
             "id", "cliente", "cliente_nombre", "usuario", "usuario_username",
             "fecha_pedido", "estado", "total", "detalles",
         ]
-        read_only_fields = ["fecha_pedido", "total"]
+        # 'estado' editable permitia marcar un pedido como pagado por la API sin
+        # pasar por pagar_pedido (que es genera la factura y avisa a los admins).
+        read_only_fields = ["fecha_pedido", "total", "usuario", "estado"]
 
 
 class NotificacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notificacion
         fields = "__all__"
-        read_only_fields = ["fecha_creacion"]
+        # Las notificaciones las genera la aplicacion (utilidades.crear_
+        # notificacion); el cliente solo debe poder marcar la suya como leida.
+        # 'usuario' editable permitia crear o reasignar notificaciones de
+        # cualquier otro usuario, y 'mensaje'/'enlace' dejaaban reescribir el
+        # texto de avisos del sistema (stock bajo, pedido confirmado...).
+        read_only_fields = ["usuario", "mensaje", "enlace", "fecha_creacion"]
 
 
 class ChatHistorialSerializer(serializers.ModelSerializer):
