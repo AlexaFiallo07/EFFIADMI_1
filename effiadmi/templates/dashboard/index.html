@@ -3,112 +3,419 @@
 {% block titulo %}Dashboard Principal - EFFIADMI{% endblock %}
 
 {% block contenido %}
-<div class="dashboard-header">
-    <h1>Dashboard Principal</h1>
-    <p>Resumen general de tu negocio</p>
-</div>
+<div class="dash-grid" id="dashGrid">
 
-<div class="kpi-matrix">
-
-    <div class="kpi-card-custom">
-        <div class="kpi-icon-box geo-green"><span class="material-symbols-outlined">attach_money</span></div>
-        <div class="kpi-core-data">
-            <span class="kpi-tag">Ventas Hoy</span>
-            <h3 class="kpi-number">{{ ventas_hoy|cop }}</h3>
+    <!-- ============ NOTAS RÁPIDAS (varias notas) ============ -->
+    <div class="span-12">
+        <div class="notas-head">
+            <div class="placa-titulo">
+                <span class="material-symbols-outlined">edit_note</span>
+                <h3>Notas rápidas</h3>
+            </div>
+            <div class="notas-head-acciones">
+                <span class="notas-estado" id="notasEstado">Sin cambios</span>
+                <button type="button" class="btn btn-outline btn-sm" id="notasNueva">+ Nueva nota</button>
+                <button type="button" class="placa-link" id="notasLimpiar">Limpiar todo</button>
+            </div>
         </div>
+        <div class="notas-grid" id="notasGrid"></div>
     </div>
 
-    <div class="kpi-card-custom">
-        <div class="kpi-icon-box geo-blue"><span class="material-symbols-outlined">stacked_line_chart</span></div>
-        <div class="kpi-core-data">
-            <span class="kpi-tag">Ventas del Mes</span>
-            <h3 class="kpi-number">{{ ventas_mes|cop }}</h3>
-        </div>
-    </div>
+    <!-- ============ FILA 1 · BIENVENIDA + CALENDARIO ============ -->
+    <section class="dashboard-panel-card placa-bienvenida span-7"
+             id="bienvenida"
+             data-nombre="{{ request.session.logueado.nombre|default:'Usuario' }}">
+        <div class="bienvenida-fila">
+            <div class="bienvenida-texto">
+                <div class="bienvenida-ola" id="saludoHora">Bienvenido de nuevo</div>
+                <p class="bienvenida-copy">
+                    {% if productos_bajo_stock %}
+                        Tienes <strong>{{ productos_bajo_stock|length }}</strong> producto{{ productos_bajo_stock|length|pluralize:"s" }}
+                        con stock bajo y <strong>{{ total_pedidos }}</strong> pedido{{ total_pedidos|pluralize:"s" }} en el sistema.
+                        Revisa el inventario antes de facturar.
+                    {% else %}
+                        Todo en orden: ningún producto está por debajo del stock mínimo y llevas
+                        <strong>{{ total_pedidos }}</strong> pedido{{ total_pedidos|pluralize:"s" }} registrado{{ total_pedidos|pluralize:"s" }}.
+                    {% endif %}
+                </p>
+                <div class="bienvenida-acciones">
+                    <a class="btn btn-solido" href="{% url 'effiadmi:crear_pedido' %}">
+                        <span class="material-symbols-outlined" style="font-size:18px">add_shopping_cart</span>
+                        Nuevo pedido
+                    </a>
+                    <a class="btn btn-fantasma" href="{% url 'effiadmi:reportes' %}">Ver reportes</a>
+                </div>
+            </div>
 
-    <div class="kpi-card-custom">
-        <div class="kpi-icon-box geo-yellow"><span class="material-symbols-outlined">inventory</span></div>
-        <div class="kpi-core-data">
-            <span class="kpi-tag">Unidades en Inventario</span>
-            <h3 class="kpi-number">{{ unidades_totales }}</h3>
-        </div>
-    </div>
-
-    <div class="kpi-card-custom">
-        <div class="kpi-icon-box geo-purple"><span class="material-symbols-outlined">shopping_cart</span></div>
-        <div class="kpi-core-data">
-            <span class="kpi-tag">Pedidos Totales</span>
-            <h3 class="kpi-number">{{ total_pedidos }}</h3>
-        </div>
-    </div>
-
-    <div class="kpi-card-custom">
-        <div class="kpi-icon-box geo-teal"><span class="material-symbols-outlined">group</span></div>
-        <div class="kpi-core-data">
-            <span class="kpi-tag">Clientes Registrados</span>
-            <h3 class="kpi-number">{{ total_clientes }}</h3>
-        </div>
-    </div>
-
-    <div class="kpi-card-custom">
-        <div class="kpi-icon-box geo-green"><span class="material-symbols-outlined">account_balance</span></div>
-        <div class="kpi-core-data">
-            <span class="kpi-tag">Valor del Inventario</span>
-            <h3 class="kpi-number">{{ valor_inventario|cop }}</h3>
-        </div>
-    </div>
-</div>
-
-<div class="bottom-layout">
-
-    <div class="charts-section">
-        <div class="dashboard-panel-card">
-            <h3 class="panel-card-title">Productos Mas Vendidos</h3>
-            {% if productos_vendidos %}
-                <div class="chart-box"><canvas id="canvasProductosMasVendidos"></canvas></div>
-            {% else %}
-                <p class="empty-note">No hay ventas registradas aun.</p>
-            {% endif %}
-        </div>
-
-        <div class="dashboard-panel-card">
-            <h3 class="panel-card-title">Categorias Mas Rentables</h3>
-            {% if categorias_data %}
-                <div class="chart-box-sm"><canvas id="canvasCategoriasRentables"></canvas></div>
-            {% else %}
-                <p class="empty-note">No hay datos de categorias aun.</p>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="side-widgets-section">
-
-        <div class="dashboard-panel-card">
-            <h3 class="panel-card-title">Productos con Stock Bajo</h3>
-            <div class="stack">
-                {% for inv in productos_bajo_stock %}
-                    <div class="system-alert-row warn-alert">
-                        {{ inv.product.nombre }} — {{ inv.cantidad_disponible }} / min {{ inv.stock_minimo }}
+            <div class="clima">
+                <span class="material-symbols-outlined">partly_cloudy_day</span>
+                <div>
+                    <div class="clima-temp">24°</div>
+                    <div class="clima-lugar">Bogotá, Colombia</div>
+                    <div class="clima-meta">
+                        <span><span class="material-symbols-outlined">water_drop</span>65%</span>
+                        <span><span class="material-symbols-outlined">air</span>12 km/h</span>
                     </div>
-                {% empty %}
-                    <p class="empty-note sm">Todos los productos tienen stock suficiente.</p>
-                {% endfor %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="dashboard-panel-card span-5">
+        <div class="cal-enc">
+            <div class="cal-mes" id="calMes">&nbsp;</div>
+            <div class="cal-nav">
+                <button type="button" id="calPrev" aria-label="Mes anterior">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+                <button type="button" id="calNext" aria-label="Mes siguiente">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </button>
+            </div>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+
+        <div class="eventos">
+            <div class="evento">
+                <span class="evento-barra verde"></span>
+                <div>
+                    <div class="evento-hora">Ventas de hoy</div>
+                    <div class="evento-nombre">{{ ventas_hoy|cop }}</div>
+                </div>
+            </div>
+            <div class="evento">
+                <span class="evento-barra oro"></span>
+                <div>
+                    <div class="evento-hora">Facturas emitidas</div>
+                    <div class="evento-nombre">{{ total_facturas }} en total</div>
+                </div>
+            </div>
+            <div class="evento">
+                <span class="evento-barra"></span>
+                <div>
+                    <div class="evento-hora">Alertas de stock</div>
+                    <div class="evento-nombre">
+                        {% if productos_bajo_stock %}{{ productos_bajo_stock|length }} productos por reponer{% else %}Inventario al día{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ FILA 2 · KPI ============ -->
+    <div class="span-12">
+        <div class="kpi-matrix">
+
+            <div class="kpi-card-custom">
+                <div class="kpi-icon-box geo-green"><span class="material-symbols-outlined">attach_money</span></div>
+                <div class="kpi-core-data">
+                    <span class="kpi-tag">Ventas Hoy</span>
+                    <h3 class="kpi-number">{{ ventas_hoy|cop }}</h3>
+                </div>
+            </div>
+
+            <div class="kpi-card-custom">
+                <div class="kpi-icon-box geo-blue"><span class="material-symbols-outlined">stacked_line_chart</span></div>
+                <div class="kpi-core-data">
+                    <span class="kpi-tag">Ventas del Mes</span>
+                    <h3 class="kpi-number">{{ ventas_mes|cop }}</h3>
+                </div>
+            </div>
+
+            <div class="kpi-card-custom">
+                <div class="kpi-icon-box geo-yellow"><span class="material-symbols-outlined">inventory</span></div>
+                <div class="kpi-core-data">
+                    <span class="kpi-tag">Unidades en Inventario</span>
+                    <h3 class="kpi-number">{{ unidades_totales }}</h3>
+                </div>
+            </div>
+
+            <div class="kpi-card-custom">
+                <div class="kpi-icon-box geo-purple"><span class="material-symbols-outlined">shopping_cart</span></div>
+                <div class="kpi-core-data">
+                    <span class="kpi-tag">Pedidos Totales</span>
+                    <h3 class="kpi-number">{{ total_pedidos }}</h3>
+                </div>
+            </div>
+
+            <div class="kpi-card-custom">
+                <div class="kpi-icon-box geo-teal"><span class="material-symbols-outlined">group</span></div>
+                <div class="kpi-core-data">
+                    <span class="kpi-tag">Clientes Registrados</span>
+                    <h3 class="kpi-number">{{ total_clientes }}</h3>
+                </div>
+            </div>
+
+            <div class="kpi-card-custom">
+                <div class="kpi-icon-box geo-green"><span class="material-symbols-outlined">account_balance</span></div>
+                <div class="kpi-core-data">
+                    <span class="kpi-tag">Valor del Inventario</span>
+                    <h3 class="kpi-number">{{ valor_inventario|cop }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ FILA 3 · PROGRESO + VENTAS + STOCK ============ -->
+    <section class="dashboard-panel-card span-4">
+        <div class="placa-head">
+            <div class="placa-titulo">
+                <span class="material-symbols-outlined">donut_small</span>
+                <div>
+                    <h3>Progreso del mes</h3>
+                    <span class="placa-sub">Calculado con tus datos reales</span>
+                </div>
             </div>
         </div>
 
-        <div class="dashboard-panel-card">
-            <h3 class="panel-card-title">Movimientos Recientes</h3>
-            <div class="stack">
-                {% for mov in movimientos_recientes %}
-                    <div class="system-alert-row {% if mov.tipo_movimiento == 'ENTRADA' %}info-alert{% elif mov.tipo_movimiento == 'SALIDA' %}danger-alert{% else %}warn-alert{% endif %}">
-                        {{ mov.tipo_movimiento }} — {{ mov.inventory.product.nombre }} x{{ mov.cantidad }}
-                    </div>
-                {% empty %}
-                    <p class="empty-note sm">No hay movimientos recientes.</p>
-                {% endfor %}
+        <div class="anillos" id="anillos"
+             data-productos="{{ total_productos }}"
+             data-bajo="{{ productos_bajo_stock|length }}"
+             data-facturas="{{ total_facturas }}"
+             data-pedidos="{{ total_pedidos }}"
+             data-ventas-hoy="{{ ventas_hoy }}"
+             data-ventas-mes="{{ ventas_mes }}">
+
+            <div class="anillo-item">
+                <div class="anillo-svg">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="anillo-fondo" cx="50" cy="50" r="42"></circle>
+                        <circle class="anillo-prog" cx="50" cy="50" r="42" stroke="var(--verde)" stroke-dasharray="0 264"></circle>
+                    </svg>
+                    <div class="anillo-val">–</div>
+                </div>
+                <div class="anillo-etq">Stock suficiente</div>
+                <div class="anillo-sub" data-sub="stock">–</div>
+            </div>
+
+            <div class="anillo-item">
+                <div class="anillo-svg">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="anillo-fondo" cx="50" cy="50" r="42"></circle>
+                        <circle class="anillo-prog" cx="50" cy="50" r="42" stroke="var(--iris)" stroke-dasharray="0 264"></circle>
+                    </svg>
+                    <div class="anillo-val">–</div>
+                </div>
+                <div class="anillo-etq">Facturas emitidas</div>
+                <div class="anillo-sub" data-sub="facturas">–</div>
+            </div>
+
+            <div class="anillo-item">
+                <div class="anillo-svg">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="anillo-fondo" cx="50" cy="50" r="42"></circle>
+                        <circle class="anillo-prog" cx="50" cy="50" r="42" stroke="var(--oro)" stroke-dasharray="0 264"></circle>
+                    </svg>
+                    <div class="anillo-val">–</div>
+                </div>
+                <div class="anillo-etq">Ventas de hoy</div>
+                <div class="anillo-sub" data-sub="ventas">–</div>
             </div>
         </div>
-    </div>
+    </section>
+
+    <section class="dashboard-panel-card span-5">
+        <div class="placa-head">
+            <div class="placa-titulo">
+                <span class="material-symbols-outlined">bar_chart</span>
+                <div>
+                    <h3>Productos más vendidos</h3>
+                    <span class="placa-sub">Unidades por producto</span>
+                </div>
+            </div>
+            <a class="placa-link" href="{% url 'effiadmi:reportes' %}">Ver reportes</a>
+        </div>
+        {% if productos_vendidos %}
+            <div class="chart-box"><canvas id="canvasProductosMasVendidos"></canvas></div>
+        {% else %}
+            <p class="empty-note">No hay ventas registradas aun.</p>
+        {% endif %}
+    </section>
+
+    <section class="dashboard-panel-card span-3">
+        <div class="placa-head">
+            <div class="placa-titulo">
+                <span class="material-symbols-outlined">warning_amber</span>
+                <div>
+                    <h3>Stock bajo</h3>
+                    <span class="placa-sub">Requieren reposición</span>
+                </div>
+            </div>
+        </div>
+        <div class="stack">
+            {% for inv in productos_bajo_stock %}
+                <div class="pend-row">
+                    <span class="pend-ico peligro"><span class="material-symbols-outlined">inventory_2</span></span>
+                    <div class="pend-txt">
+                        <b>{{ inv.product.nombre }}</b>
+                        <small>mínimo {{ inv.stock_minimo }}</small>
+                    </div>
+                    <span class="pend-valor">{{ inv.cantidad_disponible }}</span>
+                </div>
+            {% empty %}
+                <p class="empty-note sm">Todos los productos tienen stock suficiente.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- ============ FILA 4 · ACTIVIDAD + CATEGORÍAS ============ -->
+    <section class="dashboard-panel-card span-7">
+        <div class="placa-head">
+            <div class="placa-titulo">
+                <span class="material-symbols-outlined">history</span>
+                <div>
+                    <h3>Actividad reciente</h3>
+                    <span class="placa-sub">Últimos movimientos de inventario</span>
+                </div>
+            </div>
+            <a class="placa-link" href="{% url 'effiadmi:lista_inventario' %}">Ver inventario</a>
+        </div>
+
+        <div class="feed">
+            {% for mov in movimientos_recientes %}
+                <div class="feed-item">
+                    <div class="feed-avatar">{{ mov|actor|slice:":2"|upper }}</div>
+                    <span class="feed-punto{% if mov.tipo_movimiento == 'ENTRADA' %} verde{% elif mov.tipo_movimiento == 'SALIDA' %} rojo{% else %} oro{% endif %}"></span>
+                    <div class="feed-txt">
+                        <p>
+                            <b>{{ mov|actor }}</b>
+                            registró una
+                            <b>{{ mov.tipo_movimiento|lower }}</b>
+                            de <b>{{ mov.cantidad }}</b> unidad{{ mov.cantidad|pluralize }} en
+                            <b>{{ mov.inventory.product.nombre }}</b>
+                        </p>
+                        <div class="feed-hora">
+                            <span class="material-symbols-outlined">schedule</span>
+                            hace {{ mov.fecha|timesince }}
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="empty-note">No hay movimientos recientes.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="dashboard-panel-card span-5">
+        <div class="placa-head">
+            <div class="placa-titulo">
+                <span class="material-symbols-outlined">pie_chart</span>
+                <div>
+                    <h3>Categorías más rentables</h3>
+                    <span class="placa-sub">Participación en facturación</span>
+                </div>
+            </div>
+        </div>
+        {% if categorias_data %}
+            <div class="chart-box-sm"><canvas id="canvasCategoriasRentables"></canvas></div>
+        {% else %}
+            <p class="empty-note">No hay datos de categorias aun.</p>
+        {% endif %}
+    </section>
+
+    <!-- ============ FILA 5 · ACCIONES RÁPIDAS + PERFIL ============ -->
+    <section class="dashboard-panel-card span-7">
+        <div class="placa-head">
+            <div class="placa-titulo">
+                <span class="material-symbols-outlined">bolt</span>
+                <div>
+                    <h3>Acciones rápidas</h3>
+                    <span class="placa-sub">Lo que más usas</span>
+                </div>
+            </div>
+        </div>
+        <div class="acciones-rap">
+            <a class="accion" href="{% url 'effiadmi:crear_producto' %}">
+                <span class="acc-ico"><span class="material-symbols-outlined">add_box</span></span>
+                <span class="accion-txt">Nuevo producto</span>
+            </a>
+            <a class="accion" href="{% url 'effiadmi:crear_cliente' %}">
+                <span class="acc-ico"><span class="material-symbols-outlined">person_add</span></span>
+                <span class="accion-txt">Agregar cliente</span>
+            </a>
+            <a class="accion" href="{% url 'effiadmi:crear_pedido' %}">
+                <span class="acc-ico"><span class="material-symbols-outlined">shopping_cart</span></span>
+                <span class="accion-txt">Nuevo pedido</span>
+            </a>
+            <a class="accion" href="{% url 'effiadmi:crear_factura_compra' %}">
+                <span class="acc-ico"><span class="material-symbols-outlined">upload_file</span></span>
+                <span class="accion-txt">Subir factura</span>
+            </a>
+        </div>
+    </section>
+
+    <section class="dashboard-panel-card span-5 perfil-rapido">
+        <div class="avatar-grande">{{ perfil_iniciales }}</div>
+        <div class="perfil-rapido-nombre">{{ request.session.logueado.nombre|default:'Usuario' }}</div>
+        <span class="rol-pastilla">{{ perfil_cargo }}</span>
+        <div class="perfil-stats">
+            <div class="pstat"><b>{{ total_productos }}</b><small>Productos</small></div>
+            <div class="pstat"><b>{{ total_clientes }}</b><small>Clientes</small></div>
+            <div class="pstat"><b>{{ total_pedidos }}</b><small>Pedidos</small></div>
+        </div>
+        <a class="btn btn-solido" style="width:100%;justify-content:center;margin-top:16px"
+           href="{% url 'effiadmi:perfil' %}">
+            <span class="material-symbols-outlined" style="font-size:18px">person</span>
+            Ver mi perfil
+        </a>
+    </section>
+
+    <!-- ============ FILA 6 · PEDIDOS RECIENTES ============ -->
+    <section class="dashboard-panel-card span-12">
+        <div class="placa-head">
+            <div class="placa-titulo">
+                <span class="material-symbols-outlined">receipt_long</span>
+                <div>
+                    <h3>Pedidos recientes</h3>
+                    <span class="placa-sub">{{ pedidos_recientes|length }} registro{{ pedidos_recientes|length|pluralize }}</span>
+                </div>
+            </div>
+            <a class="placa-link" href="{% url 'effiadmi:lista_pedidos' %}">Ver todos</a>
+        </div>
+        {% if pedidos_recientes %}
+            <div class="tbl-scroll">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Pedido</th>
+                            <th>Cliente</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th style="text-align:right">Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pedido in pedidos_recientes %}
+                            <tr>
+                                <td>#{{ pedido.id }}</td>
+                                <td>{{ pedido.cliente.nombre }}</td>
+                                <td>{{ pedido.fecha_pedido|date:"d M Y" }}</td>
+                                <td>
+                                    {% if pedido.estado == "pagado" %}
+                                        <span class="estado ok">Pagado</span>
+                                    {% elif pedido.estado == "confirmado" %}
+                                        <span class="estado ok">Confirmado</span>
+                                    {% elif pedido.estado == "cancelado" %}
+                                        <span class="estado canc">Cancelado</span>
+                                    {% else %}
+                                        <span class="estado pend">Pendiente</span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align:right">{{ pedido.total|cop }}</td>
+                                <td style="text-align:right">
+                                    <a class="placa-link" href="{% url 'effiadmi:detalle_pedido' pedido.id %}">Ver</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="empty-note">No hay pedidos registrados.</p>
+        {% endif %}
+    </section>
+
 </div>
 {% endblock %}
 
@@ -132,7 +439,7 @@
 
         const productosChartElement = document.getElementById('canvasProductosMasVendidos');
         if (productosChartElement) {
-            const productosVendidos = JSON.parse('{{ productos_vendidos|escapejs|default:"[]" }}');
+            const productosVendidos = JSON.parse('{{ productos_vendidos_json|escapejs|default:"[]" }}');
 
             if (productosVendidos && productosVendidos.length) {
                 new Chart(productosChartElement.getContext('2d'), {
@@ -164,8 +471,8 @@
 
         const categoriasChartElement = document.getElementById('canvasCategoriasRentables');
         if (categoriasChartElement) {
-            const categoriasLabels = JSON.parse('{{ categorias_labels|escapejs|default:"[]" }}');
-            const categoriasData = JSON.parse('{{ categorias_data|escapejs|default:"[]" }}');
+            const categoriasLabels = JSON.parse('{{ categorias_labels_json|escapejs|default:"[]" }}');
+            const categoriasData = JSON.parse('{{ categorias_data_json|escapejs|default:"[]" }}');
 
             if (categoriasLabels && categoriasLabels.length && categoriasData && categoriasData.length) {
                 new Chart(categoriasChartElement.getContext('2d'), {
@@ -185,6 +492,219 @@
                     }
                 });
             }
+        }
+
+        /* ---------- Saludo según la hora ---------- */
+        const placaBienvenida = document.getElementById('bienvenida');
+        const saludoHora = document.getElementById('saludoHora');
+        if (placaBienvenida && saludoHora) {
+            const hora = new Date().getHours();
+            const saludo = hora < 12 ? 'Buenos días' : (hora < 19 ? 'Buenas tardes' : 'Buenas noches');
+            const saludoHola = saludo + ', ' + (placaBienvenida.dataset.nombre || 'Usuario');
+            saludoHora.textContent = saludoHola;
+        }
+
+        /* ---------- Calendario del mes en curso ---------- */
+        const calendario = document.getElementById('calGrid');
+        const etiquetaMes = document.getElementById('calMes');
+        if (calendario && etiquetaMes) {
+            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
+                           'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const hoy = new Date();
+            let cursor = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+
+            const pintar = function () {
+                const anio = cursor.getFullYear();
+                const mes = cursor.getMonth();
+                etiquetaMes.textContent = meses[mes] + ' ' + anio;
+
+                let html = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+                    .map(function (d) { return '<div class="cal-dow">' + d + '</div>'; })
+                    .join('');
+
+                const primerDia = (new Date(anio, mes, 1).getDay() + 6) % 7;
+                const diasEnMes = new Date(anio, mes + 1, 0).getDate();
+
+                for (let i = 0; i < primerDia; i++) {
+                    html += '<div class="cal-dia vacio"></div>';
+                }
+
+                for (let dia = 1; dia <= diasEnMes; dia++) {
+                    const fecha = new Date(anio, mes, dia);
+                    const esHoy = fecha.toDateString() === hoy.toDateString();
+                    const finde = fecha.getDay() === 0 || fecha.getDay() === 6;
+                    const clase = 'cal-dia' + (esHoy ? ' hoy' : '') + (finde ? '' : ' laboral');
+                    html += '<div class="' + clase + '">' + dia + '</div>';
+                }
+
+                calendario.innerHTML = html;
+            };
+
+            const previo = document.getElementById('calPrev');
+            const siguiente = document.getElementById('calNext');
+            if (previo) previo.addEventListener('click', function () {
+                cursor = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1);
+                pintar();
+            });
+            if (siguiente) siguiente.addEventListener('click', function () {
+                cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+                pintar();
+            });
+
+            pintar();
+        }
+
+        /* ---------- Anillos de progreso (sobre datos reales) ---------- */
+        const anillos = document.getElementById('anillos');
+        if (anillos) {
+            const dato = function (clave) {
+                const bruto = anillos.dataset[clave];
+                const numero = parseFloat(String(bruto).replace(',', '.'));
+                return isNaN(numero) ? 0 : numero;
+            };
+
+            const productos = dato('productos');
+            const bajo = dato('bajo');
+            const facturas = dato('facturas');
+            const pedidos = dato('pedidos');
+            const ventasHoy = dato('ventasHoy');
+            const ventasMes = dato('ventasMes');
+
+            const formatoCOP = new Intl.NumberFormat('es-CO', {
+                style: 'currency', currency: 'COP', maximumFractionDigits: 0
+            });
+            const entero = new Intl.NumberFormat('es-CO');
+
+            const medidas = [
+                {
+                    pct: productos > 0 ? ((productos - bajo) / productos) * 100 : 0,
+                    texto: entero.format(Math.max(productos - bajo, 0)) + ' de ' + entero.format(productos)
+                },
+                {
+                    pct: pedidos > 0 ? Math.min((facturas / pedidos) * 100, 100) : 0,
+                    texto: entero.format(facturas) + ' de ' + entero.format(pedidos) + ' pedidos'
+                },
+                {
+                    pct: ventasMes > 0 ? Math.min((ventasHoy / ventasMes) * 100, 100) : 0,
+                    texto: formatoCOP.format(ventasHoy) + ' de ' + formatoCOP.format(ventasMes)
+                }
+            ];
+
+            const items = anillos.querySelectorAll('.anillo-item');
+            const circunferencia = 2 * Math.PI * 42;
+
+            items.forEach(function (item, indice) {
+                const datoMedida = medidas[indice];
+                if (!datoMedida) return;
+
+                const pct = Math.max(0, Math.min(100, datoMedida.pct));
+                const barra = item.querySelector('.anillo-prog');
+                const valor = item.querySelector('.anillo-val');
+                const sub = item.querySelector('.anillo-sub');
+
+                if (barra) {
+                    barra.setAttribute('stroke-dasharray',
+                        (circunferencia * pct / 100).toFixed(1) + ' ' + circunferencia.toFixed(1));
+                }
+                if (valor) valor.textContent = Math.round(pct) + '%';
+                if (sub) sub.textContent = datoMedida.texto;
+            });
+        }
+
+        /* ---------- Notas rápidas (varias notas, estilo Google Keep) ---------- */
+        const notasGrid = document.getElementById('notasGrid');
+        const notasEstado = document.getElementById('notasEstado');
+        const notasNueva = document.getElementById('notasNueva');
+        const notasLimpiar = document.getElementById('notasLimpiar');
+        const claveNotas = 'effiadmi-notas';
+        const MAX_NOTAS = 6;
+        const MIN_NOTAS = 4;
+        const TIPS = ['Ideas…', 'Pendientes…', 'Productos que faltan…', 'Contactos por agendar…'];
+
+        function notasCargar() {
+            try {
+                const guardado = JSON.parse(localStorage.getItem(claveNotas) || 'null');
+                if (Array.isArray(guardado) && guardado.length) {
+                    return guardado.map(function (t) {
+                        return typeof t === 'string' ? t : '';
+                    });
+                }
+            } catch (e) {}
+
+            // Migracion: recupera la nota antigua guardada como texto plano
+            // (clave anterior) y la convierte a la primera nota del formato nuevo.
+            let notaVieja = null;
+            try { notaVieja = localStorage.getItem('effiadmi-notas-dashboard'); } catch (e) {}
+            const inicial = [];
+            if (notaVieja && notaVieja.trim()) inicial.push(notaVieja);
+            while (inicial.length < MIN_NOTAS) inicial.push('');
+            try {
+                localStorage.setItem(claveNotas, JSON.stringify(inicial));
+                localStorage.removeItem('effiadmi-notas-dashboard');
+            } catch (e) {}
+            return inicial;
+        }
+
+        function notasGuardarTodas() {
+            try { localStorage.setItem(claveNotas, JSON.stringify(notasDatos)); } catch (e) {}
+        }
+
+        function notasPintar() {
+            if (!notasGrid) return;
+            notasGrid.innerHTML = '';
+            notasDatos.forEach(function (texto, i) {
+                const item = document.createElement('div');
+                item.className = 'nota-item';
+                item.innerHTML =
+                    '<div class="nota-cabecera">' +
+                        '<span class="material-symbols-outlined nota-pin">push_pin</span>' +
+                        '<button type="button" class="nota-borrar" title="Borrar nota" aria-label="Borrar nota">' +
+                            '<span class="material-symbols-outlined">close</span>' +
+                        '</button>' +
+                    '</div>' +
+                    '<textarea class="nota-cuerpo" placeholder=""></textarea>';
+                const ta = item.querySelector('textarea');
+                ta.placeholder = TIPS[i % TIPS.length];
+                ta.value = texto;
+                ta.addEventListener('input', function () {
+                    notasDatos[i] = ta.value;
+                    notasGuardarTodas();
+                    if (notasEstado) notasEstado.textContent = 'Guardado ' +
+                        new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+                });
+                item.querySelector('.nota-borrar').addEventListener('click', function () {
+                    notasDatos.splice(i, 1);
+                    if (notasDatos.length < 1) notasDatos = [''];
+                    notasGuardarTodas();
+                    notasPintar();
+                    if (notasEstado) notasEstado.textContent = 'Nota eliminada';
+                });
+                notasGrid.appendChild(item);
+            });
+            if (notasNueva) notasNueva.style.visibility = notasDatos.length >= MAX_NOTAS ? 'hidden' : 'visible';
+        }
+
+        let notasDatos = notasCargar();
+        notasPintar();
+
+        if (notasNueva) {
+            notasNueva.addEventListener('click', function () {
+                if (notasDatos.length >= MAX_NOTAS) return;
+                notasDatos.push('');
+                notasGuardarTodas();
+                notasPintar();
+                const items = notasGrid.querySelectorAll('.nota-item');
+                const ultimo = items[items.length - 1];
+                if (ultimo) ultimo.querySelector('textarea').focus();
+            });
+        }
+        if (notasLimpiar) {
+            notasLimpiar.addEventListener('click', function () {
+                notasDatos = notasDatos.map(function () { return ''; });
+                notasGuardarTodas();
+                notasPintar();
+                if (notasEstado) notasEstado.textContent = 'Notas borradas';
+            });
         }
     });
 </script>

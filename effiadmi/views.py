@@ -4,11 +4,15 @@ import json
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
-from django.http import HttpResponse
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.db import IntegrityError, transaction
-from django.db.models import Sum, F, Count
+from django.db.models import Sum, F, Count, Max, Q
+from django.db.models.functions import Cast
+from django.db.models import IntegerField
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django import template as django_template
@@ -40,24 +44,47 @@ def cop_decimal(value):
     return f"$ {_formato_colombiano(value, decimales=True)}"
 
 
+@register.filter(name="actor")
+def actor(value):
+    """Quien firmo un registro: los InventoryLog antiguos tienen usuario nulo."""
+    usuario = getattr(value, "usuario", None)
+    if usuario is None:
+        return "Sistema"
+    return usuario.first_name or usuario.username or usuario.email or "Sistema"
+
+
 @register.filter(name="marklight")
 def marklight(value):
     from django.utils.html import escape
     from django.utils.safestring import mark_safe
     import re
 
-    texto = escape(str(value) if value is not None else "")
+    texto = str(value) if value is not None else ""
+    texto = texto.replace("\r\n", "\n").replace("\r", "\n")
+    texto = re.sub(r"[ \t]+\n", "\n", texto)
+    # El modelo devuelve bloques de 3 o mas lineas en blanco: sin normalizar
+    # dejan huecos grandes dentro de la burbuja.
+    texto = re.sub(r"\n{3,}", "\n\n", texto).strip()
+
+    texto = escape(texto)
+    # Las vinetas de markdown ("*   texto", "-   texto") se ven crudas si no.
+    texto = re.sub(r"(?m)^[ \t]*[*\-]+[ \t]+", "&bull; ", texto)
     texto = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", texto)
     texto = re.sub(r"`(.+?)`", r"<code>\1</code>", texto)
+    texto = texto.replace("\n\n", "<br><br>").replace("\n", "<br>")
     return mark_safe(texto)
 from .models import (
     UserProfile, Branch, Product, Categoria, Inventory, InventoryLog,
     Cliente, Proveedor, ProveedorProducto,
     Factura, FacturaDetalle, Pedido, PedidoDetalle,
     Notificacion, Conversacion, ChatHistorial, Reporte, CorreoEnviado, FacturaCompra,
+    MAX_ASUNTO_CORREO,
 )
 from .servicio_ia import consultar_asistente_effiadmi
-from .utilidades import autorizacion, crear_notificacion, ids_admins, enviar_correo
+from .utilidades import (
+    autorizacion, crear_notificacion, ids_admins, enviar_correo, validar_adjunto,
+    _correo_configurado,
+)
 
 
 # ==================== LOGIN/LOGOUT ====================
@@ -168,6 +195,14 @@ def inicio(request):
             "inventory__product", "inventory__branch"
         ).order_by("-fecha")[:10]
 
+        pedidos_recientes = Pedido.objects.select_related("cliente").order_by("-fecha_pedido")[:7]
+
+        logueado = request.session.get("logueado", {}) or {}
+        nombre_actual = (logueado.get("nombre") or "").strip()
+        partes = [p for p in nombre_actual.split() if p]
+        perfil_iniciales = "".join(p[0] for p in partes[:2]).upper() or "US"
+        perfil_cargo = "Administrador" if logueado.get("rol") == "admin" else "Operador"
+
         contexto = {
             "total_productos": total_productos,
             "total_clientes": total_clientes,
@@ -178,15 +213,34 @@ def inicio(request):
             "ventas_hoy": ventas_hoy,
             "ventas_mes": ventas_mes,
             "productos_vendidos": list(productos_vendidos),
+            # JSON real para el JS del dashboard: con |escapejs sobre una lista
+            # Python se colaba el repr con comillas simples y reventaba el script.
+            "productos_vendidos_json": json.dumps(list(productos_vendidos)),
             "categorias_labels": categorias_labels,
             "categorias_data": categorias_data,
+            "categorias_labels_json": json.dumps(categorias_labels),
+            "categorias_data_json": json.dumps(categorias_data),
             "productos_bajo_stock": productos_bajo_stock,
             "movimientos_recientes": movimientos_recientes,
+            "pedidos_recientes": pedidos_recientes,
+            "perfil_iniciales": perfil_iniciales,
+            "perfil_cargo": perfil_cargo,
         }
         return render(request, "dashboard/index.html", contexto)
     except Exception as e:
         messages.error(request, f"Error: {e}")
-        return render(request, "dashboard/index.html")
+        return redirect("effiadmi:lista_pedidos")
+
+
+def _motivo_salida_confirmacion(pedido_id):
+    """Motivo exacto del movimiento de salida que genera confirmar_pedido.
+
+    cancelar_pedido busca este texto para devolver el stock a la misma sucursal
+    de la que salio, asi que ambos sitios deben usar esta misma funcion: con un
+    'motivo__contains' escrito a mano, el pedido #1 tambien encuentra el
+    movimiento del #11.
+    """
+    return f"Salida por confirmacion de Pedido #{pedido_id}"
 
 
 @autorizacion(roles=['admin', 'operador'])
@@ -220,8 +274,17 @@ def perfil(request):
 @autorizacion(roles=['admin', 'operador'])
 def lista_clientes(request):
     try:
+        q = (request.GET.get("q", "") or "").strip()
         clientes_registrados = Cliente.objects.all().order_by("-id")
-        return render(request, "clientes/lista_clientes.html", {"clientes": clientes_registrados})
+        if q:
+            clientes_registrados = clientes_registrados.filter(
+                Q(nombre__icontains=q) | Q(correo__icontains=q) | Q(telefono__icontains=q)
+            )
+        return render(request, "clientes/lista_clientes.html", {
+            "clientes": clientes_registrados,
+            "total_filtrados": clientes_registrados.count(),
+            "filtrar_q": q,
+        })
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
@@ -302,38 +365,63 @@ def eliminar_cliente(request, id):
 @autorizacion(roles=['admin', 'operador'])
 def lista_productos(request):
     try:
+        q = request.GET.get("q", "").strip()
+        categoria_id = request.GET.get("categoria", "").strip()
         mostrar_inactivos = request.GET.get("inactivos") == "1"
-        if mostrar_inactivos:
-            productos_registrados = Product.objects.all().order_by("-id")
-        else:
-            productos_registrados = Product.objects.filter(activo=True).order_by("-id")
 
-        stock_map = {}
-        for inv in Inventory.objects.select_related("branch").all():
-            pid = inv.product.id
-            if pid not in stock_map:
-                stock_map[pid] = 0
-            stock_map[pid] += inv.cantidad_disponible
+        # select_related("categoria"): la lista muestra el nombre de la categoria
+        # de cada producto. Sin esto Django hacia una consulta por producto (con
+        # 60 productos, 60 consultas extra).
+        productos_registrados = Product.objects.select_related("categoria").all()
 
-        productos_con_stock = []
-        for p in productos_registrados:
-            productos_con_stock.append({
-                "producto": p,
-                "stock": stock_map.get(p.id, 0),
-            })
+        if q:
+            productos_registrados = productos_registrados.filter(
+                Q(nombre__icontains=q) | Q(sku__icontains=q)
+            )
+        if categoria_id:
+            productos_registrados = productos_registrados.filter(categoria_id=categoria_id)
+        if not mostrar_inactivos:
+            productos_registrados = productos_registrados.filter(activo=True)
 
-        return render(request, "productos/lista.html", {"productos": productos_con_stock})
+        productos_registrados = productos_registrados.order_by("-id")
+        total_filtrados = productos_registrados.count()
+
+        # La suma por producto la hace la base de datos; antes se recorría
+        # Inventory entera en Python.
+        stock_map = dict(
+            Inventory.objects
+            .values("product_id")
+            .annotate(total=Sum("cantidad_disponible"))
+            .values_list("product_id", "total")
+        )
+
+        productos_con_stock = [
+            {"producto": p, "stock": stock_map.get(p.id, 0)}
+            for p in productos_registrados
+        ]
+
+        return render(request, "productos/lista.html", {
+            "productos": productos_con_stock,
+            "total_filtrados": total_filtrados,
+            "categorias": Categoria.objects.filter(activa=True).order_by("nombre"),
+            "filtrar_q": q,
+            "filtrar_categoria": categoria_id,
+            "mostrar_inactivos": mostrar_inactivos,
+        })
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
 
 
 def _siguiente_id_producto():
-    maximo = 0
-    for sku in Product.objects.values_list("sku", flat=True):
-        if str(sku).isdigit():
-            maximo = max(maximo, int(sku))
-    return str(maximo + 1)
+    # Max() sobre el cast a entero: recorrer todos los sku en Python era un
+    # escaneo completo de la tabla solo para sacar el mayor.
+    maximo = (
+        Product.objects
+        .filter(sku__regex=r"^[0-9]+$")
+        .aggregate(maximo=Max(Cast("sku", IntegerField())))
+    )["maximo"]
+    return str((maximo or 0) + 1)
 
 
 @autorizacion(roles=['admin'])
@@ -556,10 +644,17 @@ def eliminar_producto(request, id):
 @autorizacion(roles=['admin'])
 def lista_categorias(request):
     try:
+        q = (request.GET.get("q", "") or "").strip()
         categorias_registradas = Categoria.objects.annotate(
             total_productos=Count("productos")
         ).order_by("nombre")
-        return render(request, "categorias/lista.html", {"categorias": categorias_registradas})
+        if q:
+            categorias_registradas = categorias_registradas.filter(nombre__icontains=q)
+        return render(request, "categorias/lista.html", {
+            "categorias": categorias_registradas,
+            "total_filtrados": categorias_registradas.count(),
+            "filtrar_q": q,
+        })
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
@@ -644,11 +739,16 @@ def eliminar_categoria(request, id):
 @autorizacion(roles=['admin', 'operador'])
 def lista_inventario(request):
     try:
+        q = (request.GET.get("q", "") or "").strip()
         sucursal_id = request.GET.get("sucursal")
         categoria = request.GET.get("categoria")
 
         inventario = Inventory.objects.select_related("product", "branch").all()
 
+        if q:
+            inventario = inventario.filter(
+                Q(product__nombre__icontains=q) | Q(product__sku__icontains=q)
+            )
         if sucursal_id:
             inventario = inventario.filter(branch_id=sucursal_id)
         if categoria:
@@ -665,6 +765,8 @@ def lista_inventario(request):
             "categorias": categorias,
             "sucursal_seleccionada": sucursal_id,
             "categoria_seleccionada": categoria,
+            "total_filtrados": inventario.count(),
+            "filtrar_q": q,
         }
         return render(request, "inventario/lista.html", contexto)
     except Exception as e:
@@ -678,7 +780,10 @@ def detalle_inventario(request, id):
         inventario = get_object_or_404(
             Inventory.objects.select_related("product", "branch"), pk=id
         )
-        movimientos = InventoryLog.objects.filter(inventory=inventario).order_by("-fecha")[:50]
+        # select_related evita una consulta por cada mov.usuario de la tabla.
+        movimientos = InventoryLog.objects.filter(
+            inventory=inventario
+        ).select_related("usuario").order_by("-fecha")[:50]
 
         contexto = {
             "inventario": inventario,
@@ -769,8 +874,17 @@ def registrar_movimiento(request, id):
 @autorizacion(roles=['admin', 'operador'])
 def lista_pedidos(request):
     try:
+        q = (request.GET.get("q", "") or "").strip()
         pedidos_registrados = Pedido.objects.select_related("cliente").all().order_by("-id")
-        return render(request, "pedidos/lista.html", {"pedidos": pedidos_registrados})
+        if q:
+            pedidos_registrados = pedidos_registrados.filter(
+                Q(id__icontains=q) | Q(cliente__nombre__icontains=q)
+            )
+        return render(request, "pedidos/lista.html", {
+            "pedidos": pedidos_registrados,
+            "total_filtrados": pedidos_registrados.count(),
+            "filtrar_q": q,
+        })
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
@@ -935,7 +1049,7 @@ def confirmar_pedido(request, id):
                     tipo_movimiento="SALIDA",
                     cantidad=det.cantidad,
                     cantidad_resultante=inv.cantidad_disponible,
-                    motivo=f"Salida por confirmacion de Pedido #{pedido.id}",
+                    motivo=_motivo_salida_confirmacion(pedido.id),
                     usuario=usuario,
                 )
                 if inv.cantidad_disponible <= inv.stock_minimo:
@@ -972,6 +1086,20 @@ def cancelar_pedido(request, id):
             messages.warning(request, "El pedido ya esta cancelado.")
             return redirect("effiadmi:detalle_pedido", id=pedido.id)
 
+        if pedido.estado == "pagado":
+            messages.warning(
+                request,
+                "No se puede cancelar un pedido ya pagado. Anula la factura desde Facturacion.",
+            )
+            return redirect("effiadmi:detalle_pedido", id=pedido.id)
+
+        # Solo confirmar_pedido descuenta stock, asi que solo un pedido
+        # confirmado tiene algo que devolver. Un pedido pendiente nunca lo
+        # desconto y devolverlo inflaba el inventario.
+        devolver_stock = pedido.estado == "confirmado"
+
+        branch = Branch.objects.filter(es_principal=True).first() or Branch.objects.first()
+
         with transaction.atomic():
             pedido.estado = "cancelado"
             pedido.save()
@@ -982,18 +1110,42 @@ def cancelar_pedido(request, id):
                 factura.save()
 
             detalles = PedidoDetalle.objects.filter(pedido=pedido).select_related("producto")
-            for det in detalles:
-                inv = Inventory.objects.filter(
-                    product=det.producto
-                ).first()
-                if inv:
+            if devolver_stock and branch:
+                usuario = None
+                if request.session.get("logueado"):
+                    usuario = User.objects.filter(
+                        id=request.session["logueado"]["id"]
+                    ).first()
+                for det in detalles:
+                    # Se devuelve al inventario exacto del que salio el stock,
+                    # rastreandolo por el movimiento de kardex. Elegir la
+                    # sucursal principal aqui no servia: si entre la
+                    # confirmacion y la cancelacion cambiaba la principal (o
+                    # hay varias marcadas), el stock se iba a otra sucursal.
+                    # El motivo se compara EXACTO (no 'contains') porque
+                    # "Pedido #1" tambien esta dentro de "Pedido #11".
+                    salida = (
+                        InventoryLog.objects
+                        .filter(
+                            inventory__product=det.producto,
+                            tipo_movimiento="SALIDA",
+                            motivo=_motivo_salida_confirmacion(pedido.id),
+                        )
+                        .select_related("inventory")
+                        .order_by("-fecha")
+                        .first()
+                    )
+                    if salida:
+                        inv = salida.inventory
+                    else:
+                        # Sin rastro en kardex: cae a la sucursal principal.
+                        inv = Inventory.objects.filter(
+                            product=det.producto, branch=branch
+                        ).first()
+                    if not inv:
+                        continue
                     inv.cantidad_disponible += det.cantidad
                     inv.save()
-                    usuario = None
-                    if request.session.get("logueado"):
-                        usuario = User.objects.filter(
-                            id=request.session["logueado"]["id"]
-                        ).first()
                     InventoryLog.objects.create(
                         inventory=inv,
                         tipo_movimiento="ENTRADA",
@@ -1100,16 +1252,28 @@ def pagar_pedido(request, id):
 def lista_facturas(request):
     try:
         estado = request.GET.get("estado", "")
+        q = (request.GET.get("q", "") or "").strip()
         facturas_registradas = Factura.objects.select_related(
             "cliente", "pedido"
         ).all().order_by("-id")
+        if q:
+            facturas_registradas = facturas_registradas.filter(
+                Q(cliente__nombre__icontains=q) | Q(id__icontains=q)
+            )
         if estado == "emitida":
             facturas_registradas = facturas_registradas.filter(estado="emitida")
         elif estado == "anulada":
             facturas_registradas = facturas_registradas.filter(estado="anulada")
+
+        base_facturas = Factura.objects.all()
         return render(request, "facturas/lista.html", {
             "facturas": facturas_registradas,
             "filtro_estado": estado,
+            "filtrar_q": q,
+            "total_filtrados": facturas_registradas.count(),
+            "total_cuenta": base_facturas.count(),
+            "emitidas_cuenta": base_facturas.filter(estado="emitida").count(),
+            "anuladas_cuenta": base_facturas.filter(estado="anulada").count(),
         })
     except Exception as e:
         messages.error(request, f"Error: {e}")
@@ -1188,8 +1352,17 @@ def editar_factura(request, id):
 @autorizacion(roles=['admin'])
 def lista_usuarios(request):
     try:
+        q = (request.GET.get("q", "") or "").strip()
         usuarios_registrados = User.objects.select_related("profile").all().order_by("-id")
-        return render(request, "usuarios/lista.html", {"usuarios": usuarios_registrados})
+        if q:
+            usuarios_registrados = usuarios_registrados.filter(
+                Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q)
+            )
+        return render(request, "usuarios/lista.html", {
+            "usuarios": usuarios_registrados,
+            "total_filtrados": usuarios_registrados.count(),
+            "filtrar_q": q,
+        })
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
@@ -1213,15 +1386,17 @@ def crear_usuario(request):
                 messages.error(request, "El correo ya esta registrado.")
                 return render(request, "usuarios/crear.html")
 
-            user = User.objects.create_user(
-                username=email,
-                email=email,
-                password=contrasena,
-                first_name=nombre,
-                last_name=apellido or "",
-            )
-
-            UserProfile.objects.create(user=user, cargo=cargo)
+            # Atomicidad: si el UserProfile falla, tampoco debe quedar el User
+            # huérfano (o al revés). Antes se guardaban por separado.
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=contrasena,
+                    first_name=nombre,
+                    last_name=apellido or "",
+                )
+                UserProfile.objects.create(user=user, cargo=cargo)
 
             messages.success(request, "¡Usuario creado exitosamente!")
             return redirect("effiadmi:lista_usuarios")
@@ -1242,18 +1417,22 @@ def editar_usuario(request, id):
         perfil, _ = UserProfile.objects.get_or_create(user=user)
 
         if request.method == "POST":
-            user.first_name = request.POST.get("nombre_usuario", "")
-            user.last_name = request.POST.get("apellido_usuario", "")
-            user.email = request.POST.get("email", "")
-
             nueva_contrasena = request.POST.get("contraseña")
-            if nueva_contrasena:
-                user.set_password(nueva_contrasena)
 
-            user.save()
+            # Atomicidad: el User y su UserProfile se guardan juntos, para que
+            # un fallo a mitad no deje el cargo desactualizado.
+            with transaction.atomic():
+                user.first_name = request.POST.get("nombre_usuario", "")
+                user.last_name = request.POST.get("apellido_usuario", "")
+                user.email = request.POST.get("email", "")
 
-            perfil.cargo = request.POST.get("cargo", perfil.cargo)
-            perfil.save()
+                if nueva_contrasena:
+                    user.set_password(nueva_contrasena)
+
+                user.save()
+
+                perfil.cargo = request.POST.get("cargo", perfil.cargo)
+                perfil.save()
 
             messages.success(request, "¡Usuario actualizado exitosamente!")
             return redirect("effiadmi:lista_usuarios")
@@ -1293,14 +1472,27 @@ def eliminar_usuario(request, id):
 def lista_proveedores(request):
     try:
         estado = request.GET.get("estado", "")
+        q = (request.GET.get("q", "") or "").strip()
         proveedores_registrados = Proveedor.objects.all().order_by("-id")
+        if q:
+            proveedores_registrados = proveedores_registrados.filter(
+                Q(nombre__icontains=q) | Q(correo__icontains=q) | Q(telefono__icontains=q) | Q(direccion__icontains=q)
+            )
         if estado == "activo":
             proveedores_registrados = proveedores_registrados.filter(activo=True)
         elif estado == "inactivo":
             proveedores_registrados = proveedores_registrados.filter(activo=False)
+
+        total_cuenta = Proveedor.objects.count()
+        activos_cuenta = Proveedor.objects.filter(activo=True).count()
         return render(request, "proveedores/lista.html", {
             "proveedores": proveedores_registrados,
             "filtro_estado": estado,
+            "filtrar_q": q,
+            "total_filtrados": proveedores_registrados.count(),
+            "total_cuenta": total_cuenta,
+            "activos_cuenta": activos_cuenta,
+            "inactivos_cuenta": total_cuenta - activos_cuenta,
         })
     except Exception as e:
         messages.error(request, f"Error: {e}")
@@ -1460,8 +1652,15 @@ def _notificar_stock_bajo(inventario):
 def lista_notificaciones(request):
     try:
         usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+        q = (request.GET.get("q", "") or "").strip()
         notificaciones_registradas = Notificacion.objects.filter(usuario=usuario).order_by("-id")
-        return render(request, "notificaciones/lista.html", {"notificaciones": notificaciones_registradas})
+        if q:
+            notificaciones_registradas = notificaciones_registradas.filter(mensaje__icontains=q)
+        return render(request, "notificaciones/lista.html", {
+            "notificaciones": notificaciones_registradas,
+            "total_filtrados": notificaciones_registradas.count(),
+            "filtrar_q": q,
+        })
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
@@ -1470,13 +1669,20 @@ def lista_notificaciones(request):
 @autorizacion(roles=['admin', 'operador'])
 def detalle_notificacion(request, id):
     try:
-        notif = get_object_or_404(Notificacion, pk=id)
-        
+        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+        # El filtro por usuario evita leer (y marcar como leida) la
+        # notificacion de otra cuenta recorriendo los ids.
+        notif = get_object_or_404(Notificacion, pk=id, usuario=usuario)
+
         if not notif.leido:
             notif.leido = True
             notif.save()
-        
+
         return render(request, "notificaciones/detalle.html", {"notificacion": notif})
+    except Http404:
+        # Http404 hereda de Exception: sin este raise el except la convertiria
+        # en un redirect y un id ajeno devolveria 302 en vez de 404.
+        raise
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_notificaciones")
@@ -1485,11 +1691,16 @@ def detalle_notificacion(request, id):
 @autorizacion(roles=['admin', 'operador'])
 def eliminar_notificacion(request, id):
     try:
-        notif = get_object_or_404(Notificacion, pk=id)
+        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+        # Sin el filtro por usuario un operador podria borrar las
+        # notificaciones de los administradores.
+        notif = get_object_or_404(Notificacion, pk=id, usuario=usuario)
         if request.method == "POST":
             notif.delete()
             messages.success(request, "¡Notificacion eliminada exitosamente!")
         return redirect("effiadmi:lista_notificaciones")
+    except Http404:
+        raise
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:lista_notificaciones")
@@ -1538,18 +1749,22 @@ def estadisticas_ia(request):
             if inv.cantidad_disponible <= inv.stock_minimo:
                 productos_bajos.append(inv)
 
-        ventas_por_producto = (
+        # Solo las facturas emitidas cuentan como venta: sin este filtro las
+        # anuladas inflaban el ranking de productos y los totales que ve la IA.
+        top_ventas = list(
             FacturaDetalle.objects
+            .filter(factura__estado="emitida")
             .values("producto__id", "producto__nombre")
             .annotate(total=Sum("cantidad"))
             .order_by("-total")
         )
+        top_8 = top_ventas[:8]
+
         producto_mas_vendido = None
-        if ventas_por_producto:
-            mejor = ventas_por_producto.first()
+        if top_8:
             producto_mas_vendido = {
-                "nombre": mejor["producto__nombre"],
-                "unidades": mejor["total"],
+                "nombre": top_8[0]["producto__nombre"],
+                "unidades": top_8[0]["total"],
             }
 
         contexto = {
@@ -1562,35 +1777,57 @@ def estadisticas_ia(request):
             "valor_inventario": valor_inventario,
             "productos_bajos": productos_bajos,
             "producto_mas_vendido": producto_mas_vendido,
+            "top_productos": top_8,
+            "top_productos_labels": [v["producto__nombre"] for v in top_8],
+            "top_productos_valores": [v["total"] for v in top_8],
+            # JSON real para Chart.js (el repr con comillas simples rompia JSON.parse).
+            "top_productos_labels_json": json.dumps([v["producto__nombre"] for v in top_8]),
+            "top_productos_valores_json": json.dumps([v["total"] for v in top_8]),
             "entradas": InventoryLog.objects.filter(tipo_movimiento="ENTRADA").count(),
             "salidas": InventoryLog.objects.filter(tipo_movimiento="SALIDA").count(),
             "es_admin": es_admin,
         }
 
-        # Historial: admin ve todos (o filtra por usuario), operador ve solo el suyo
-        usuarios_disponibles = []
-        query_historial = ChatHistorial.objects.select_related("usuario")
-        if es_admin:
-            usuarios_disponibles = User.objects.filter(
-                id__in=ChatHistorial.objects.values("usuario_id").distinct()
-            ).order_by("username")
-            filtro_usuario = request.GET.get("usuario", "")
-            if filtro_usuario:
-                query_historial = query_historial.filter(usuario_id=filtro_usuario)
+        # Conversaciones del usuario: la activa manda, si no hay se toma la mas reciente.
+        conversacion_activa = None
+        # "nueva" fuerza a arrancar un hilo limpio en vez de retomar el ultimo.
+        if request.method == "POST":
+            arranquenueva = "nueva_conversacion" in request.POST or request.POST.get("nueva") == "1"
         else:
-            query_historial = query_historial.filter(usuario=usuario)
-        contexto["historial"] = query_historial.order_by("-fecha")[:30]
-        contexto["usuarios_disponibles"] = usuarios_disponibles
+            arranquenueva = False
+
+        if not arranquenueva:
+            conversacion_id = str(
+                request.POST.get("conversacion") or request.GET.get("conversacion", "")
+            ).strip()
+            if conversacion_id.isdigit():
+                conversacion_activa = Conversacion.objects.filter(
+                    id=conversacion_id, usuario=usuario
+                ).first()
+            if conversacion_activa is None:
+                conversacion_activa = (
+                    Conversacion.objects
+                    .filter(usuario=usuario, mensajes__isnull=False)
+                    .order_by("-fecha_actualizacion")
+                    .first()
+                )
 
         # Contexto de negocio para la IA
+        # Una sola consulta para los precios de los productos del ranking: antes
+        # se hacia Product.objects.filter(pk=pid) dentro del bucle (una query
+        # por producto, hasta 15). Solo se lanza si hay margenes que calcular.
+        ids_top = {v["producto__id"] for v in top_ventas[:15]} & precios_compra.keys()
+        precios_venta = (
+            {p.id: float(p.precio_venta) for p in Product.objects.filter(pk__in=ids_top)}
+            if ids_top else {}
+        )
+
         productos_str = []
-        for v in ventas_por_producto[:15]:
+        for v in top_ventas[:15]:
             pid = v["producto__id"]
             margen = ""
-            if pid in precios_compra:
-                pv = {p.id: float(p.precio_venta) for p in Product.objects.filter(pk=pid)}
-                if pid in pv:
-                    margen = f", margen={round(pv[pid] - precios_compra[pid], 2)}"
+            if pid in precios_compra and pid in precios_venta:
+                margen = f", margen={round(precios_venta[pid] - precios_compra[pid], 2)}"
             productos_str.append(
                 f"{v['producto__nombre']}: {v['total']} uds vendidas{margen}"
             )
@@ -1613,19 +1850,76 @@ def estadisticas_ia(request):
             "Salidas de inventario": contexto["salidas"],
         }
 
+        # ==================== CHAT IA ====================
+        # La conversacion se crea sola con el primer mensaje, para no dejar hilos vacios.
+        base_chat = reverse("effiadmi:estadisticas_ia")
         if request.method == "POST":
+            if "nueva_conversacion" in request.POST:
+                # Empezar un hilo limpio: se vuelve a la vista sin conversacion activa.
+                return redirect(base_chat)
             pregunta = request.POST.get("pregunta", "").strip()
             if pregunta:
-                conversacion, respuesta = _responder_chat(usuario, pregunta)
-                contexto["respuesta_ia"] = respuesta
-                contexto["pregunta"] = pregunta
-            else:
-                messages.warning(request, "Escribe una pregunta para el asistente IA.")
+                conversacion_activa, respuesta = _responder_chat(
+                    usuario, pregunta,
+                    conversacion=conversacion_activa,
+                    contexto_negocio=contexto_negocio,
+                )
+                if _es_error_ia(respuesta):
+                    messages.error(request, respuesta)
+                # POST -> Redirect -> GET: al recargar ya no se reenvia el mensaje
+                # (antes se re-renderizaba el POST y F5 duplicaba la pregunta).
+                if conversacion_activa:
+                    return redirect(f"{base_chat}?conversacion={conversacion_activa.id}")
+                return redirect(base_chat)
+            messages.warning(request, "Escribe una pregunta para el asistente IA.")
+            if conversacion_activa:
+                return redirect(f"{base_chat}?conversacion={conversacion_activa.id}")
+            return redirect(base_chat)
+
+        # Unicamente los mensajes de la conversacion activa, en orden cronologico.
+        contexto["historial"] = (
+            conversacion_activa.mensajes.order_by("fecha")
+            if conversacion_activa
+            else ChatHistorial.objects.none()
+        )
+        contexto["conversacion_activa"] = conversacion_activa
+        # Si arranco un hilo nuevo y sigue vacio, el siguiente envio no debe
+        # volver a retomar la conversacion anterior.
+        contexto["hilo_nuevo"] = arranquenueva and not conversacion_activa
+        # Historial paginado de a 8: "Ver mas" sube el limite via ?hist=N.
+        try:
+            hist_limite = int(request.GET.get("hist", 8))
+        except (TypeError, ValueError):
+            hist_limite = 8
+        hist_limite = max(8, min(hist_limite, 200))
+        con_mensajes = Conversacion.objects.filter(usuario=usuario, mensajes__isnull=False)
+        # Se re-consulta para que la conversacion recien creada ya aparezca en la lista.
+        contexto["conversaciones"] = con_mensajes.order_by("-fecha_actualizacion")[:hist_limite]
+        contexto["hist_limite"] = hist_limite
+        contexto["hist_hay_mas"] = con_mensajes.count() > hist_limite
 
         return render(request, "dashboard/estadisticas.html", contexto)
     except Exception as e:
         messages.error(request, f"Error: {e}")
         return redirect("effiadmi:inicio")
+
+
+@autorizacion(roles=['admin'])
+def eliminar_conversacion(request, id):
+    try:
+        usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+        # Sin el filtro por usuario, un administrador podria borrar hilos ajenos.
+        conv = Conversacion.objects.filter(pk=id, usuario=usuario).first()
+        if conv is None:
+            messages.warning(request, "Conversacion no encontrada.")
+            return redirect("effiadmi:estadisticas_ia")
+        if request.method == "POST":
+            conv.delete()
+            messages.success(request, "Conversacion eliminada.")
+        return redirect("effiadmi:estadisticas_ia")
+    except Exception as e:
+        messages.error(request, f"Error: {e}")
+        return redirect("effiadmi:estadisticas_ia")
 
 
 # ==================== CHAT IA ====================
@@ -1655,19 +1949,29 @@ def _contexto_negocio_effiadmi():
         if inv.cantidad_disponible <= inv.stock_minimo:
             productos_bajos.append(inv)
 
-    ventas_por_producto = (
+    # Solo las facturas emitidas son ventas: las anuladas no se le reportan a la IA.
+    ventas_por_producto = list(
         FacturaDetalle.objects
+        .filter(factura__estado="emitida")
         .values("producto__id", "producto__nombre")
         .annotate(total=Sum("cantidad"))
-        .order_by("-total")
+        .order_by("-total")[:15]
+    )
+
+    # Una sola consulta de precios: antes Product.objects.get(pk=pid) por producto.
+    # Solo se lanza si hay margenes que calcular.
+    ids_top = {v["producto__id"] for v in ventas_por_producto} & precios_compra.keys()
+    precios_venta = (
+        {p.id: float(p.precio_venta) for p in Product.objects.filter(pk__in=ids_top)}
+        if ids_top else {}
     )
 
     productos_str = []
-    for v in ventas_por_producto[:15]:
+    for v in ventas_por_producto:
         pid = v["producto__id"]
         margen = ""
-        if pid in precios_compra:
-            margen = f", margen={round(float(Product.objects.get(pk=pid).precio_venta) - precios_compra[pid], 2)}"
+        if pid in precios_compra and pid in precios_venta:
+            margen = f", margen={round(precios_venta[pid] - precios_compra[pid], 2)}"
         productos_str.append(f"{v['producto__nombre']}: {v['total']} uds vendidas{margen}")
 
     bajos_str = []
@@ -1696,12 +2000,33 @@ def _titulo_conversacion(mensaje):
     return (texto[:60] + "…") if len(texto) > 60 else texto or "Historial"
 
 
-def _responder_chat(usuario, mensaje, conversacion=None):
-    """Guarda el intercambio en una conversacion y devuelve (conversacion, respuesta)."""
+def _es_error_ia(respuesta):
+    """La IA devuelve los fallos como texto; asi se distinguen de una respuesta real."""
+    texto = (respuesta or "").strip()
+    return (
+        not texto
+        or texto.startswith("Error:")
+        or texto.startswith("No hay clave de Gemini")
+    )
+
+
+def _responder_chat(usuario, mensaje, conversacion=None, contexto_negocio=None):
+    """Guarda el intercambio en una conversacion y devuelve (conversacion, respuesta).
+
+    Si la IA falla no se guarda el mensaje: evita llenar el historial de errores
+    que el usuario no puede borrar desde la interfaz.
+    """
     if conversacion is None:
         conversacion = Conversacion.objects.create(usuario=usuario)
     es_primero = not conversacion.mensajes.exists()
-    respuesta = consultar_asistente_effiadmi(mensaje, contexto_negocio=_contexto_negocio_effiadmi())
+    if contexto_negocio is None:
+        contexto_negocio = _contexto_negocio_effiadmi()
+    respuesta = consultar_asistente_effiadmi(mensaje, contexto_negocio=contexto_negocio)
+    if _es_error_ia(respuesta):
+        if es_primero and not conversacion.mensajes.exists():
+            conversacion.delete()
+            conversacion = None
+        return conversacion, respuesta
     ChatHistorial.objects.create(
         usuario=usuario,
         conversacion=conversacion,
@@ -1724,14 +2049,30 @@ def reportes(request):
     try:
         usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
         es_admin = request.session["logueado"]["rol"] == "admin"
+        q = (request.GET.get("q", "") or "").strip()
 
         if es_admin:
-            reportes_lista = Reporte.objects.select_related("usuario").all()
+            reportes_lista = Reporte.objects.select_related("usuario").all().order_by("-fecha_creacion", "-id")
             filtro_estado = request.GET.get("estado", "")
+            if q:
+                reportes_lista = reportes_lista.filter(
+                    Q(titulo__icontains=q) | Q(descripcion__icontains=q)
+                )
             if filtro_estado:
                 reportes_lista = reportes_lista.filter(estado=filtro_estado)
+
+            base_reportes = Reporte.objects.all()
+            total_cuenta = base_reportes.count()
+            pendientes_cuenta = base_reportes.filter(estado="pendiente").count()
+            vistos_cuenta = base_reportes.filter(estado="visto").count()
+            resueltos_cuenta = base_reportes.filter(estado="resuelto").count()
         else:
-            reportes_lista = Reporte.objects.filter(usuario=usuario)
+            reportes_lista = Reporte.objects.filter(usuario=usuario).order_by("-fecha_creacion", "-id")
+            if q:
+                reportes_lista = reportes_lista.filter(
+                    Q(titulo__icontains=q) | Q(descripcion__icontains=q)
+                )
+            total_cuenta = pendientes_cuenta = vistos_cuenta = resueltos_cuenta = None
 
         if request.method == "POST":
             titulo = request.POST.get("titulo", "").strip()
@@ -1761,6 +2102,12 @@ def reportes(request):
             "reportes": reportes_lista,
             "es_admin": es_admin,
             "filtro_estado": request.GET.get("estado", ""),
+            "filtrar_q": q,
+            "total_filtrados": reportes_lista.count(),
+            "total_cuenta": total_cuenta,
+            "pendientes_cuenta": pendientes_cuenta,
+            "vistos_cuenta": vistos_cuenta,
+            "resueltos_cuenta": resueltos_cuenta,
         })
     except Exception as e:
         messages.error(request, f"Error: {e}")
@@ -1821,27 +2168,53 @@ def detalle_reporte(request, id):
 @autorizacion(roles=['admin', 'operador'])
 def lista_correos(request):
     try:
-        from .utilidades import _correo_configurado, _backend_es_consola
-
         smtp_configurado = _correo_configurado()
-        backend_consola = _backend_es_consola()
-        enviados = CorreoEnviado.objects.select_related("usuario").order_by("-fecha")[:50]
+        logueado = request.session.get("logueado") or {}
+
+        enviados = CorreoEnviado.objects.select_related("usuario").order_by("-fecha")
+        q = (request.GET.get("q", "") or "").strip()
+        if q:
+            enviados = enviados.filter(
+                Q(destinatario__icontains=q) | Q(asunto__icontains=q)
+            )
+        if logueado.get("rol") != "admin":
+            # Un operador solo ve lo que ha enviado el mismo. La lista completa
+            # revela a que clientes y proveedores escribieron los demas.
+            enviados = enviados.filter(usuario_id=logueado.get("id"))
+        total_filtrados = enviados.count()
+        enviados = enviados[:50]
 
         if request.method == "POST":
             destinatario = (request.POST.get("destinatario", "") or "").strip()
             asunto = (request.POST.get("asunto", "") or "").strip()
             cuerpo = (request.POST.get("cuerpo", "") or "").strip()
 
+            # El <input type="email"> del formulario solo valida en el navegador:
+            # un POST directo permite mandar cualquier texto como destinatario.
             if not all([destinatario, asunto, cuerpo]):
-                messages.error(request, "Completa destinatario, asunto y mensaje.")
+                error = "Completa destinatario, asunto y mensaje."
+            elif len(asunto) > MAX_ASUNTO_CORREO:
+                error = f"El asunto no puede superar los {MAX_ASUNTO_CORREO} caracteres."
+            else:
+                try:
+                    validate_email(destinatario)
+                except ValidationError:
+                    error = "Ingresa un correo electronico valido."
+                else:
+                    error = ""
+
+            if error:
+                messages.error(request, error)
                 return render(request, "correos/lista.html", {
                     "enviados": enviados,
                     "smtp_configurado": smtp_configurado,
+                    "total_filtrados": total_filtrados,
+                    "filtrar_q": q,
                 })
 
             usuario = None
-            if request.session.get("logueado"):
-                usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
+            if logueado.get("id"):
+                usuario = User.objects.filter(id=logueado["id"]).first()
 
             exitoso, error = enviar_correo(destinatario, asunto, cuerpo)
             CorreoEnviado.objects.create(
@@ -1861,7 +2234,8 @@ def lista_correos(request):
         return render(request, "correos/lista.html", {
             "enviados": enviados,
             "smtp_configurado": smtp_configurado,
-            "backend_consola": backend_consola,
+            "total_filtrados": total_filtrados,
+            "filtrar_q": q,
         })
     except Exception as e:
         messages.error(request, f"Error: {e}")
@@ -1872,8 +2246,13 @@ def lista_correos(request):
 
 
 def _aplicar_filtros_facturas_compra(request, qs):
+    q = (request.GET.get("q", "") or "").strip()
     mes_seleccionado = (request.GET.get("mes", "") or "").strip()
     proveedor_id = (request.GET.get("proveedor", "") or "").strip()
+    if q:
+        qs = qs.filter(
+            Q(numero__icontains=q) | Q(proveedor__nombre__icontains=q)
+        )
     if proveedor_id and proveedor_id.isdigit():
         qs = qs.filter(proveedor_id=int(proveedor_id))
     if mes_seleccionado and "-" in mes_seleccionado:
@@ -1883,17 +2262,18 @@ def _aplicar_filtros_facturas_compra(request, qs):
                 fecha__year=int(partes[0]),
                 fecha__month=int(partes[1]),
             )
-    return qs, mes_seleccionado, proveedor_id
+    return qs, mes_seleccionado, proveedor_id, q
 
 
 @autorizacion(roles=['admin', 'operador'])
 def lista_facturas_compra(request):
     try:
         qs = FacturaCompra.objects.select_related("proveedor", "usuario").all()
-        qs, mes_seleccionado, proveedor_id = _aplicar_filtros_facturas_compra(request, qs)
+        qs, mes_seleccionado, proveedor_id, q_texto = _aplicar_filtros_facturas_compra(request, qs)
         facturas = qs.order_by("-fecha", "-id")
 
         total_general = facturas.aggregate(total=Sum("monto"))["total"] or 0
+        total_filtrados = facturas.count()
 
         meses_disponibles = (
             FacturaCompra.objects
@@ -1916,6 +2296,8 @@ def lista_facturas_compra(request):
             "mes_seleccionado": mes_seleccionado,
             "proveedor_seleccionado": proveedor_id,
             "total_general": total_general,
+            "total_filtrados": total_filtrados,
+            "filtrar_q": q_texto,
             "etiquetas": etiquetas,
             "datos": datos,
         })
@@ -1967,15 +2349,24 @@ def crear_factura_compra(request):
             if request.session.get("logueado"):
                 usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
 
-            FacturaCompra.objects.create(
-                proveedor=proveedor,
-                usuario=usuario,
-                numero=numero,
-                fecha=fecha,
-                monto=monto,
-                archivo=archivo,
-                notas=notas,
-            )
+            archivo, error_adjunto = validar_adjunto(archivo)
+            if error_adjunto:
+                messages.error(request, error_adjunto)
+                return render(request, "facturas_compra/crear.html", ctx_base)
+
+            # Atomicidad: la escritura del archivo en disco y la fila en la BD
+            # no son atomicas entre si, pero al menos la fila no queda sin
+            # guardar si algo falla despues.
+            with transaction.atomic():
+                FacturaCompra.objects.create(
+                    proveedor=proveedor,
+                    usuario=usuario,
+                    numero=numero,
+                    fecha=fecha,
+                    monto=monto,
+                    archivo=archivo,
+                    notas=notas,
+                )
             messages.success(request, "Factura de compra registrada exitosamente.")
             return redirect(reverse('effiadmi:facturacion') + '?tab=compras')
         except Exception as e:
@@ -2071,10 +2462,11 @@ def facturacion(request):
 
         if tab == "compras":
             qs = FacturaCompra.objects.select_related("proveedor", "usuario").all()
-            qs, mes_seleccionado, proveedor_id = _aplicar_filtros_facturas_compra(request, qs)
+            qs, mes_seleccionado, proveedor_id, q_texto = _aplicar_filtros_facturas_compra(request, qs)
             facturas = qs.order_by("-fecha", "-id")
 
             total_general = facturas.aggregate(total=Sum("monto"))["total"] or 0
+            total_filtrados = facturas.count()
 
             meses_disponibles = (
                 FacturaCompra.objects
@@ -2098,12 +2490,19 @@ def facturacion(request):
                 "mes_seleccionado": mes_seleccionado,
                 "proveedor_seleccionado": proveedor_id,
                 "total_general": total_general,
+                "total_filtrados": total_filtrados,
+                "filtrar_q": q_texto,
                 "etiquetas": etiquetas,
                 "datos": datos,
             }
         else:
             estado = request.GET.get("estado", "")
+            q = (request.GET.get("q", "") or "").strip()
             facturas_qs = Factura.objects.select_related("cliente", "pedido").all().order_by("-id")
+            if q:
+                facturas_qs = facturas_qs.filter(
+                    Q(cliente__nombre__icontains=q) | Q(id__icontains=q)
+                )
             if estado == "emitida":
                 facturas_qs = facturas_qs.filter(estado="emitida")
             elif estado == "anulada":
@@ -2114,6 +2513,11 @@ def facturacion(request):
                 "es_admin": es_admin,
                 "facturas": facturas_qs,
                 "filtro_estado": estado,
+                "filtrar_q": q,
+                "total_filtrados": facturas_qs.count(),
+                "total_cuenta": Factura.objects.count(),
+                "emitidas_cuenta": Factura.objects.filter(estado="emitida").count(),
+                "anuladas_cuenta": Factura.objects.filter(estado="anulada").count(),
             }
 
         return render(request, "facturacion/facturacion.html", contexto)

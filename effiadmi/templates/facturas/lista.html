@@ -11,15 +11,22 @@
     <div class="card block-lg">
         <div class="card-body">
             <form method="GET" class="toolbar">
+                <input type="hidden" name="estado" value="{{ filtro_estado }}">
                 <div class="form-group">
-                    <label class="form-label">Estado</label>
-                    <select name="estado" class="form-control" onchange="this.form.submit()">
-                        <option value="">Todas</option>
-                        <option value="emitida" {% if filtro_estado == 'emitida' %}selected{% endif %}>Emitidas</option>
-                        <option value="anulada" {% if filtro_estado == 'anulada' %}selected{% endif %}>Anuladas</option>
-                    </select>
+                    <label class="form-label">Buscar</label>
+                    <input type="search" name="q" class="form-control" value="{{ filtrar_q }}" placeholder="Cliente o número de factura…" autocomplete="off">
+                </div>
+                <div class="hstack gap-sm">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <a href="{% url 'effiadmi:lista_facturas' %}" class="btn btn-outline">Limpiar</a>
+                    <span class="badge badge-primary">{{ total_filtrados }} resultado{{ total_filtrados|pluralize }}</span>
                 </div>
             </form>
+            <div class="filtros-pills">
+                <a href="?estado=&q={{ filtrar_q|urlencode }}" class="{% if not filtro_estado %}active{% endif %}">Todas <span class="cnt">{{ total_cuenta }}</span></a>
+                <a href="?estado=emitida&q={{ filtrar_q|urlencode }}" class="{% if filtro_estado == 'emitida' %}active{% endif %}">Emitidas <span class="cnt">{{ emitidas_cuenta }}</span></a>
+                <a href="?estado=anulada&q={{ filtrar_q|urlencode }}" class="{% if filtro_estado == 'anulada' %}active{% endif %}">Anuladas <span class="cnt">{{ anuladas_cuenta }}</span></a>
+            </div>
         </div>
     </div>
 
@@ -52,7 +59,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'effiadmi:detalle_factura' factura.id %}" class="btn btn-ghost btn-sm">Ver</a>
+                            <a href="{% url 'effiadmi:detalle_factura' factura.id %}" class="btn btn-outline btn-sm">Ver</a>
                             {% if factura.estado == "emitida" %}
                                 <form method="post" action="{% url 'effiadmi:anular_factura' factura.id %}" style="display: inline;" onsubmit="return confirm('Anular esta factura?');">
                                     {% csrf_token %}

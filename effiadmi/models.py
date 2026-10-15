@@ -397,10 +397,13 @@ class Reporte(models.Model):
 # Correos enviados (historial)
 # ============================================================
 
+MAX_ASUNTO_CORREO = 200
+
+
 class CorreoEnviado(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     destinatario = models.EmailField(db_index=True)
-    asunto = models.CharField(max_length=200)
+    asunto = models.CharField(max_length=MAX_ASUNTO_CORREO)
     cuerpo = models.TextField()
     exitoso = models.BooleanField(default=False)
     error = models.TextField(blank=True, default="")
@@ -420,7 +423,9 @@ class CorreoEnviado(models.Model):
 # ============================================================
 
 def _ruta_factura_compra(instance, filename):
-    return f"facturas_compra/{instance.fecha:%Y/%m}/{filename}"
+    from .utilidades import _nombre_seguro
+
+    return f"facturas_compra/{instance.fecha:%Y/%m}/{_nombre_seguro(filename)}"
 
 
 class FacturaCompra(models.Model):

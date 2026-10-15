@@ -75,6 +75,7 @@ urlpatterns = [
 
     # ==================== ESTADISTICAS IA ====================
     path('estadisticas/', views.estadisticas_ia, name='estadisticas_ia'),
+    path('estadisticas/conversaciones/<int:id>/eliminar/', views.eliminar_conversacion, name='eliminar_conversacion'),
 
     # ==================== REPORTES ====================
     path('reportes/', views.reportes, name='reportes'),

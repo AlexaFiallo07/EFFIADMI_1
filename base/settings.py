@@ -26,12 +26,41 @@ load_dotenv(BASE_DIR / ".env")
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=)n5&q_vz5y(*xxvv_s-sh6%7sr6m#nk8tolly1ydu)_gx_0b3'
+# La clave estaba hardcodeada en el repositorio: cualquiera con el codigo podia
+# firmar cookies de sesion y publicar la app. Ahora sale del .env y, si no esta,
+# se genera una aleatoria solo para desarrollo.
+SECRET_KEY = os.getenv("SECRET_KEY")
+_DEBUG_ACTIVO = os.getenv("DEBUG", "1") == "1"
+if not SECRET_KEY:
+    if _DEBUG_ACTIVO:
+        SECRET_KEY = "django-insecure-solo-desarrollo-no-usar-en-produccion"
+    else:
+        raise RuntimeError(
+            "Falta SECRET_KEY en el .env. Sin ella no se puede arrancar en produccion."
+        )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _DEBUG_ACTIVO
 
-ALLOWED_HOSTS = ["*"]
+# En desarrollo acepta todo para no tener que configurar el host; con DEBUG
+# apagado hay que declararlos en el .env (ALLOWED_HOSTS=localhost,midominio.com).
+ALLOWED_HOSTS = (
+    ["*"]
+    if DEBUG
+    else [h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()]
+)
+
+# Cabeceras y cookies seguras. Solo tiene efecto sobre HTTPS, asi que en
+# desarrollo (http://localhost) no rompen nada.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "0") == "1"
+SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
+SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
 
 
 # Application definition
@@ -46,6 +75,7 @@ INSTALLED_APPS = [
     'effiadmi',
     'landing',
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
 ]
 
@@ -76,6 +106,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'effiadmi.utilidades.notificaciones_no_leidas',
+                'effiadmi.utilidades.assets_version',
             ],
         },
     },
@@ -168,14 +199,41 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ),
+    # Sin esto la API quedaba con CRUD publico para cualquiera sin login.
+    # Los endpoints /api/token/ y /api/token/refresh/ tienen sus propios
+    # permission_classes vacios, asi que siguen siendo publicos.
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ),
+    # Antes no habia limite de peticiones: un cliente autenticado podía
+    # vaciar la cuota de Gemini desde /api/ia/consultar/ con un bucle.
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ),
+    # Los rates vienen del .env para no tener que editar codigo cuando se
+    # levanta el limite en una prueba de carga (JMeter con 100 hilos revienta
+    # 60/min en /api/token/). Los defaults son los de produccion: si el .env
+    # no define la variable, el limite sigue siendo el de siempre.
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': os.getenv("THROTTLE_ANON", "60/minute"),
+        'user': os.getenv("THROTTLE_USER", "600/minute"),
+        'ia': os.getenv("THROTTLE_IA", "20/minute"),
+    },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS: solo los origenes explicitos del .env (CORS_ALLOWED_ORIGINS=url1,url2).
+# Antes era CORS_ALLOW_ALL_ORIGINS = True, que dejaba leer la API desde
+# cualquier pagina. Vacio = ningun origen permitido.
+CORS_ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    if o.strip()
+]
+CORS_ALLOW_CREDENTIALS = False
 
 from datetime import timedelta
 
