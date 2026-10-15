@@ -11,6 +11,34 @@
         {% endif %}
     </div>
 
+    <div class="card block-lg">
+        <div class="card-body">
+            <form method="GET" class="toolbar">
+                <div class="form-group">
+                    <label class="form-label">Buscar</label>
+                    <input type="search" name="q" class="form-control" value="{{ filtrar_q }}" placeholder="Nombre o SKU del producto…" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Categoria</label>
+                    <select name="categoria" class="form-control">
+                        <option value="">Todas</option>
+                        {% for cat in categorias %}
+                            <option value="{{ cat.id }}" {% if filtrar_categoria == cat.id|stringformat:"d" %}selected{% endif %}>{{ cat.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <label class="filtro-toggle">
+                    <input type="checkbox" name="inactivos" value="1" {% if mostrar_inactivos %}checked{% endif %}> Ver inactivos
+                </label>
+                <div class="hstack gap-sm">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <a href="{% url 'effiadmi:lista_productos' %}" class="btn btn-outline">Limpiar</a>
+                    <span class="badge badge-primary">{{ total_filtrados }} resultado{{ total_filtrados|pluralize }}</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-body">
             <table class="table">

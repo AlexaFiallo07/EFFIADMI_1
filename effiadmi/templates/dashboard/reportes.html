@@ -43,26 +43,34 @@
     </div>
     {% endif %}
 
-    {% if es_admin %}
     <div class="card block-lg">
         <div class="card-body">
             <form method="GET" class="toolbar">
+                <input type="hidden" name="estado" value="{{ filtro_estado|default:'' }}">
                 <div class="form-group">
-                    <label class="form-label">Estado</label>
-                    <select name="estado" class="form-control" onchange="this.form.submit()">
-                        <option value="">Todos</option>
-                        <option value="pendiente" {% if filtro_estado == 'pendiente' %}selected{% endif %}>Pendientes</option>
-                        <option value="visto" {% if filtro_estado == 'visto' %}selected{% endif %}>Vistos</option>
-                        <option value="resuelto" {% if filtro_estado == 'resuelto' %}selected{% endif %}>Resueltos</option>
-                    </select>
+                    <label class="form-label">Buscar</label>
+                    <input type="search" name="q" class="form-control" value="{{ filtrar_q }}" placeholder="Título o contenido del reporte…" autocomplete="off">
+                </div>
+                <div class="hstack gap-sm">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <a href="{% url 'effiadmi:reportes' %}" class="btn btn-outline">Limpiar</a>
+                    <span class="badge badge-primary">{{ total_filtrados }} resultado{{ total_filtrados|pluralize }}</span>
                 </div>
             </form>
+            {% if es_admin %}
+            <div class="filtros-pills">
+                <a href="?estado=&q={{ filtrar_q|urlencode }}" class="{% if not filtro_estado %}active{% endif %}">Todos <span class="cnt">{{ total_cuenta }}</span></a>
+                <a href="?estado=pendiente&q={{ filtrar_q|urlencode }}" class="{% if filtro_estado == 'pendiente' %}active{% endif %}">Pendientes <span class="cnt">{{ pendientes_cuenta }}</span></a>
+                <a href="?estado=visto&q={{ filtrar_q|urlencode }}" class="{% if filtro_estado == 'visto' %}active{% endif %}">Vistos <span class="cnt">{{ vistos_cuenta }}</span></a>
+                <a href="?estado=resuelto&q={{ filtrar_q|urlencode }}" class="{% if filtro_estado == 'resuelto' %}active{% endif %}">Resueltos <span class="cnt">{{ resueltos_cuenta }}</span></a>
+            </div>
+            {% endif %}
         </div>
     </div>
-    {% endif %}
 
     <div class="card">
         <div class="card-body">
+            <div class="tbl-scroll">
             <table class="table">
                 <thead>
                     <tr>
@@ -103,6 +111,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </div>

@@ -20,7 +20,8 @@
     </script>
 
     <link rel="icon" type="image/png" href="{% static 'img/logoeffiadmi_4.png' %}">
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v={{ assets_version }}">
+    <link rel="stylesheet" href="{% static 'css/wireframe.css' %}?v={{ assets_version }}">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 
     {% block css %}
@@ -40,26 +41,27 @@
 
         <nav class="sidebar-menu">
             {% if request.session.logueado %}
+                <div class="nav-titulo">Principal</div>
                 <a href="{% url 'effiadmi:perfil' %}" class="menu-link {% if request.resolver_match.url_name == 'perfil' %}active{% endif %}">
                     <span class="material-symbols-outlined">account_circle</span> Perfil
                 </a>
                 <a href="{% url 'effiadmi:inicio' %}" class="menu-link {% if request.resolver_match.url_name == 'inicio' %}active{% endif %}">
                     <span class="material-symbols-outlined">dashboard</span> Inicio
                 </a>
+
+                <div class="nav-sep"></div>
+                <div class="nav-titulo">Operación</div>
                 <a href="{% url 'effiadmi:lista_inventario' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_inventario' %}active{% endif %}">
                     <span class="material-symbols-outlined">inventory_2</span> Inventario
                 </a>
-
                 <a href="{% url 'effiadmi:lista_productos' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_productos' %}active{% endif %}">
                     <span class="material-symbols-outlined">category</span> Productos
                 </a>
-
                 {% if request.session.logueado.rol == 'admin' %}
                 <a href="{% url 'effiadmi:lista_categorias' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_categorias' %}active{% endif %}">
                     <span class="material-symbols-outlined">sell</span> Categorias
                 </a>
                 {% endif %}
-
                 <a href="{% url 'effiadmi:lista_pedidos' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_pedidos' %}active{% endif %}">
                     <span class="material-symbols-outlined">shopping_cart</span> Pedidos
                 </a>
@@ -72,16 +74,19 @@
                 <a href="{% url 'effiadmi:facturacion' %}" class="menu-link {% if '/factur' in request.path %}active{% endif %}">
                     <span class="material-symbols-outlined">description</span> Facturación
                 </a>
+
+                <div class="nav-sep"></div>
+                <div class="nav-titulo">Análisis</div>
                 <a href="{% url 'effiadmi:lista_correos' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_correos' %}active{% endif %}">
                     <span class="material-symbols-outlined">mail</span> Correos
                 </a>
                 {% if request.session.logueado.rol == 'admin' %}
                 <a href="{% url 'effiadmi:estadisticas_ia' %}" class="menu-link {% if request.resolver_match.url_name == 'estadisticas_ia' %}active{% endif %}">
-                    <span class="material-symbols-outlined">psychology</span> Estadisticas IA
+                    <span class="material-symbols-outlined">auto_awesome</span> Estadisticas IA
                 </a>
                 {% endif %}
                 <a href="{% url 'effiadmi:reportes' %}" class="menu-link {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
-                    <span class="material-symbols-outlined">feedback</span> Reportes
+                    <span class="material-symbols-outlined">summarize</span> Reportes
                 </a>
             {% else %}
                 <a href="{% url 'effiadmi:login' %}" class="menu-link active">
@@ -91,17 +96,19 @@
         </nav>
 
         <div class="sidebar-footer">
-            <label class="switch" for="themeSwitch" title="Cambiar tema">
-                <input type="checkbox" id="themeSwitch">
-                <span class="switch-track"><span class="switch-thumb"></span></span>
-                <span class="switch-label">Modo oscuro</span>
-            </label>
+            <div class="sf-fila">
+                <label class="switch" for="themeSwitch" title="Cambiar tema">
+                    <input type="checkbox" id="themeSwitch">
+                    <span class="switch-track"><span class="switch-thumb"></span></span>
+                    <span class="switch-label">Tema</span>
+                </label>
 
-            {% if request.session.logueado %}
-                <a href="{% url 'effiadmi:logout' %}" class="menu-link logout-btn">
-                    <span class="material-symbols-outlined">logout</span> Cerrar Sesión
-                </a>
-            {% endif %}
+                {% if request.session.logueado %}
+                    <a href="{% url 'effiadmi:logout' %}" class="menu-link logout-btn" title="Cerrar sesión">
+                        <span class="material-symbols-outlined">logout</span> Salir
+                    </a>
+                {% endif %}
+            </div>
         </div>
     </aside>
 

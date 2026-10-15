@@ -20,6 +20,22 @@
     </div>
     {% endif %}
 
+    <div class="card block-lg">
+        <div class="card-body">
+            <form method="GET" class="toolbar">
+                <div class="form-group">
+                    <label class="form-label">Buscar en envíos</label>
+                    <input type="search" name="q" class="form-control" value="{{ filtrar_q }}" placeholder="Destinatario o asunto…" autocomplete="off">
+                </div>
+                <div class="hstack gap-sm">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <a href="{% url 'effiadmi:lista_correos' %}" class="btn btn-outline">Limpiar</a>
+                    <span class="badge badge-primary">{{ total_filtrados }} resultado{{ total_filtrados|pluralize }}</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="grid-2">
         <div class="card">
             <div class="card-header">

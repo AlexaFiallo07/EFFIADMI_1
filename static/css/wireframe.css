@@ -1,0 +1,607 @@
+/* ============================================================
+   EFFIADMI — CAPA WIREFRAME (restructura global)
+   Re-skin de toda la app con el lenguaje del prototipo:
+   sidebar clara con secciones, topbar ligera, tarjetas planas,
+   tablas editoriales, botones compactos y estados tipo pildora.
+   Capa aditiva: mantiene la paleta EFFIADMI y los logos.
+   Cargada DESPUES de styles.css: aqui es donde gana para
+   la misma especificidad.
+   ============================================================ */
+
+/* ---------- Shell: sidebar clara fija ---------- */
+.app-layout { display: grid; grid-template-columns: var(--sidebar-width) 1fr; }
+.app-layout.auth-layout { display: block; }
+
+.main-viewport { margin-left: 0; }
+
+.app-sidebar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: var(--sidebar-width);
+    border: none;
+    border-right: 1px solid var(--color-border);
+    border-radius: 0;
+    background-color: color-mix(in srgb, var(--blanco) 92%, transparent);
+    background-image:
+        radial-gradient(320px 190px at 100% 0%, var(--color-primary-light) 0%, transparent 70%),
+        radial-gradient(260px 200px at 0% 110%, rgba(196, 163, 90, 0.08) 0%, transparent 70%);
+    box-shadow: none;
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    overflow: hidden;
+}
+.app-sidebar::before { content: none; }
+
+/* Logo (se mantiene el archivo de marca en su caja blanca) */
+.sidebar-brand { padding: 24px 16px 18px; border-bottom: 1px solid var(--color-border); margin-bottom: 0; }
+.brand-container { border-radius: 14px; padding: 10px 12px; box-shadow: inset 0 0 0 1px rgba(196, 163, 90, 0.30), 0 10px 22px -12px rgba(0, 0, 0, 0.22); }
+.brand-logo { width: 132px; }
+
+/* ---------- Menu agrupado por secciones ---------- */
+.sidebar-menu { gap: 3px; padding: 10px 12px 6px; }
+
+.nav-titulo {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--humo);
+    padding: 13px 13px 5px;
+}
+.nav-sep { height: 1px; background: var(--color-border); margin: 11px 10px 2px; }
+
+.menu-link {
+    padding: 10px 13px;
+    gap: 12px;
+    border-radius: 12px;
+    font-family: var(--font-ui);
+    font-size: 13.5px;
+    font-weight: 550;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--gris);
+}
+.menu-link .material-symbols-outlined { font-size: 20px; color: var(--humo); }
+.menu-link:hover { background-color: var(--color-primary-light); color: var(--tinta); transform: none; }
+.menu-link:hover .material-symbols-outlined { color: var(--iris); }
+.menu-link:active { transform: scale(0.985); }
+
+.menu-link.active {
+    background-image: linear-gradient(90deg, rgba(196, 163, 90, 0.22), rgba(196, 163, 90, 0.05));
+    color: var(--tinta);
+    font-weight: 650;
+    box-shadow: inset 0 0 0 1px rgba(196, 163, 90, 0.28);
+}
+.menu-link.active .material-symbols-outlined { color: var(--oro-oscuro); }
+.menu-link.active::before {
+    left: 0;
+    width: 3px;
+    height: 18px;
+    border-radius: 0 3px 3px 0;
+    background: linear-gradient(180deg, var(--oro), var(--iris));
+}
+
+/* ---------- Pie de sidebar: perfil + tema + salida ---------- */
+.sidebar-footer {
+    border-top: 1px solid var(--color-border);
+    padding: 12px;
+    gap: 10px;
+}
+.sf-fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sf-fila .switch { padding: 2px 4px; }
+.sf-fila .switch-label { color: var(--gris); font-size: 12px; }
+
+.perfil-dock {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 11px;
+    border-radius: 16px;
+    background-color: var(--color-primary-light);
+    border: 1px solid var(--color-border);
+}
+.perfil-avatar {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-image: linear-gradient(140deg, var(--plum), var(--iris));
+    color: #fff;
+    font-family: var(--font-primary);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    box-shadow: 0 8px 18px -10px rgba(58, 35, 112, 0.7);
+}
+.perfil-info { min-width: 0; }
+.perfil-info b { display: block; font-size: 13px; font-weight: 700; color: var(--tinta); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.perfil-info small { font-size: 11.5px; color: var(--humo); }
+.perfil-flecha { margin-left: auto; font-size: 20px; color: var(--humo); }
+
+.menu-link.logout-btn { padding: 9px 12px; border-radius: 12px; color: var(--gris); }
+.menu-link.logout-btn .material-symbols-outlined { font-size: 19px; }
+.menu-link.logout-btn:hover { background-color: var(--rojo-light); color: var(--rojo); transform: none; }
+.menu-link.logout-btn:hover .material-symbols-outlined { color: var(--rojo); }
+
+/* ---------- Topbar ligera que respira ---------- */
+.topbar {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    padding: 6px 2px 18px;
+    margin-bottom: 20px;
+}
+.topbar-hello { font-size: 10.5px; letter-spacing: 0.22em; color: var(--oro-oscuro); }
+.topbar-name { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+.topbar-date { font-size: 13px; color: var(--humo); }
+.topbar-role { font-size: 10.5px; padding: 5px 12px; letter-spacing: 0.12em; }
+
+.topbar-bell {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    border: 1px solid var(--color-border);
+    background-color: var(--blanco);
+    color: var(--gris);
+    box-shadow: 0 1px 2px rgba(36, 30, 51, 0.04), 0 6px 16px -8px rgba(58, 35, 112, 0.18);
+}
+.topbar-bell .material-symbols-outlined { font-size: 22px; }
+.topbar-bell:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); color: var(--iris); border-color: var(--iris); }
+
+/* ---------- Tarjetas planas (estilo wireframe) ---------- */
+.card,
+.dashboard-panel-card {
+    background-color: var(--blanco);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 1px 2px rgba(36, 30, 51, 0.05), 0 10px 26px -14px rgba(58, 35, 112, 0.22);
+}
+.card::before,
+.dashboard-panel-card::before { background: none; opacity: 1; }
+.card:hover,
+.dashboard-panel-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 2px 4px rgba(36, 30, 51, 0.06), 0 20px 42px -20px rgba(58, 35, 112, 0.34);
+    border-color: var(--lavanda-clara);
+}
+.card:hover::before,
+.dashboard-panel-card:hover::before { opacity: 1; }
+
+/* La placa de bienvenida conserva su degradado de marca */
+.dashboard-panel-card.placa-bienvenida {
+    background-color: var(--uva);
+    background-image:
+        radial-gradient(400px 260px at 88% -30%, rgba(196, 163, 90, 0.42) 0%, transparent 70%),
+        radial-gradient(320px 240px at 22% 140%, rgba(255, 255, 255, 0.16) 0%, transparent 70%),
+        linear-gradient(125deg, var(--vino) 0%, var(--uva) 52%, var(--iris) 100%);
+}
+
+/* ---------- Botones compactos ---------- */
+.btn {
+    border-radius: 12px;
+    padding: 10px 17px;
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: 0;
+}
+.btn-primary {
+    background-image: linear-gradient(135deg, var(--uva), var(--plum));
+    border-color: transparent;
+    box-shadow: 0 10px 22px -12px rgba(58, 35, 112, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+}
+.btn-primary:hover { background-image: linear-gradient(135deg, var(--plum), var(--iris)); border-color: transparent; }
+.btn-outline { background-color: var(--blanco); border-color: var(--acero-oscuro); color: var(--uva); }
+.btn-outline:hover { background-color: var(--blanco); border-color: var(--iris); color: var(--iris); box-shadow: none; }
+.btn-ghost { color: var(--gris); }
+.btn-ghost:hover { background-color: var(--color-primary-light); color: var(--uva); }
+.btn-sm { padding: 8px 14px; font-size: 12.5px; }
+.btn-lg { padding: 13px 26px; font-size: 15px; }
+
+.btn-solido { background-color: #fff; color: var(--uva); }
+.btn-solido:hover { transform: translateY(-2px); box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.5); }
+.btn-fantasma { background-color: rgba(255, 255, 255, 0.16); color: #fff; border-color: rgba(255, 255, 255, 0.34); }
+.btn-fantasma:hover { background-color: rgba(255, 255, 255, 0.26); }
+.btn-secundario { background-color: var(--blanco); color: var(--tinta); border-color: var(--color-border); }
+.btn-secundario:hover { border-color: var(--iris); color: var(--iris); transform: translateY(-2px); }
+
+/* Acciones de riesgo/exito en plano solido (igual familia que btn-primary) */
+.btn-success {
+    background-image: none;
+    background-color: var(--verde);
+    border-color: transparent;
+    box-shadow: 0 8px 18px -10px rgba(39, 174, 96, 0.7);
+}
+.btn-success:hover { background-color: #1E8449; border-color: transparent; }
+.btn-error {
+    background-image: none;
+    background-color: var(--rojo);
+    border-color: transparent;
+    box-shadow: 0 8px 18px -10px rgba(235, 87, 87, 0.7);
+}
+.btn-error:hover { background-color: #CE4646; border-color: transparent; }
+
+/* Cabeceras y pies de tarjeta con hairline solida (editorial) */
+.card-header { border-bottom-style: solid; }
+.card-footer { border-top-style: solid; }
+
+/* Pestanas segmentadas al mismo lenguaje que los botones primarios */
+.seccion-tabs a.active {
+    background-image: linear-gradient(135deg, var(--uva), var(--plum));
+    color: #fff;
+    box-shadow: 0 10px 22px -12px rgba(58, 35, 112, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+}
+
+/* ---------- Tablas editoriales ---------- */
+.table th {
+    background: none;
+    color: var(--humo);
+    font-size: 10.5px;
+    font-weight: 750;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--color-border);
+}
+.table th:first-child,
+.table th:last-child { border-radius: 0; }
+.table thead { background: none; }
+.table td {
+    padding: 14px 14px;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--gris);
+    font-size: 13.5px;
+}
+.table tbody tr:hover { background-color: color-mix(in srgb, var(--iris) 5%, transparent); }
+.table td:first-child { color: var(--tinta); font-weight: 600; }
+
+/* ---------- Badges tipo pildora ---------- */
+.badge { padding: 4px 12px; font-size: 11.5px; letter-spacing: 0.2px; border: none; }
+.badge-primary { background-color: color-mix(in srgb, var(--iris) 12%, transparent); color: var(--iris); }
+.badge-success { background-color: color-mix(in srgb, var(--verde) 12%, transparent); color: var(--verde); }
+.badge-warning { background-color: color-mix(in srgb, var(--ambar) 22%, transparent); color: #8A6D1F; }
+.badge-error { background-color: color-mix(in srgb, var(--rojo) 12%, transparent); color: var(--rojo); }
+[data-theme="dark"] .badge-warning { color: var(--ambar); }
+[data-theme="dark"] .badge-primary { background-color: color-mix(in srgb, var(--iris) 18%, transparent); }
+
+/* Estadillo con punto (persistencia del lenguaje wireframe) */
+.estado {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 750;
+    padding: 4px 11px;
+    border-radius: 999px;
+}
+.estado::before { content: ""; width: 5.5px; height: 5.5px; border-radius: 50%; background: currentColor; }
+.estado.ok { background-color: color-mix(in srgb, var(--verde) 12%, transparent); color: var(--verde); }
+.estado.pend { background-color: color-mix(in srgb, var(--ambar) 22%, transparent); color: #8A6D1F; }
+.estado.canc { background-color: color-mix(in srgb, var(--rojo) 12%, transparent); color: var(--rojo); }
+[data-theme="dark"] .estado.pend { color: var(--ambar); }
+
+/* ---------- Formularios ---------- */
+.form-control,
+.form-select,
+textarea.form-control { border-width: 1.5px; border-radius: 13px; padding: 11px 15px; }
+
+/* ---------- Alertas ---------- */
+.mensaje,
+.alert { border-radius: 14px; }
+
+/* ---------- KPI ---------- */
+.kpi-card-custom { border-radius: 18px; }
+.kpi-tag { letter-spacing: 0.1em; }
+
+/* ---------- Encabezado de página ---------- */
+.page-head { margin-bottom: 26px; }
+.page-head h1 { font-size: 27px; }
+.notas-bandeja { margin: -12px 0 18px; font-size: 13.5px; color: var(--humo); }
+
+/* ---------- Responsivo de la rejilla nueva ---------- */
+@media (max-width: 1024px) {
+    .app-layout { grid-template-columns: 1fr; }
+    .app-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        margin: 0;
+        border-radius: 0 20px 20px 0;
+        box-shadow: 0 0 60px rgba(0, 0, 0, 0.35);
+    }
+    .app-layout.sidebar-open .app-sidebar { transform: translateX(0); }
+}
+
+/* ---------- Notas rápidas (varias notas, estilo Google Keep) ---------- */
+.notas-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.notas-head h3 {
+    font-family: var(--font-primary);
+    font-size: 15px;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+    color: var(--tinta);
+}
+.notas-head-acciones { display: flex; align-items: center; gap: 12px; }
+.notas-head .notas-estado { display: inline-flex; align-items: center; gap: 7px; }
+.notas-head .notas-estado::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.notas-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+.notas-grid > .nota-item {
+    background-image:
+        radial-gradient(220px 130px at 100% 0%, rgba(196, 163, 90, 0.14) 0%, transparent 70%),
+        linear-gradient(165deg, #FFFEF7 0%, color-mix(in srgb, var(--ambar) 16%, var(--blanco)) 100%);
+    border: 1px solid color-mix(in srgb, var(--oro) 30%, var(--color-border));
+    border-radius: 14px;
+    padding: 12px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 26px -18px rgba(58, 35, 112, 0.25);
+}
+[data-theme="dark"] .notas-grid > .nota-item {
+    background-image:
+        radial-gradient(220px 130px at 100% 0%, rgba(196, 163, 90, 0.18) 0%, transparent 70%),
+        linear-gradient(165deg, color-mix(in srgb, var(--ambar) 8%, var(--tinta)) 0%, color-mix(in srgb, var(--ambar) 16%, var(--vino)) 100%);
+    border-color: color-mix(in srgb, var(--oro) 34%, var(--color-border));
+}
+.nota-item .nota-cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+.nota-item .nota-pin {
+    font-size: 19px;
+    color: var(--oro-oscuro);
+    transform: rotate(-32deg);
+    margin-right: auto;
+}
+.nota-borrar {
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--humo);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color .15s ease, color .15s ease;
+}
+.nota-borrar:hover { background-color: color-mix(in srgb, var(--rojo) 12%, transparent); color: var(--rojo); }
+.nota-borrar .material-symbols-outlined { font-size: 17px; }
+.nota-item .nota-cuerpo {
+    width: 100%;
+    min-height: 110px;
+    max-height: 220px;
+    border: none;
+    outline: none;
+    resize: vertical;
+    background-color: transparent;
+    font-family: var(--font-ui);
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding: 2px 0;
+    color: var(--tinta);
+}
+.nota-item .nota-cuerpo::placeholder { color: var(--humo); }
+@media (max-width: 900px) { .notas-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .notas-grid { grid-template-columns: 1fr; } }
+
+/* Marca de agua EFFIADMI en la placa de bienvenida */
+.dashboard-panel-card.placa-bienvenida { overflow: hidden; }
+.dashboard-panel-card.placa-bienvenida::after {
+    content: "EFFIADMI";
+    position: absolute;
+    right: 24px;
+    bottom: -14px;
+    font-family: var(--font-primary);
+    font-weight: 800;
+    font-size: clamp(44px, 6vw, 84px);
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.055);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* ---------- Píldoras de filtro (en vez de tarjetas con select) ---------- */
+.filtros-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+.filtros-pills a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background-color: var(--color-border-light);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 650;
+    transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.filtros-pills a:hover {
+    color: var(--color-text-primary);
+    background-color: var(--color-primary-lighter);
+}
+.filtros-pills a.active {
+    background-image: linear-gradient(135deg, var(--uva), var(--plum));
+    color: #FFFFFF;
+    box-shadow: 0 8px 18px -10px rgba(58, 35, 112, 0.6);
+}
+.filtros-pills a .cnt { font-weight: 750; opacity: 0.72; }
+
+/* ---------- Tabla con scroll y cabecera fija ---------- */
+.tbl-scroll { max-height: 420px; overflow: auto; border-radius: 14px; scrollbar-width: thin; }
+.tbl-scroll .table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: var(--blanco);
+}
+.tbl-scroll .table { margin-bottom: 0; }
+
+/* ---------- Actividad reciente scrolleable ---------- */
+.feed {
+    max-height: 340px;
+    overflow-y: auto;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--oro) transparent;
+}
+.feed::-webkit-scrollbar { width: 8px; }
+.feed::-webkit-scrollbar-thumb { background-color: var(--oro); border-radius: 999px; }
+.feed::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- Toggle de filtros (checkbox con etiqueta) ---------- */
+.filtro-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 11px;
+    font-size: 13px;
+    color: var(--gris);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+.filtro-toggle input { width: 16px; height: 16px; accent-color: var(--iris); cursor: pointer; }
+/* ---------- Sección EFFI en la página: chat embebido + historial ---------- */
+.effi-section {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 24px;
+    margin-top: 32px;
+    align-items: stretch;
+}
+.effi-section .effi-embed { padding: 0; overflow: hidden; }
+.effi-section .effi-panel {
+    position: static;
+    display: flex;
+    width: auto !important;
+    max-width: none !important;
+    height: 560px;
+    max-height: none;
+    border-radius: var(--radius-xl);
+    border: none;
+    box-shadow: none;
+}
+.effi-section .effi-messages { min-height: 0; }
+.effi-section .effi-historial {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+.effi-section .effi-historial .panel-card-title { flex-shrink: 0; }
+.effi-historial-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--oro) transparent;
+}
+.effi-historial-list::-webkit-scrollbar { width: 8px; }
+.effi-historial-list::-webkit-scrollbar-thumb { background-color: var(--oro); border-radius: 999px; }
+.effi-historial-list .effi-conv-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 10px;
+    border-radius: 12px;
+    color: var(--gris);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color .15s ease, color .15s ease;
+}
+.effi-historial-list .effi-conv-item .material-symbols-outlined { font-size: 17px; flex-shrink: 0; }
+.effi-historial-list .effi-conv-item:hover { background-color: var(--lavanda-clara); color: var(--uva); }
+.effi-historial-list .effi-conv-item.active {
+    background-image: linear-gradient(135deg, var(--uva), var(--iris));
+    color: #FFFFFF;
+}
+[data-theme="dark"] .effi-historial-list .effi-conv-item:hover { color: var(--lavanda); }
+
+/* Fila del historial: enlace + boton de borrado */
+.effi-conv-row { display: flex; align-items: center; gap: 4px; }
+.effi-conv-row .effi-conv-item { flex: 1; min-width: 0; }
+.effi-conv-row .effi-conv-item > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.effi-conv-del { flex-shrink: 0; }
+.effi-conv-del button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 9px;
+    background-color: transparent;
+    color: var(--humo);
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+}
+.effi-conv-del button .material-symbols-outlined { font-size: 17px; }
+.effi-conv-del button:hover { background-color: var(--rojo-light); color: var(--rojo); }
+.effi-hist-more {
+    flex-shrink: 0;
+    margin-top: 8px;
+    padding: 9px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 650;
+    color: var(--uva);
+    text-decoration: none;
+    transition: border-color .15s ease, color .15s ease;
+}
+.effi-hist-more:hover { border-color: var(--iris); color: var(--iris); }
+
+/* Estado de envio del chat EFFI */
+.effi-send:disabled { opacity: .65; cursor: default; }
+.effi-send:disabled .material-symbols-outlined { animation: effi-girar .9s linear infinite; }
+@keyframes effi-girar { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+    .effi-section { grid-template-columns: 1fr; }
+    .effi-section .effi-panel { height: 480px; }
+}

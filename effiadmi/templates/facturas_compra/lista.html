@@ -28,6 +28,10 @@
         <div class="card-body">
             <form method="GET" class="toolbar">
                 <div class="form-group">
+                    <label class="form-label">Buscar</label>
+                    <input type="search" name="q" class="form-control" value="{{ filtrar_q }}" placeholder="Número o proveedor…" autocomplete="off">
+                </div>
+                <div class="form-group">
                     <label class="form-label">Proveedor</label>
                     <select name="proveedor" class="form-control">
                         <option value="">Todos</option>
@@ -40,8 +44,10 @@
                     <label class="form-label">Mes</label>
                     <input type="month" name="mes" class="form-control" value="{{ mes_seleccionado }}">
                 </div>
-                <div>
+                <div class="hstack gap-sm">
                     <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <a href="{% url 'effiadmi:lista_facturas_compra' %}" class="btn btn-outline">Limpiar</a>
+                    <span class="badge badge-primary">{{ total_filtrados }} registro{{ total_filtrados|pluralize }}</span>
                 </div>
             </form>
         </div>

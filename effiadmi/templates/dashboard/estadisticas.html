@@ -3,10 +3,10 @@
 {% block titulo %}Estadísticas IA - EFFIADMI{% endblock %}
 
 {% block contenido %}
-<div class="dashboard-header">
-    <h1>Estadísticas IA</h1>
-    <p>Métricas en tiempo real y asistente inteligente de EFFIADMI</p>
-</div>
+<div class="container">
+    <div class="page-head">
+        <h1>Estadísticas IA</h1>
+    </div>
 
 <div class="kpi-matrix">
     <div class="kpi-card-custom">
@@ -152,66 +152,80 @@
     </div>
 </div>
 
-<!-- Widget flotante de chat EFFI -->
-<div class="effi-widget{% if request.method == 'POST' %} open{% endif %}" id="effiWidget"{% if request.method == 'POST' %} data-autoopen="1"{% endif %}>
-    <div class="effi-panel" id="effiPanel">
-        <div class="effi-header">
-            <div class="effi-header-user">
-                <div class="effi-avatar">E</div>
-                <div>
-                    <div class="effi-header-label">EFFI</div>
-                    <div class="effi-header-sub">Asistente de tu negocio</div>
+<!-- Seccion EFFI: chat embebido en la pagina + historial -->
+<div class="effi-section">
+    <div class="dashboard-panel-card effi-embed">
+        <div class="effi-panel" id="effiPanel">
+            <div class="effi-header">
+                <div class="effi-header-user">
+                    <div class="effi-avatar">E</div>
+                    <div>
+                        <div class="effi-header-label">EFFI</div>
+                        <div class="effi-header-sub">Asistente de tu negocio</div>
+                    </div>
+                </div>
+                <div class="effi-header-tools">
+                    <button type="button" class="effi-new-chat" id="effiNuevaChat" title="Empezar una conversacion nueva">
+                        <span class="material-symbols-outlined">add_comment</span>
+                    </button>
                 </div>
             </div>
-            <div class="effi-header-tools">
-                <button type="button" class="effi-new-chat" id="effiNuevaChat" title="Empezar una conversacion nueva">
-                    <span class="material-symbols-outlined">add_comment</span>
+
+            <div class="effi-messages" id="effiMessages">
+                {% for h in historial %}
+                    <div class="effi-msg effi-user">
+                        <div class="effi-bubble user-bubble">{{ h.mensaje }}<div class="effi-meta">{{ h.fecha|date:"H:i" }}</div></div>
+                    </div>
+                    <div class="effi-msg effi-bot">
+                        <div class="effi-bubble ia-bubble">{{ h.respuesta|marklight }}<div class="effi-meta">{{ h.fecha|date:"H:i" }}</div></div>
+                    </div>
+                {% empty %}
+                    <div class="effi-empty">
+                        <p>¡Hola! Soy <strong>EFFI</strong>, tu asistente.</p>
+                        <small>Pregunta sobre tus productos, stock, ventas o proveedores.</small>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <form method="post" action="{% url 'effiadmi:estadisticas_ia' %}" class="effi-inputbar" id="effiForm">
+                {% csrf_token %}
+                <input type="hidden" name="conversacion" id="effiConvId" value="{% if hilo_nuevo %}{% else %}{{ conversacion_activa.id|default:'' }}{% endif %}">
+                <input type="hidden" name="nueva" id="effiConvNueva" value="{% if hilo_nuevo %}1{% else %}0{% endif %}">
+                <textarea id="effiInput" name="pregunta" rows="1" placeholder="Escribe a EFFI... (Enter para enviar)"></textarea>
+                <button type="submit" class="effi-send" title="Enviar">
+                    <span class="material-symbols-outlined">send</span>
                 </button>
-            </div>
+            </form>
         </div>
-
-        {% if conversaciones and not hilo_nuevo %}
-        <div class="effi-conv-bar">
-            {% for c in conversaciones %}
-                <a href="?conversacion={{ c.id }}"
-                   class="effi-conv-chip{% if conversacion_activa and c.id == conversacion_activa.id %} active{% endif %}"
-                   title="{{ c.titulo }}">
-                    {{ c.titulo|truncatechars:26 }}
-                </a>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <div class="effi-messages" id="effiMessages">
-            {% for h in historial %}
-                <div class="effi-msg effi-user">
-                    <div class="effi-bubble user-bubble">{{ h.mensaje }}<div class="effi-meta">{{ h.fecha|date:"H:i" }}</div></div>
-                </div>
-                <div class="effi-msg effi-bot">
-                    <div class="effi-bubble ia-bubble">{{ h.respuesta|marklight }}<div class="effi-meta">{{ h.fecha|date:"H:i" }}</div></div>
-                </div>
-            {% empty %}
-                <div class="effi-empty">
-                    <p>¡Hola! Soy <strong>EFFI</strong>, tu asistente.</p>
-                    <small>Pregunta sobre tus productos, stock, ventas o proveedores.</small>
-                </div>
-            {% endfor %}
-        </div>
-
-        <form method="post" action="{% url 'effiadmi:estadisticas_ia' %}" class="effi-inputbar" id="effiForm">
-            {% csrf_token %}
-            <input type="hidden" name="conversacion" id="effiConvId" value="{% if hilo_nuevo %}{% else %}{{ conversacion_activa.id|default:'' }}{% endif %}">
-            <input type="hidden" name="nueva" id="effiConvNueva" value="{% if hilo_nuevo %}1{% else %}0{% endif %}">
-            <textarea id="effiInput" name="pregunta" rows="1" placeholder="Escribe a EFFI... (Enter para enviar)"></textarea>
-            <button type="submit" class="effi-send" title="Enviar">
-                <span class="material-symbols-outlined">send</span>
-            </button>
-        </form>
     </div>
 
-    <button class="effi-launcher" id="effiLauncher" type="button" aria-label="Abrir chat EFFI">
-        <span class="material-symbols-outlined" id="effiLauncherIcon">chat</span>
-    </button>
+    <div class="dashboard-panel-card effi-historial" id="effiHistorial">
+        <h3 class="panel-card-title">Historial de conversaciones</h3>
+        {% if conversaciones and not hilo_nuevo %}
+        <div class="effi-historial-list">
+            {% for c in conversaciones %}
+                <div class="effi-conv-row">
+                    <a href="?conversacion={{ c.id }}" class="effi-conv-item{% if conversacion_activa and c.id == conversacion_activa.id %} active{% endif %}" title="{{ c.titulo }}">
+                        <span class="material-symbols-outlined">chat</span>
+                        <span>{{ c.titulo|truncatechars:34 }}</span>
+                    </a>
+                    <form method="post" action="{% url 'effiadmi:eliminar_conversacion' c.id %}" class="effi-conv-del" onsubmit="return confirm('¿Eliminar esta conversación con EFFI?');">
+                        {% csrf_token %}
+                        <button type="submit" title="Eliminar conversación" aria-label="Eliminar conversación">
+                            <span class="material-symbols-outlined">delete</span>
+                        </button>
+                    </form>
+                </div>
+            {% endfor %}
+            {% if hist_hay_mas %}
+                <a href="?hist={{ hist_limite|add:8 }}{% if conversacion_activa %}&amp;conversacion={{ conversacion_activa.id }}{% endif %}" class="effi-hist-more">Ver más conversaciones</a>
+            {% endif %}
+        </div>
+        {% else %}
+            <p class="empty-note sm">Aún no hay conversaciones con EFFI.</p>
+        {% endif %}
+    </div>
+</div>
 </div>
 {% endblock %}
 
@@ -257,10 +271,10 @@
             new Chart(ctxTop, {
                 type: 'bar',
                 data: {
-                    labels: JSON.parse('{{ top_productos_labels|escapejs|default:"[]" }}'),
+                    labels: JSON.parse('{{ top_productos_labels_json|escapejs|default:"[]" }}'),
                     datasets: [{
                         label: 'Unidades vendidas',
-                        data: JSON.parse('{{ top_productos_valores|escapejs|default:"[]" }}'),
+                        data: JSON.parse('{{ top_productos_valores_json|escapejs|default:"[]" }}'),
                         backgroundColor: varCss('--iris', '#6A4DAB'),
                         borderRadius: 6
                     }]
@@ -281,28 +295,11 @@
 
 <script>
     (function () {
-        const widget = document.getElementById('effiWidget');
-        const launcher = document.getElementById('effiLauncher');
-        const launcherIcon = document.getElementById('effiLauncherIcon');
         const messages = document.getElementById('effiMessages');
         const input = document.getElementById('effiInput');
         const form = document.getElementById('effiForm');
 
-        if (launcher) {
-            launcher.addEventListener('click', function () {
-                const isOpen = widget.classList.toggle('open');
-                launcherIcon.textContent = isOpen ? 'close' : 'chat';
-                if (isOpen && messages) {
-                    messages.scrollTop = messages.scrollHeight;
-                    if (input) input.focus();
-                }
-            });
-
-            if (widget.getAttribute('data-autoopen')) {
-                launcherIcon.textContent = 'close';
-                if (messages) messages.scrollTop = messages.scrollHeight;
-            }
-        }
+        if (messages) messages.scrollTop = messages.scrollHeight;
 
         if (input) {
             const resize = function () {
@@ -318,8 +315,20 @@
             });
         }
 
-        // "Nueva conversacion" se resuelve en el navegador: limpia el hilo visible
-        // y marca el envio siguiente para que arranque uno limpio.
+        // Estado de envio: evita el doble clic mientras la IA responde.
+        if (form) {
+            form.addEventListener('submit', function () {
+                const boton = form.querySelector('.effi-send');
+                if (boton && !boton.disabled) {
+                    boton.disabled = true;
+                    const icono = boton.querySelector('.material-symbols-outlined');
+                    if (icono) icono.textContent = 'progress_activity';
+                }
+            });
+        }
+
+        // "Nueva conversacion": limpia el hilo visible y marca el envio siguiente
+        // para que arranque uno limpio. Tambien avisa en la tarjeta de historial.
         const nuevaChat = document.getElementById('effiNuevaChat');
         const convId = document.getElementById('effiConvId');
         const convNueva = document.getElementById('effiConvNueva');
@@ -329,9 +338,6 @@
                 if (convId) convId.value = '';
                 if (convNueva) convNueva.value = '1';
 
-                const barra = document.querySelector('.effi-conv-bar');
-                if (barra) barra.remove();
-
                 if (messages) {
                     messages.innerHTML =
                         '<div class="effi-empty">' +
@@ -339,6 +345,15 @@
                         '<small>Escribe tu pregunta para iniciar un hilo limpio.</small>' +
                         '</div>';
                 }
+
+                const listaHist = document.querySelector('.effi-historial-list');
+                if (listaHist) {
+                    const nota = document.createElement('p');
+                    nota.className = 'empty-note sm';
+                    nota.textContent = 'Nueva conversacion iniciada, tu historial aparecera aqui.';
+                    listaHist.replaceWith(nota);
+                }
+
                 if (input) input.focus();
             });
         }

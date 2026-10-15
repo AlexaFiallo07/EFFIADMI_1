@@ -106,6 +106,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'effiadmi.utilidades.notificaciones_no_leidas',
+                'effiadmi.utilidades.assets_version',
             ],
         },
     },
@@ -211,10 +212,14 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
         'rest_framework.throttling.ScopedRateThrottle',
     ),
+    # Los rates vienen del .env para no tener que editar codigo cuando se
+    # levanta el limite en una prueba de carga (JMeter con 100 hilos revienta
+    # 60/min en /api/token/). Los defaults son los de produccion: si el .env
+    # no define la variable, el limite sigue siendo el de siempre.
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '60/minute',
-        'user': '600/minute',
-        'ia': '20/minute',
+        'anon': os.getenv("THROTTLE_ANON", "60/minute"),
+        'user': os.getenv("THROTTLE_USER", "600/minute"),
+        'ia': os.getenv("THROTTLE_IA", "20/minute"),
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,

@@ -13,16 +13,23 @@
 
     <div class="card block-lg">
         <div class="card-body">
-            <form method="GET" class="hstack">
+            <form method="GET" class="toolbar">
+                <input type="hidden" name="estado" value="{{ filtro_estado }}">
                 <div class="form-group">
-                    <label class="form-label">Estado</label>
-                    <select name="estado" class="form-control" onchange="this.form.submit()">
-                        <option value="">Todos</option>
-                        <option value="activo" {% if filtro_estado == 'activo' %}selected{% endif %}>Activos</option>
-                        <option value="inactivo" {% if filtro_estado == 'inactivo' %}selected{% endif %}>Inactivos</option>
-                    </select>
+                    <label class="form-label">Buscar</label>
+                    <input type="search" name="q" class="form-control" value="{{ filtrar_q }}" placeholder="Nombre, correo o teléfono…" autocomplete="off">
+                </div>
+                <div class="hstack gap-sm">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <a href="{% url 'effiadmi:lista_proveedores' %}" class="btn btn-outline">Limpiar</a>
+                    <span class="badge badge-primary">{{ total_filtrados }} resultado{{ total_filtrados|pluralize }}</span>
                 </div>
             </form>
+            <div class="filtros-pills">
+                <a href="?estado=&q={{ filtrar_q|urlencode }}" class="{% if not filtro_estado %}active{% endif %}">Todos <span class="cnt">{{ total_cuenta }}</span></a>
+                <a href="?estado=activo&q={{ filtrar_q|urlencode }}" class="{% if filtro_estado == 'activo' %}active{% endif %}">Activos <span class="cnt">{{ activos_cuenta }}</span></a>
+                <a href="?estado=inactivo&q={{ filtrar_q|urlencode }}" class="{% if filtro_estado == 'inactivo' %}active{% endif %}">Inactivos <span class="cnt">{{ inactivos_cuenta }}</span></a>
+            </div>
         </div>
     </div>
 

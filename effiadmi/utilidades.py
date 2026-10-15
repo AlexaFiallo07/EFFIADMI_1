@@ -37,6 +37,33 @@ def notificaciones_no_leidas(request):
     return {"no_leidas_notificaciones": no_leidas}
 
 
+def assets_version(request):
+    """Version para romper la cache de CSS/JS estaticos.
+
+    Se calcula con la fecha de modificacion de las hojas de estilo y del JS
+    principal. Al editar cualquiera de ellos la URL cambia (?v=...) y el
+    navegador deja de reutilizar la copia antigua, sin que el usuario tenga
+    que limpiar la cache ni recargar con Ctrl+F5.
+    """
+    from pathlib import Path
+
+    from django.conf import settings
+
+    base = Path(settings.BASE_DIR) / "static"
+    version = 0
+    for rel in (
+        "css/styles.css",
+        "css/wireframe.css",
+        "css/estilos.css",
+        "js/principal.js",
+    ):
+        try:
+            version = max(version, int((base / rel).stat().st_mtime))
+        except OSError:
+            continue
+    return {"assets_version": version}
+
+
 def _correo_configurado():
     from django.conf import settings
 
