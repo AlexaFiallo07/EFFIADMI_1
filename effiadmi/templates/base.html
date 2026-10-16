@@ -219,6 +219,40 @@
                 }
             }
         });
+
+        // Tablas apiladas en movil: copia el texto de cada <th> al data-label
+        // de su columna para que el CSS (wireframe.css) muestre "Etiqueta: valor".
+        // Funciona tambien con filas creadas despues por JS (carrito de pedidos).
+        function etiquetarFilas(tabla, filas) {
+            const encabezados = Array.prototype.map.call(
+                tabla.querySelectorAll('thead th'),
+                function (th) { return th.textContent.replace(/\s+/g, ' ').trim(); }
+            );
+            if (!encabezados.length) return;
+            (filas || tabla.querySelectorAll('tbody > tr')).forEach(function (fila) {
+                Array.prototype.forEach.call(fila.children, function (celda, i) {
+                    if (encabezados[i] && !celda.hasAttribute('data-label')) {
+                        celda.setAttribute('data-label', encabezados[i]);
+                    }
+                });
+            });
+        }
+
+        document.querySelectorAll('table.table').forEach(function (tabla) {
+            etiquetarFilas(tabla);
+            const cuerpo = tabla.tBodies[0];
+            if (cuerpo && window.MutationObserver) {
+                new MutationObserver(function (mutaciones) {
+                    mutaciones.forEach(function (m) {
+                        Array.prototype.forEach.call(m.addedNodes, function (nodo) {
+                            if (nodo.nodeType === 1 && nodo.tagName === 'TR') {
+                                etiquetarFilas(tabla, [nodo]);
+                            }
+                        });
+                    });
+                }).observe(cuerpo, { childList: true });
+            }
+        });
     });
 </script>
 {% block js %}

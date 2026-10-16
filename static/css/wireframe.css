@@ -605,3 +605,57 @@ textarea.form-control { border-width: 1.5px; border-radius: 13px; padding: 11px 
     .effi-section { grid-template-columns: 1fr; }
     .effi-section .effi-panel { height: 480px; }
 }
+
+/* ---------- Tablas como tarjetas apiladas en movil/tablet ----------
+   Las etiquetas de cada celda se copian desde el <thead> con JS
+   (ver base.html) al atributo data-label; aqui solo se pinta. */
+@media (max-width: 800px) {
+    .table {
+        display: block;
+        min-width: 0;
+    }
+    .table thead { display: none; }
+    .table tbody { display: block; }
+
+    .table tbody tr {
+        display: block;
+        margin-bottom: 12px;
+        padding: 4px 14px;
+        border: 1px solid var(--color-border);
+        border-radius: 14px;
+        background-color: var(--blanco);
+        box-shadow: 0 1px 2px rgba(20, 12, 40, 0.05);
+    }
+    .table tbody tr:last-child { margin-bottom: 0; }
+    .table tbody tr:hover { background-color: var(--blanco); }
+
+    .table td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 11px 0;
+        border-bottom: 1px dashed var(--color-border);
+        text-align: right;
+    }
+    .table tbody tr td:last-child { border-bottom: none; }
+
+    .table td[data-label]::before {
+        content: attr(data-label);
+        flex-shrink: 0;
+        font-weight: 650;
+        font-size: 12.5px;
+        color: var(--humo);
+        text-align: left;
+    }
+    .table td > * { min-width: 0; }
+
+    .table td.empty-row {
+        justify-content: center;
+        text-align: center;
+        padding: 18px 0;
+    }
+    .table td.empty-row::before { content: none; display: none; }
+
+    .tbl-scroll { max-height: none; overflow: visible; }
+}
