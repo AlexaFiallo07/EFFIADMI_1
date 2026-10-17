@@ -1,4 +1,4 @@
-from django.db import models
+﻿from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 
@@ -417,3 +417,26 @@ class FacturaCompra(models.Model):
 
     def __str__(self):
         return f"Compra {self.numero or self.id} - {self.fecha:%d/%m/%Y}"
+
+
+
+# ============================================================
+# Auditoría de ingresos
+# ============================================================
+
+class RegistroIngreso(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="ingresos")
+    rol = models.CharField(max_length=20, blank=True, default="")
+    fecha = models.DateTimeField(auto_now_add=True)
+    ip = models.CharField(max_length=45, blank=True, default="")
+
+    class Meta:
+        verbose_name = "Registro de ingreso"
+        verbose_name_plural = "Registros de ingreso"
+        ordering = ["-fecha"]
+        indexes = [
+            models.Index(fields=["-fecha"]),
+        ]
+
+    def __str__(self):
+        return f"{self.usuario.username} - {self.fecha:%Y-%m-%d %H:%M}"

@@ -1,9 +1,12 @@
-from django.urls import path
+﻿from django.urls import path
 from . import views
 
 app_name = 'effiadmi'
 urlpatterns = [
     # ==================== AUTH ====================
+    # ==================== RECUPERACIÓN DE CONTRASEÑA ====================
+    path('recuperar-password/', views.solicitar_recuperacion, name='solicitar_recuperacion'),
+    path('restablecer-password/<str:token>/', views.restablecer_password, name='restablecer_password'),
     path('login/', views.login, name='login'),
     path('logout/', views.logout, name='logout'),
     
@@ -90,3 +93,4 @@ urlpatterns = [
     path('facturas-compra/crear/', views.crear_factura_compra, name='crear_factura_compra'),
     path('facturas-compra/exportar/', views.exportar_facturas_compra_excel, name='exportar_facturas_compra_excel'),
 ]
+

@@ -1,4 +1,4 @@
-from decimal import Decimal
+﻿from decimal import Decimal
 import io
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
@@ -8,6 +8,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, F, Count
 from django.utils import timezone
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.core import signing
+from django.core.signing import salted_hmac
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+import hmac
 from datetime import timedelta, datetime
 from django import template as django_template
 
@@ -58,7 +65,36 @@ from .servicio_ia import consultar_asistente_effiadmi
 from .utilidades import autorizacion, crear_notificacion, ids_admins, enviar_correo
 
 
+RESET_SALT = 'effiadmi-password-reset'
+
 # ==================== LOGIN/LOGOUT ====================
+
+def token_recuperacion(usuario):
+    try:
+        version = salted_hmac(RESET_SALT, usuario.password).hexdigest()
+        return signing.dumps({"id": usuario.id, "version": version}, salt=RESET_SALT, compress=True)
+    except Exception:
+        return ""
+
+
+def usuario_desde_token(token):
+    try:
+        datos = signing.loads(token, salt=RESET_SALT, max_age=3600)
+    except Exception:
+        return None
+    try:
+        user = User.objects.filter(id=datos.get("id"), is_active=True).first()
+    except Exception:
+        return None
+    if not user:
+        return None
+    try:
+        version_actual = salted_hmac(RESET_SALT, user.password).hexdigest()
+        if hmac.compare_digest(datos.get("version", ""), version_actual):
+            return user
+    except Exception:
+        pass
+    return None
 
 
 def login(request):
@@ -1995,3 +2031,47 @@ class EmailOrUsernameBackend:
             return User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return None
+
+
+
+# ==================== RECUPERACIÓN DE CONTRASEÑA ====================
+
+def solicitar_recuperacion(request):
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip()
+        if not email:
+            return render(request, "usuarios/recuperar_password.html", {"error": "Escribe el correo de tu cuenta."})
+        try:
+            validate_email(email)
+        except ValidationError:
+            return render(request, "usuarios/recuperar_password.html", {"error": "Escribe un correo válido."})
+        user = User.objects.filter(email__iexact=email, is_active=True).first()
+        if user:
+            token = token_recuperacion(user)
+            if token:
+                try:
+                    enlace = request.build_absolute_uri(reverse("effiadmi:restablecer_password", args=[token]))
+                    cuerpo = f"Hola {user.first_name or user.username},\n\nRecibimos una solicitud para cambiar la contraseña. El enlace es válido por 1 hora.\n\nSi no fuiste tú, ignora este mensaje."
+                    enviar_correo(user.email, "Recuperación de contraseña - EFFIADMI", cuerpo, request=request, enlace=enlace, texto_enlace="Cambiar mi contraseña", template="emails/password_reset.html")
+                except Exception:
+                    pass
+        return render(request, "usuarios/recuperar_password.html", {"enviado": True})
+    return render(request, "usuarios/recuperar_password.html")
+
+
+def restablecer_password(request, token):
+    user = usuario_desde_token(token)
+    if not user:
+        return render(request, "usuarios/restablecer_password.html", {"valido": False})
+    if request.method == "POST":
+        password = request.POST.get("password", "")
+        confirmacion = request.POST.get("password_confirm", "")
+        if password != confirmacion:
+            return render(request, "usuarios/restablecer_password.html", {"valido": True, "error": "Las contraseñas no coinciden."})
+        if len(password) < 8:
+            return render(request, "usuarios/restablecer_password.html", {"valido": True, "error": "Mínimo 8 caracteres."})
+        user.set_password(password)
+        user.save(update_fields=["password"])
+        messages.success(request, "Contraseña actualizada. Ya puedes iniciar sesión.")
+        return redirect("effiadmi:login")
+    return render(request, "usuarios/restablecer_password.html", {"valido": True})

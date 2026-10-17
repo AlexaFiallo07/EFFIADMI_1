@@ -1,0 +1,44 @@
+﻿{% load static %}
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ asunto }}</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f5f5f5;color:#212529;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f5f5f5;padding:32px 12px">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:#ffffff;border:1px solid #e9ecef;border-radius:16px;overflow:hidden;">
+            <tr><td style="height:4px;background:#0d6efd;font-size:0;line-height:0;">&nbsp;</td></tr>
+            <tr>
+              <td style="padding:28px 32px 10px;text-align:center;">
+                {% if logo_url %}
+                <img src="{{ logo_url }}" width="64" height="64" alt="EFFIADMI" style="display:inline-block;width:64px;height:64px;object-fit:contain;">
+                {% endif %}
+                <p style="margin:14px 0 0;color:#0d6efd;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">EFFIADMI</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 24px;">
+                <h1 style="margin:0 0 16px;font-size:20px;font-weight:700;color:#212529;text-align:center;">{{ asunto }}</h1>
+                <div style="font-size:15px;line-height:1.6;color:#212529;white-space:pre-line;">{{ cuerpo }}</div>
+                {% if enlace %}
+                <p style="margin:28px 0 0;text-align:center;">
+                  <a href="{{ enlace }}" target="_blank" style="display:inline-block;padding:12px 28px;background:#0d6efd;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:600;">{{ texto_enlace|default:"Ver detalle" }}</a>
+                </p>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px 24px;background:#f8f9fa;border-top:1px solid #e9ecef;text-align:center;color:#6c757d;font-size:12px;">
+                Este es un correo automático de EFFIADMI. Si no solicitaste esta acción, puedes ignorarlo.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
