@@ -732,9 +732,15 @@ textarea.form-control:focus {
 /* Layout de autenticación (sin dock) */
 .app-layout.auth-layout { display: block; }
 .app-layout.auth-layout .app-sidebar { display: none; }
-.app-layout.auth-layout .main-viewport { margin-left: 0; padding: 0; }
+.app-layout.auth-layout .main-viewport { margin-left: 0; padding: 0; min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; }
 .app-layout.auth-layout .menu-toggle { display: none; }
-.app-layout.auth-layout .contenedor-dinamico { max-width: none; }
+.app-layout.auth-layout .contenedor-dinamico { max-width: none; width: 100%; display: flex; align-items: center; justify-content: center; padding: 0; }
+.app-layout.auth-layout .contenedor-dinamico > .auth-wrapper { width: 100%; }
+
+/* Auth card styles */
+.auth-wrapper { width: 100%; display: flex; align-items: center; justify-content: center; padding: clamp(1rem, 2vw, 1.5rem); }
+.auth-card { max-width: min(420px, 92vw); width: 100%; margin: 0 auto; }
+.app-layout.auth-layout { background-color: var(--color-bg); }
 
 /* Botón de menú (móvil) y overlay */
 .menu-toggle {
