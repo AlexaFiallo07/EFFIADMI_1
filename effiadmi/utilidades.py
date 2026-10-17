@@ -86,7 +86,7 @@ def enviar_correo(destinatario, asunto, cuerpo, **kwargs):
     from django.conf import settings
     from django.core.mail import EmailMultiAlternatives
     from django.template.loader import render_to_string
-    from django.contrib.staticfiles.templatetags.staticfiles import static
+    from django.templatetags.static import static
 
     if _backend_es_consola() or not _correo_configurado():
         return (
