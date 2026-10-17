@@ -2624,8 +2624,9 @@ def solicitar_recuperacion(request):
             if token:
                 try:
                     enlace = request.build_absolute_uri(reverse("effiadmi:restablecer_password", args=[token]))
-                    cuerpo = f"Hola {user.first_name or user.username},\n\nRecibimos una solicitud para cambiar la contraseña. El enlace es válido por 1 hora.\n\nSi no fuiste tú, ignora este mensaje."
-                    enviar_correo(user.email, "Recuperación de contraseña - EFFIADMI", cuerpo, request=request, enlace=enlace, texto_enlace="Cambiar mi contraseña", template="emails/password_reset.html")
+                    nombre = f"{user.first_name} {user.last_name}".strip() or user.username
+                    cuerpo = f"Hola {nombre},\n\nRecibimos una solicitud para cambiar tu contraseña. Haz clic en el botón para restablecerla.\n\nEste enlace es válido por 1 hora.\n\nSi no solicitaste este cambio, te recomendamos cambiar tu contraseña a una más segura, ya que es posible que alguien esté intentando acceder a tu cuenta."
+                    enviar_correo(user.email, "Recuperación de contraseña - EFFIADMI", cuerpo, request=request, enlace=enlace, texto_enlace="Restablecer contraseña", template="emails/password_reset.html")
                 except Exception:
                     pass
         return render(request, "usuarios/recuperar_password.html", {"enviado": True})
@@ -2645,6 +2646,18 @@ def restablecer_password(request, token):
             return render(request, "usuarios/restablecer_password.html", {"valido": True, "error": "Mínimo 8 caracteres."})
         user.set_password(password)
         user.save(update_fields=["password"])
+        try:
+            nombre = f"{user.first_name} {user.last_name}".strip() or user.username
+            cuerpo = f"Hola {nombre},\n\nTu contraseña se ha actualizado correctamente.\n\nSi no realizaste este cambio, por favor contacta al administrador de inmediato."
+            enviar_correo(
+                user.email,
+                "Contraseña actualizada - EFFIADMI",
+                cuerpo,
+                request=request,
+                template="emails/password_changed.html",
+            )
+        except Exception:
+            pass
         messages.success(request, "Contraseña actualizada. Ya puedes iniciar sesión.")
         return redirect("effiadmi:login")
     return render(request, "usuarios/restablecer_password.html", {"valido": True})

@@ -742,8 +742,15 @@ textarea.form-control:focus {
 .auth-card { max-width: min(480px, 94vw); width: 100%; margin: 0 auto; }
 .app-layout.auth-layout { background-color: var(--color-bg); }
 
-/* Botón de menú (móvil) y overlay */
-.menu-toggle {
+/* Ajuste para evitar desacomodos en login */
+.login-form-side .btn {
+    width: 100%;
+    display: block;
+}
+.login-form-side {
+    width: 100%;
+    max-width: 100%;
+}
     display: none;
     width: 46px;
     height: 46px;
