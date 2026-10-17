@@ -739,7 +739,7 @@ textarea.form-control:focus {
 
 /* Auth card styles */
 .auth-wrapper { width: 100%; display: flex; align-items: center; justify-content: center; padding: clamp(1rem, 2vw, 1.5rem); }
-.auth-card { max-width: min(420px, 92vw); width: 100%; margin: 0 auto; }
+.auth-card { max-width: min(480px, 94vw); width: 100%; margin: 0 auto; }
 .app-layout.auth-layout { background-color: var(--color-bg); }
 
 /* Botón de menú (móvil) y overlay */
