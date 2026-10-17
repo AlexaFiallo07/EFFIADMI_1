@@ -5,11 +5,32 @@
 {% block contenido %}
 <div class="container">
     <div class="page-head">
-        <h1>Listado de Notificaciones</h1>
+        <h1>Notificaciones</h1>
         <form method="POST" action="{% url 'effiadmi:marcar_todas_leidas' %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline">Marcar todas como leídas</button>
         </form>
+    </div>
+    {% if notificaciones %}
+    <p class="notas-bandeja">Tienes {{ notificaciones|length }} aviso{{ notificaciones|length|pluralize }} en tu bandeja.</p>
+    {% else %}
+    <p class="notas-bandeja">Tu bandeja está al día.</p>
+    {% endif %}
+
+    <div class="card block-lg">
+        <div class="card-body">
+            <form method="GET" class="toolbar">
+                <div class="form-group">
+                    <label class="form-label">Buscar</label>
+                    <input type="search" name="q" class="form-control" value="{{ filtrar_q }}" placeholder="Buscar en los mensajes…" autocomplete="off">
+                </div>
+                <div class="hstack gap-sm">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <a href="{% url 'effiadmi:lista_notificaciones' %}" class="btn btn-outline">Limpiar</a>
+                    <span class="badge badge-primary">{{ total_filtrados }} resultado{{ total_filtrados|pluralize }}</span>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div class="card">

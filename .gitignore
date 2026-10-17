@@ -16,6 +16,8 @@ dist/
 # Base de datos y archivos locales
 db.sqlite3
 db.sqlite3-journal
+staticfiles/
+media/
 
 # Claves y configuración local
 .env

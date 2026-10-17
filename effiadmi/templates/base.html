@@ -20,7 +20,8 @@
     </script>
 
     <link rel="icon" type="image/png" href="{% static 'img/logoeffiadmi_4.png' %}">
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v={{ assets_version }}">
+    <link rel="stylesheet" href="{% static 'css/wireframe.css' %}?v={{ assets_version }}">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 
     {% block css %}
@@ -40,26 +41,27 @@
 
         <nav class="sidebar-menu">
             {% if request.session.logueado %}
+                <div class="nav-titulo">Principal</div>
                 <a href="{% url 'effiadmi:perfil' %}" class="menu-link {% if request.resolver_match.url_name == 'perfil' %}active{% endif %}">
                     <span class="material-symbols-outlined">account_circle</span> Perfil
                 </a>
                 <a href="{% url 'effiadmi:inicio' %}" class="menu-link {% if request.resolver_match.url_name == 'inicio' %}active{% endif %}">
                     <span class="material-symbols-outlined">dashboard</span> Inicio
                 </a>
+
+                <div class="nav-sep"></div>
+                <div class="nav-titulo">Operación</div>
                 <a href="{% url 'effiadmi:lista_inventario' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_inventario' %}active{% endif %}">
                     <span class="material-symbols-outlined">inventory_2</span> Inventario
                 </a>
-
                 <a href="{% url 'effiadmi:lista_productos' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_productos' %}active{% endif %}">
                     <span class="material-symbols-outlined">category</span> Productos
                 </a>
-
                 {% if request.session.logueado.rol == 'admin' %}
                 <a href="{% url 'effiadmi:lista_categorias' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_categorias' %}active{% endif %}">
                     <span class="material-symbols-outlined">sell</span> Categorias
                 </a>
                 {% endif %}
-
                 <a href="{% url 'effiadmi:lista_pedidos' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_pedidos' %}active{% endif %}">
                     <span class="material-symbols-outlined">shopping_cart</span> Pedidos
                 </a>
@@ -69,30 +71,22 @@
                 <a href="{% url 'effiadmi:lista_proveedores' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_proveedores' %}active{% endif %}">
                     <span class="material-symbols-outlined">local_shipping</span> Proveedores
                 </a>
-                <a href="{% url 'effiadmi:lista_facturas' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_facturas' %}active{% endif %}">
+                <a href="{% url 'effiadmi:facturacion' %}" class="menu-link {% if '/factur' in request.path %}active{% endif %}">
                     <span class="material-symbols-outlined">description</span> Facturación
                 </a>
-                {% if request.session.logueado.rol == 'admin' %}
-                <a href="{% url 'effiadmi:lista_facturas_compra' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_facturas_compra' %}active{% endif %}">
-                    <span class="material-symbols-outlined">receipt_long</span> Facturas Compra
-                </a>
-                {% endif %}
+
+                <div class="nav-sep"></div>
+                <div class="nav-titulo">Análisis</div>
                 <a href="{% url 'effiadmi:lista_correos' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_correos' %}active{% endif %}">
                     <span class="material-symbols-outlined">mail</span> Correos
                 </a>
                 {% if request.session.logueado.rol == 'admin' %}
                 <a href="{% url 'effiadmi:estadisticas_ia' %}" class="menu-link {% if request.resolver_match.url_name == 'estadisticas_ia' %}active{% endif %}">
-                    <span class="material-symbols-outlined">psychology</span> Estadisticas IA
+                    <span class="material-symbols-outlined">auto_awesome</span> Estadisticas IA
                 </a>
                 {% endif %}
                 <a href="{% url 'effiadmi:reportes' %}" class="menu-link {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
-                    <span class="material-symbols-outlined">feedback</span> Reportes
-                </a>
-                <a href="{% url 'effiadmi:lista_notificaciones' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_notificaciones' %}active{% endif %}">
-                    <span class="material-symbols-outlined">notifications</span> Notificaciones
-                    {% if no_leidas_notificaciones %}
-                    <span class="badge-notif">{{ no_leidas_notificaciones }}</span>
-                    {% endif %}
+                    <span class="material-symbols-outlined">summarize</span> Reportes
                 </a>
             {% else %}
                 <a href="{% url 'effiadmi:login' %}" class="menu-link active">
@@ -102,17 +96,19 @@
         </nav>
 
         <div class="sidebar-footer">
-            <label class="switch" for="themeSwitch" title="Cambiar tema">
-                <input type="checkbox" id="themeSwitch">
-                <span class="switch-track"><span class="switch-thumb"></span></span>
-                <span class="switch-label">Modo oscuro</span>
-            </label>
+            <div class="sf-fila">
+                <label class="switch" for="themeSwitch" title="Cambiar tema">
+                    <input type="checkbox" id="themeSwitch">
+                    <span class="switch-track"><span class="switch-thumb"></span></span>
+                    <span class="switch-label">Tema</span>
+                </label>
 
-            {% if request.session.logueado %}
-                <a href="{% url 'effiadmi:logout' %}" class="menu-link logout-btn">
-                    <span class="material-symbols-outlined">logout</span> Cerrar Sesión
-                </a>
-            {% endif %}
+                {% if request.session.logueado %}
+                    <a href="{% url 'effiadmi:logout' %}" class="menu-link logout-btn" title="Cerrar sesión">
+                        <span class="material-symbols-outlined">logout</span> Salir
+                    </a>
+                {% endif %}
+            </div>
         </div>
     </aside>
 
@@ -131,6 +127,14 @@
                 <div class="topbar-actions">
                     <span class="topbar-role">{{ request.session.logueado.rol|default:"usuario" }}</span>
                     <span class="topbar-date">{% now "j \d\e F, Y" %}</span>
+                    <a href="{% url 'effiadmi:lista_notificaciones' %}"
+                       class="topbar-bell{% if request.resolver_match.url_name == 'lista_notificaciones' %} active{% endif %}"
+                       title="Notificaciones" aria-label="Notificaciones">
+                        <span class="material-symbols-outlined">notifications</span>
+                        {% if no_leidas_notificaciones %}
+                        <span class="bell-count">{{ no_leidas_notificaciones }}</span>
+                        {% endif %}
+                    </a>
                 </div>
             </div>
             {% endif %}
@@ -192,6 +196,63 @@
                 try { localStorage.setItem('effiadmi-theme', nuevo); } catch (e) {}
             });
         }
+
+        // Confirmaciones con datos del usuario (nombre de producto, categoria...).
+        // El texto viaja como atributo data-*, escapado por Django, y se lee con
+        // dataset: nunca queda dentro de un literal JS, que era el vector de XSS
+        // de los onclick inline.
+        document.addEventListener('click', function (e) {
+            const disparador = e.target.closest('[data-confirmar]');
+            if (!disparador) return;
+
+            if (!window.confirm(disparador.dataset.confirmar)) {
+                e.preventDefault();
+                return;
+            }
+
+            const idForm = disparador.dataset.confirmarForm;
+            if (idForm) {
+                const form = document.getElementById(idForm);
+                if (form) {
+                    e.preventDefault();
+                    form.submit();
+                }
+            }
+        });
+
+        // Tablas apiladas en movil: copia el texto de cada <th> al data-label
+        // de su columna para que el CSS (wireframe.css) muestre "Etiqueta: valor".
+        // Funciona tambien con filas creadas despues por JS (carrito de pedidos).
+        function etiquetarFilas(tabla, filas) {
+            const encabezados = Array.prototype.map.call(
+                tabla.querySelectorAll('thead th'),
+                function (th) { return th.textContent.replace(/\s+/g, ' ').trim(); }
+            );
+            if (!encabezados.length) return;
+            (filas || tabla.querySelectorAll('tbody > tr')).forEach(function (fila) {
+                Array.prototype.forEach.call(fila.children, function (celda, i) {
+                    if (encabezados[i] && !celda.hasAttribute('data-label')) {
+                        celda.setAttribute('data-label', encabezados[i]);
+                    }
+                });
+            });
+        }
+
+        document.querySelectorAll('table.table').forEach(function (tabla) {
+            etiquetarFilas(tabla);
+            const cuerpo = tabla.tBodies[0];
+            if (cuerpo && window.MutationObserver) {
+                new MutationObserver(function (mutaciones) {
+                    mutaciones.forEach(function (m) {
+                        Array.prototype.forEach.call(m.addedNodes, function (nodo) {
+                            if (nodo.nodeType === 1 && nodo.tagName === 'TR') {
+                                etiquetarFilas(tabla, [nodo]);
+                            }
+                        });
+                    });
+                }).observe(cuerpo, { childList: true });
+            }
+        });
     });
 </script>
 {% block js %}

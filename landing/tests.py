@@ -2,6 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .models import MensajeContacto
+from .views import MAX_ASUNTO_CONTACTO, MAX_MENSAJE_CONTACTO
 
 
 class LandingViewTest(TestCase):
@@ -17,7 +18,7 @@ class LandingViewTest(TestCase):
 
     def test_formulario_valido(self):
         respuesta = self.client.post(
-            reverse("landing"),
+            reverse("contacto"),
             {"nombre": "Juan", "correo": "juan@test.com", "asunto": "Demo", "mensaje": "Hola"},
             follow=True,
         )
@@ -27,17 +28,47 @@ class LandingViewTest(TestCase):
 
     def test_formulario_requiere_correo_valido(self):
         respuesta = self.client.post(
-            reverse("landing"),
+            reverse("contacto"),
             {"nombre": "Juan", "correo": "correo-invalido", "asunto": "Demo", "mensaje": "Hola"},
             follow=True,
         )
         mensajes = [m for m in respuesta.context["messages"]]
         self.assertTrue(any("correo" in m.message for m in mensajes))
 
+    def test_formulario_rechaza_asunto_largo(self):
+        respuesta = self.client.post(
+            reverse("contacto"),
+            {
+                "nombre": "Juan",
+                "correo": "juan@test.com",
+                "asunto": "x" * (MAX_ASUNTO_CONTACTO + 1),
+                "mensaje": "Hola",
+            },
+            follow=True,
+        )
+        mensajes = [m for m in respuesta.context["messages"]]
+        self.assertTrue(any("asunto" in m.message for m in mensajes))
+        self.assertEqual(MensajeContacto.objects.count(), 0)
+
+    def test_formulario_rechaza_mensaje_largo(self):
+        respuesta = self.client.post(
+            reverse("contacto"),
+            {
+                "nombre": "Juan",
+                "correo": "juan@test.com",
+                "asunto": "Demo",
+                "mensaje": "x" * (MAX_MENSAJE_CONTACTO + 1),
+            },
+            follow=True,
+        )
+        mensajes = [m for m in respuesta.context["messages"]]
+        self.assertTrue(any("mensaje" in m.message for m in mensajes))
+        self.assertEqual(MensajeContacto.objects.count(), 0)
+
     def test_formulario_guarda_en_bd(self):
         self.assertEqual(MensajeContacto.objects.count(), 0)
         self.client.post(
-            reverse("landing"),
+            reverse("contacto"),
             {"nombre": "Ana", "correo": "ana@test.com", "asunto": "Demo", "mensaje": "Quiero más info"},
             follow=True,
         )
@@ -49,7 +80,7 @@ class LandingViewTest(TestCase):
 
     def test_formulario_invalido_no_guarda(self):
         self.client.post(
-            reverse("landing"),
+            reverse("contacto"),
             {"nombre": "", "correo": "x@test.com", "asunto": "", "mensaje": "Hola"},
             follow=True,
         )

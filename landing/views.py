@@ -1,8 +1,18 @@
 from django.conf import settings
 from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.shortcuts import render, redirect
 
 from .models import MensajeContacto
+
+# El formulario es publico: sin limites de longitud, un POST directo podria
+# guardar texto arbitrariamente grande. Los de nombre, correo y asunto son los
+# max_length de los campos; el mensaje es un TextField y se le pone un tope.
+MAX_NOMBRE_CONTACTO = 120
+MAX_CORREO_CONTACTO = 254
+MAX_ASUNTO_CONTACTO = 200
+MAX_MENSAJE_CONTACTO = 5000
 
 
 MODULOS = [
@@ -287,19 +297,34 @@ def contacto(request):
                 request,
                 "Por favor completa los campos obligatorios (nombre, correo y mensaje).",
             )
-        elif "@" not in correo or "." not in correo:
-            messages.error(request, "Ingresa un correo electrónico válido.")
-        else:
-            MensajeContacto.objects.create(
-                nombre=nombre,
-                correo=correo,
-                asunto=asunto,
-                mensaje=mensaje,
-            )
-            messages.success(
+        elif len(nombre) > MAX_NOMBRE_CONTACTO or len(correo) > MAX_CORREO_CONTACTO:
+            messages.error(request, "El nombre o el correo son demasiado largos.")
+        elif len(asunto) > MAX_ASUNTO_CONTACTO:
+            messages.error(
                 request,
-                "¡Gracias por escribirnos! Hemos recibido tu mensaje y te responderemos pronto.",
+                f"El asunto no puede superar los {MAX_ASUNTO_CONTACTO} caracteres.",
             )
+        elif len(mensaje) > MAX_MENSAJE_CONTACTO:
+            messages.error(
+                request,
+                f"El mensaje no puede superar los {MAX_MENSAJE_CONTACTO} caracteres.",
+            )
+        else:
+            try:
+                validate_email(correo)
+            except ValidationError:
+                messages.error(request, "Ingresa un correo electrónico válido.")
+            else:
+                MensajeContacto.objects.create(
+                    nombre=nombre,
+                    correo=correo,
+                    asunto=asunto,
+                    mensaje=mensaje,
+                )
+                messages.success(
+                    request,
+                    "¡Gracias por escribirnos! Hemos recibido tu mensaje y te responderemos pronto.",
+                )
 
         return redirect("contacto")
 

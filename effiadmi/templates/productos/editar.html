@@ -45,7 +45,7 @@
             <div class="card-footer row-between">
                 <div>
                     {% if producto.activo %}
-                        <a href="{% url 'effiadmi:eliminar_producto' producto.id %}" class="btn btn-error" onclick="event.preventDefault(); if (confirm('Esta seguro de eliminar el producto \'{{ producto.nombre }}\'? Si tiene historial asociado se desactivara.')) { document.getElementById('formEliminar').submit(); }">Eliminar</a>
+                        <a href="{% url 'effiadmi:eliminar_producto' producto.id %}" class="btn btn-error" data-confirmar="Esta seguro de eliminar el producto '{{ producto.nombre }}'? Si tiene historial asociado se desactivara." data-confirmar-form="formEliminar">Eliminar</a>
                     {% else %}
                         <a href="{% url 'effiadmi:eliminar_producto' producto.id %}" class="btn btn-success" onclick="event.preventDefault(); document.getElementById('formActivar').submit();">Activar</a>
                     {% endif %}

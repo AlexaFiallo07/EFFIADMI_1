@@ -9,6 +9,22 @@
         <a href="{% url 'effiadmi:crear_categoria' %}" class="btn btn-primary">+ Nueva Categoria</a>
     </div>
 
+    <div class="card block-lg">
+        <div class="card-body">
+            <form method="GET" class="toolbar">
+                <div class="form-group">
+                    <label class="form-label">Buscar</label>
+                    <input type="search" name="q" class="form-control" value="{{ filtrar_q }}" placeholder="Nombre de la categoría…" autocomplete="off">
+                </div>
+                <div class="hstack gap-sm">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <a href="{% url 'effiadmi:lista_categorias' %}" class="btn btn-outline">Limpiar</a>
+                    <span class="badge badge-primary">{{ total_filtrados }} resultado{{ total_filtrados|pluralize }}</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-body">
             <table class="table">
@@ -37,7 +53,7 @@
                                 {% if cat.total_productos %}
                                     <span class="btn btn-ghost btn-sm" title="No se puede eliminar porque tiene {{ cat.total_productos }} producto(s) asignado(s)">Eliminar</span>
                                 {% else %}
-                                    <a href="{% url 'effiadmi:eliminar_categoria' cat.id %}" class="btn btn-error btn-sm" onclick="event.preventDefault(); if (confirm('Esta seguro de eliminar la categoria \'{{ cat.nombre }}\'? Esta accion no se puede deshacer.')) { document.getElementById('formEliminar{{ cat.id }}').submit(); }">Eliminar</a>
+                                    <a href="{% url 'effiadmi:eliminar_categoria' cat.id %}" class="btn btn-error btn-sm" data-confirmar="Esta seguro de eliminar la categoria '{{ cat.nombre }}'? Esta accion no se puede deshacer." data-confirmar-form="formEliminar{{ cat.id }}">Eliminar</a>
                                     <form id="formEliminar{{ cat.id }}" method="POST" action="{% url 'effiadmi:eliminar_categoria' cat.id %}" hidden>{% csrf_token %}</form>
                                 {% endif %}
                             </td>

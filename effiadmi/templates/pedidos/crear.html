@@ -26,7 +26,7 @@
                 <div class="form-group">
                     <div class="row-between block-lg">
                         <label class="form-label">Productos</label>
-                        <button type="button" class="btn btn-outline btn-sm" onclick="agregarProducto()">+ Agregar producto</button>
+                        <button type="button" id="botonAgregarProducto" class="btn btn-outline btn-sm">+ Agregar producto</button>
                     </div>
 
                     <table class="table" id="tablaProductos">
@@ -62,68 +62,132 @@
 {% block js %}
 {{ productos|json_script:"productos-data" }}
 <script>
+(function () {
+    "use strict";
+
     const productos = JSON.parse(document.getElementById("productos-data").textContent);
+    const cuerpoProductos = document.getElementById("cuerpoProductos");
+    const mensajeVacio = document.getElementById("mensajeVacio");
+    const botonAgregar = document.getElementById("botonAgregarProducto");
     let contador = 0;
 
     function formatoCOP(num) {
         return "$ " + Math.round(num).toLocaleString("es-CO");
     }
 
-    function agregarProducto() {
+    function crearFilaProducto() {
         contador++;
-        const tbody = document.getElementById("cuerpoProductos");
+
         const fila = document.createElement("tr");
         fila.id = "fila-" + contador;
 
-        let opciones = '<option value="">Selecciona...</option>';
+        // Se construye con APIs del DOM y textContent: concatenar HTML con
+        // p.nombre permite ejecutar markup del nombre del producto (XSS almacenado).
+        const celdaProducto = document.createElement("td");
+        const select = document.createElement("select");
+        select.className = "form-control";
+        select.name = "producto";
+        select.required = true;
+
+        const vacio = document.createElement("option");
+        vacio.value = "";
+        vacio.textContent = "Selecciona...";
+        select.appendChild(vacio);
+
         for (const p of productos) {
-            opciones += '<option value="' + p.id + '" data-precio="' + p.precio_venta + '">' + p.nombre + ' - ' + formatoCOP(p.precio_venta) + '</option>';
+            const opcion = document.createElement("option");
+            opcion.value = p.id;
+            opcion.dataset.precio = p.precio_venta;
+            opcion.textContent = p.nombre + " - " + formatoCOP(p.precio_venta);
+            select.appendChild(opcion);
         }
 
-        fila.innerHTML = 
-            '<td><select name="producto" class="form-control" required onchange="actualizarPrecio(this)">' + opciones + '</select></td>' +
-            '<td><input type="number" name="cantidad" class="form-control" min="1" value="1" required onchange="calcularSubtotal(this)" oninput="calcularSubtotal(this)"></td>' +
-            '<td><span class="precio-unitario">$ 0</span><input type="hidden" name="precio_unitario"></td>' +
-            '<td><span class="subtotal-fila">$ 0</span></td>' +
-            '<td><button type="button" class="btn btn-ghost btn-sm" onclick="eliminarProducto(' + contador + ')" title="Eliminar">&times;</button></td>';
+        const celdaCantidad = document.createElement("td");
+        const inputCantidad = document.createElement("input");
+        inputCantidad.type = "number";
+        inputCantidad.name = "cantidad";
+        inputCantidad.className = "form-control";
+        inputCantidad.min = "1";
+        inputCantidad.value = "1";
+        inputCantidad.required = true;
 
-        tbody.appendChild(fila);
-        document.getElementById("mensajeVacio").style.display = "none";
+        const celdaPrecio = document.createElement("td");
+        const spanPrecio = document.createElement("span");
+        spanPrecio.className = "precio-unitario";
+        spanPrecio.textContent = "$ 0";
+        const inputPrecio = document.createElement("input");
+        inputPrecio.type = "hidden";
+        inputPrecio.name = "precio_unitario";
+        celdaPrecio.appendChild(spanPrecio);
+        celdaPrecio.appendChild(inputPrecio);
+
+        const celdaSubtotal = document.createElement("td");
+        const spanSubtotal = document.createElement("span");
+        spanSubtotal.className = "subtotal-fila";
+        spanSubtotal.textContent = "$ 0";
+        celdaSubtotal.appendChild(spanSubtotal);
+
+        const celdaBoton = document.createElement("td");
+        const botonQuitar = document.createElement("button");
+        botonQuitar.type = "button";
+        botonQuitar.className = "btn btn-ghost btn-sm";
+        botonQuitar.title = "Eliminar";
+        botonQuitar.textContent = "\u00d7";
+        celdaBoton.appendChild(botonQuitar);
+
+        celdaProducto.appendChild(select);
+        celdaCantidad.appendChild(inputCantidad);
+        fila.appendChild(celdaProducto);
+        fila.appendChild(celdaCantidad);
+        fila.appendChild(celdaPrecio);
+        fila.appendChild(celdaSubtotal);
+        fila.appendChild(celdaBoton);
+
+        select.addEventListener("change", actualizarPrecio);
+        inputCantidad.addEventListener("change", calcularSubtotal);
+        inputCantidad.addEventListener("input", calcularSubtotal);
+        botonQuitar.addEventListener("click", function () { eliminarProducto(fila); });
+
+        return fila;
     }
 
-    function eliminarProducto(id) {
-        const fila = document.getElementById("fila-" + id);
-        if (fila) fila.remove();
+    function agregarProducto() {
+        cuerpoProductos.appendChild(crearFilaProducto());
+        mensajeVacio.style.display = "none";
+    }
+
+    function eliminarProducto(fila) {
+        fila.remove();
         calcularTotal();
-        if (document.getElementById("cuerpoProductos").children.length === 0) {
-            document.getElementById("mensajeVacio").style.display = "block";
-        }
+        mensajeVacio.style.display = cuerpoProductos.children.length === 0 ? "block" : "none";
     }
 
-    function actualizarPrecio(select) {
-        const fila = select.closest("tr");
-        const option = select.options[select.selectedIndex];
-        const precio = option.getAttribute("data-precio") || 0;
+    function actualizarPrecio() {
+        const fila = this.closest("tr");
+        const opcion = this.options[this.selectedIndex];
+        const precio = opcion.getAttribute("data-precio") || 0;
         fila.querySelector(".precio-unitario").textContent = formatoCOP(precio);
         fila.querySelector('input[name="precio_unitario"]').value = precio;
-        calcularSubtotal(select);
+        calcularSubtotal.call(this);
     }
 
-    function calcularSubtotal(el) {
-        const fila = el.closest("tr");
+    function calcularSubtotal() {
+        const fila = this.closest("tr");
         const precio = parseFloat(fila.querySelector('input[name="precio_unitario"]').value) || 0;
         const cantidad = parseInt(fila.querySelector('input[name="cantidad"]').value) || 0;
-        const subtotal = precio * cantidad;
-        fila.querySelector(".subtotal-fila").textContent = formatoCOP(subtotal);
+        fila.querySelector(".subtotal-fila").textContent = formatoCOP(precio * cantidad);
         calcularTotal();
     }
 
     function calcularTotal() {
         let total = 0;
-        document.querySelectorAll(".subtotal-fila").forEach(function(el) {
+        document.querySelectorAll(".subtotal-fila").forEach(function (el) {
             total += parseFloat(el.textContent.replace(/[^0-9.-]/g, "")) || 0;
         });
         document.getElementById("totalPedido").textContent = formatoCOP(total);
     }
+
+    botonAgregar.addEventListener("click", agregarProducto);
+})();
 </script>
 {% endblock %}

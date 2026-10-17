@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap"
           rel="stylesheet">
 
-    <link rel="stylesheet" href="{% static 'css/estilos.css' %}">
+    <link rel="stylesheet" href="{% static 'css/estilos.css' %}?v={{ assets_version }}">
     <link rel="icon" type="image/png" href="{% static 'img/logoeffiadmi.png' %}">
 </head>
 <body>
@@ -132,7 +132,7 @@
 
     <button class="volver-arriba" id="volverArriba" aria-label="Volver arriba">↑</button>
 
-    <script src="{% static 'js/principal.js' %}"></script>
+    <script src="{% static 'js/principal.js' %}?v={{ assets_version }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

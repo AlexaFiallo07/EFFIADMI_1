@@ -9,6 +9,22 @@
         <a href="{% url 'effiadmi:crear_pedido' %}" class="btn btn-primary">+ Nuevo Pedido</a>
     </div>
 
+    <div class="card block-lg">
+        <div class="card-body">
+            <form method="GET" class="toolbar">
+                <div class="form-group">
+                    <label class="form-label">Buscar</label>
+                    <input type="search" name="q" class="form-control" value="{{ filtrar_q }}" placeholder="Cliente o número (PED-N)…" autocomplete="off">
+                </div>
+                <div class="hstack gap-sm">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <a href="{% url 'effiadmi:lista_pedidos' %}" class="btn btn-outline">Limpiar</a>
+                    <span class="badge badge-primary">{{ total_filtrados }} resultado{{ total_filtrados|pluralize }}</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card">
         <table class="table">
             <thead>
@@ -40,11 +56,11 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'effiadmi:detalle_pedido' pedido.id %}" class="btn btn-ghost btn-sm">Ver</a>
+                            <a href="{% url 'effiadmi:detalle_pedido' pedido.id %}" class="btn btn-outline btn-sm">Ver</a>
                             {% if pedido.estado == "pendiente" %}
                                 <form method="post" action="{% url 'effiadmi:eliminar_pedido' pedido.id %}" style="display: inline;">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-ghost btn-sm" onclick="return confirm('Eliminar este pedido?');">Eliminar</button>
+                                    <button type="submit" class="btn btn-error btn-sm" onclick="return confirm('Eliminar este pedido?');">Eliminar</button>
                                 </form>
                             {% endif %}
                         </td>

@@ -124,7 +124,7 @@
     <div class="card block-lg">
         <div class="card-header">
             <h3 class="card-title">Facturas de Compra</h3>
-            <a href="{% url 'effiadmi:lista_facturas_compra' %}?proveedor={{ proveedor.id }}" class="btn btn-outline btn-sm">Ver todas</a>
+            <a href="{% url 'effiadmi:facturacion' %}?tab=compras&proveedor={{ proveedor.id }}" class="btn btn-outline btn-sm">Ver todas</a>
         </div>
         <div class="card-body">
             <table class="table">
