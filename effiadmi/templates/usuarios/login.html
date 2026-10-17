@@ -47,6 +47,9 @@
                     <label for="password" class="form-label">Contraseña</label>
                     <input type="password" name="password" id="password" class="form-control"
                            placeholder="Tu contraseña" autocomplete="current-password" required>
+                    <p class="login-hint" style="margin: .35rem 0 0; text-align: right;">
+                        <a href="{% url 'effiadmi:solicitar_recuperacion' %}">¿Olvidaste tu contraseña?</a>
+                    </p>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-lg btn-block">Iniciar Sesión</button>

@@ -85,7 +85,7 @@ from .models import (
     Cliente, Proveedor, ProveedorProducto,
     Factura, FacturaDetalle, Pedido, PedidoDetalle,
     Notificacion, Conversacion, ChatHistorial, Reporte, CorreoEnviado, FacturaCompra,
-    MAX_ASUNTO_CORREO,
+    RegistroIngreso, MAX_ASUNTO_CORREO,
 )
 from .servicio_ia import consultar_asistente_effiadmi
 from .utilidades import (
@@ -149,6 +149,14 @@ def login(request):
                     "nombre": user.first_name or user.username,
                     "rol": cargo,
                 }
+
+                try:
+                    ip = (request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
+                          or request.META.get("REMOTE_ADDR", ""))
+                    RegistroIngreso.objects.create(usuario=user, rol=cargo, ip=ip[:45])
+                except Exception:
+                    pass
+
                 return redirect("effiadmi:inicio")
             else:
                 messages.error(request, "Usuario o contraseña incorrectos...")
