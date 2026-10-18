@@ -140,11 +140,14 @@
             {% endif %}
 
             {% if messages %}
+                <div class="toast-container">
                 {% for message in messages %}
-                    <div class="mensaje {{ message.tags }}">
-                        {{ message }}
+                    <div class="toast mensaje {{ message.tags }}" role="status" aria-live="polite">
+                        <span class="toast-text">{{ message }}</span>
+                        <button type="button" class="toast-close" aria-label="Cerrar">&times;</button>
                     </div>
                 {% endfor %}
+                </div>
             {% endif %}
 
             {% block contenido %}
