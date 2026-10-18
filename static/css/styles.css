@@ -507,11 +507,22 @@ textarea.form-control:focus {
     padding: var(--spacing-md) var(--spacing-lg);
     font-size: var(--font-size-base);
     border-left: 4px solid var(--acero-oscuro);
-    margin-bottom: var(--spacing-md);
+    margin: 0 auto var(--spacing-md);
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
     box-shadow: var(--shadow-sm);
+    max-width: min(1100px, calc(100% - 48px));
+    width: 100%;
+    position: relative;
+    z-index: 20;
+}
+@media (max-width: 640px) {
+    .mensaje,
+    .alert {
+        max-width: calc(100% - 24px);
+        font-size: 14px;
+    }
 }
 
 .mensaje.success, .alert-success { background-color: var(--verde-light); color: #1E8449; border-left-color: var(--verde); }
