@@ -6,33 +6,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ asunto }}</title>
   </head>
-  <body style="margin:0;padding:0;background:#f5f5f5;color:#212529;font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f5f5f5;padding:32px 12px">
+  <body style="margin:0;padding:0;background:#1e1233;color:#212529;font-family:Inter,Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#1e1233;padding:40px 12px">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:#ffffff;border:1px solid #e9ecef;border-radius:16px;overflow:hidden;">
-            <tr><td style="height:4px;background:#0d6efd;font-size:0;line-height:0;">&nbsp;</td></tr>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:#ffffff;border:1px solid #3a2370;border-radius:18px;overflow:hidden;box-shadow:0 30px 70px -30px rgba(35,25,80,0.8);">
+            <tr><td style="height:5px;background:linear-gradient(90deg,#c4a35a,#9b7fe0);font-size:0;line-height:0;">&nbsp;</td></tr>
             <tr>
-              <td style="padding:28px 32px 10px;text-align:center;">
-                {% if logo_url %}
-                <img src="{{ logo_url }}" width="64" height="64" alt="EFFIADMI" style="display:inline-block;width:64px;height:64px;object-fit:contain;">
-                {% endif %}
-                <p style="margin:14px 0 0;color:#0d6efd;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">EFFIADMI</p>
+              <td style="padding:32px 32px 12px;text-align:center;">
+                <img src="{% if logo_url %}{{ logo_url }}{% else %}https://via.placeholder.com/80x80/ffffff/3a2370?text=E{% endif %}" width="72" height="72" alt="EFFIADMI" style="display:inline-block;width:72px;height:72px;object-fit:contain;border-radius:12px;">
+                <p style="margin:16px 0 0;color:#3a2370;font-size:13px;font-weight:800;letter-spacing:3px;text-transform:uppercase;">EFFIADMI</p>
               </td>
             </tr>
             <tr>
-              <td style="padding:0 32px 24px;">
-                <h1 style="margin:0 0 16px;font-size:20px;font-weight:700;color:#212529;text-align:center;">{{ asunto }}</h1>
-                <div style="font-size:15px;line-height:1.6;color:#212529;">{{ cuerpo }}</div>
+              <td style="padding:0 36px 28px;">
+                <h1 style="margin:0 0 18px;font-size:22px;font-weight:800;color:#1e1233;text-align:center;">{{ asunto }}</h1>
+                <div style="font-size:15px;line-height:1.7;color:#2c1f4d;white-space:normal;">{{ cuerpo|linebreaksbr }}</div>
                 {% if enlace %}
-                <p style="margin:28px 0 0;text-align:center;">
-                  <a href="{{ enlace }}" target="_blank" style="display:inline-block;padding:12px 28px;background:#0d6efd;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:600;">{{ texto_enlace|default:"Ver detalle" }}</a>
+                <p style="margin:32px 0 0;text-align:center;">
+                  <a href="{{ enlace }}" target="_blank" style="display:inline-block;padding:14px 36px;background:linear-gradient(135deg,#3a2370,#9b7fe0);color:#ffffff;text-decoration:none;border-radius:999px;font-weight:700;">{{ texto_enlace|default:"Ver detalle" }}</a>
                 </p>
                 {% endif %}
               </td>
             </tr>
             <tr>
-              <td style="padding:18px 32px 24px;background:#f8f9fa;border-top:1px solid #e9ecef;text-align:center;color:#6c757d;font-size:12px;">
+              <td style="padding:20px 36px 26px;background:#f6f3ff;border-top:1px solid #e7e0ff;text-align:center;color:#6f5ea9;font-size:12px;">
                 Este es un correo automático de EFFIADMI. Si no solicitaste esta acción, te recomendamos cambiar tu contraseña a una más segura, ya que es posible que alguien esté intentando acceder a tu cuenta.
               </td>
             </tr>
