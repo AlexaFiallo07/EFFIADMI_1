@@ -1,0 +1,8 @@
+# Dependencias solo para desarrollo/pruebas (no necesarias en produccion).
+-r requirements.txt
+
+# Cobertura de la suite: coverage run -m pytest / coverage run manage.py test
+coverage>=7.4
+
+# Pruebas de carga: locust -f locustfile.py --host http://127.0.0.1:8000
+locust>=2.20

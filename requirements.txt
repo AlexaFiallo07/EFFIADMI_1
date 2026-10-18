@@ -9,3 +9,7 @@ openpyxl==3.1.5
 waitress==3.0.2
 # Sirve /static/ con compresion y cache cuando DEBUG=0
 whitenoise==6.12.0
+# Driver PostgreSQL: necesario para Supabase (DB_ENGINE=postgres)
+psycopg[binary]==3.3.6
+# Opcional: cliente Redis (necesario si CACHE_URL=redis://...)
+# redis==5.2.1

@@ -19,6 +19,11 @@ db.sqlite3-journal
 staticfiles/
 media/
 
+# Respaldos de datos (contienen hashes de contraseñas y datos personales)
+respaldo.json
+respaldos/
+*.fixture.json
+
 # Claves y configuración local
 .env
 *.env

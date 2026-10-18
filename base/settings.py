@@ -156,12 +156,63 @@ WSGI_APPLICATION = 'base.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Base de datos: SQLite por defecto (desarrollo, sin configurar nada). Para
+# produccion/nube define DB_ENGINE=postgres y las credenciales. En Supabase:
+#   DB_HOST=aws-0-<region>.pooler.supabase.com
+#   DB_USER=postgres.<project-ref>
+#   DB_NAME=postgres
+#   DB_PORT=6543  (pooler modo transaccion) o 5432 (conexion directa/sesion)
+# y desactiva cursores del servidor con DB_DISABLE_SERVER_SIDE_CURSORS=1.
+# Requiere el driver 'psycopg[binary]' instalado (ver requirements.txt).
+if os.getenv("DB_ENGINE", "sqlite").lower() in ("postgres", "postgresql"):
+    _db_options = {"connect_timeout": 5}
+    _sslmode = os.getenv("DB_SSLMODE", "require").strip()
+    if _sslmode:
+        _db_options["sslmode"] = _sslmode
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DB_NAME", "postgres"),
+            "USER": os.getenv("DB_USER", "postgres"),
+            "PASSWORD": os.getenv("DB_PASSWORD", ""),
+            "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+            "PORT": os.getenv("DB_PORT", "5432"),
+            "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+            "OPTIONS": _db_options,
+        }
     }
-}
+    # El pooler de Supabase en modo transaccion (6543) no soporta cursores del
+    # lado del servidor; sin esto las consultas grandes fallan.
+    if os.getenv("DB_DISABLE_SERVER_SIDE_CURSORS") == "1":
+        DISABLE_SERVER_SIDE_CURSORS = True
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
+
+# ==================== CACHE ====================
+# locmem por defecto (una sola instancia). El throttling de DRF y el candado de
+# login viven en la cache: con varios procesos o servidores hay que usar Redis
+# (CACHE_URL=redis://host:6379/0) para que los limites se compartan. Con
+# locmem cada worker llevaria su propia cuenta y el limite se multiplicaria.
+if os.getenv("CACHE_URL"):
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": os.getenv("CACHE_URL"),
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "effiadmi-local",
+        }
+    }
 
 
 # Password validation
@@ -186,6 +237,15 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+
+# En modo test se usa un hasher rapido: PBKDF2 (millones de iteraciones por
+# defecto) hacia que la suite tardara minutos solo calculando hashes. No afecta
+# a produccion, donde 'test' nunca aparece en sys.argv.
+import sys as _sys
+
+if "test" in _sys.argv:
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 
 # Internationalization
@@ -321,6 +381,25 @@ LOGGING = {
         },
     },
 }
+
+# Logging a archivo opcional con rotacion: define LOG_FILE=/var/log/effiadmi/app.log.
+# Sin esta variable se mantiene el comportamiento anterior (solo consola).
+_ruta_log = os.getenv("LOG_FILE", "").strip()
+if _ruta_log:
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(_ruta_log)), exist_ok=True)
+    except OSError:
+        pass
+    LOGGING["handlers"]["archivo"] = {
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": _ruta_log,
+        "maxBytes": int(os.getenv("LOG_MAX_BYTES", str(5 * 1024 * 1024))),
+        "backupCount": int(os.getenv("LOG_BACKUP_COUNT", "5")),
+        "formatter": "simple",
+        "encoding": "utf-8",
+    }
+    for _logger in ("django", "effiadmi", "django.security"):
+        LOGGING["loggers"][_logger]["handlers"].append("archivo")
 
 # ==================== LANDING ====================
 # URL del sistema EFFIADMI a la que apunta el botón "Acceder al sistema"
