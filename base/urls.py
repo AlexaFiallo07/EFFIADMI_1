@@ -15,16 +15,19 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import include, path
-from django.conf import settings
-from django.conf.urls.static import static
+from django.urls import include, path, re_path
+from base.views import media_protegida
 from effiadmi import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('effiadmi.api_urls')),
+    # /media/ solo con sesion (facturas, adjuntos): en produccion DEBUG=0
+    # no sirve nada, y sin auth cualquiera con la URL se bajaria los PDFs.
+    re_path(r'^media/(?P<ruta>.*)$', media_protegida, name='media_protegida'),
     path('', include('landing.urls')),
     path('app/', include('effiadmi.urls')),
 ]
 
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Desarrollo y produccion: /static/ lo sirve whitenoise (DEBUG=0) o el
+# runserver (DEBUG=1); /media/ siempre pasa por media_protegida.

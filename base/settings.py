@@ -29,8 +29,12 @@ load_dotenv(BASE_DIR / ".env")
 # La clave estaba hardcodeada en el repositorio: cualquiera con el codigo podia
 # firmar cookies de sesion y publicar la app. Ahora sale del .env y, si no esta,
 # se genera una aleatoria solo para desarrollo.
+#
+# Fail-closed: si el .env no declara DEBUG, la app arranca CON DEBUG APAGADO.
+# Antes el default era "1", lo que dejaba el stack trace (rutas, settings,
+# variables) visible en produccion si faltaba la variable.
 SECRET_KEY = os.getenv("SECRET_KEY")
-_DEBUG_ACTIVO = os.getenv("DEBUG", "1") == "1"
+_DEBUG_ACTIVO = os.getenv("DEBUG", "0") == "1"
 if not SECRET_KEY:
     if _DEBUG_ACTIVO:
         SECRET_KEY = "django-insecure-solo-desarrollo-no-usar-en-produccion"
@@ -42,19 +46,39 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = _DEBUG_ACTIVO
 
+if not DEBUG and len(SECRET_KEY) < 50:
+    raise RuntimeError(
+        "SECRET_KEY demasiado corta (<50 caracteres) para produccion. "
+        "Genera una nueva con: python -c \"from django.core.management.utils import "
+        "get_random_secret_key; print(get_random_secret_key())\""
+    )
+
 # En desarrollo acepta todo para no tener que configurar el host; con DEBUG
 # apagado hay que declararlos en el .env (ALLOWED_HOSTS=localhost,midominio.com).
-ALLOWED_HOSTS = (
-    ["*"]
-    if DEBUG
-    else [h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()]
-    
-)
+# Sin hosts declarados la app no arranca (fail-closed) en vez de aceptar
+# cualquier Host-header (cache poisoning / host header injection).
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = [
+        h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()
+    ]
+    if not ALLOWED_HOSTS:
+        raise RuntimeError(
+            "Falta ALLOWED_HOSTS en el .env con DEBUG=0. "
+            "Define tus dominios: ALLOWED_HOSTS=tudominio.com,www.tudominio.com"
+        )
 
 # Cabeceras y cookies seguras. Solo tiene efecto sobre HTTPS, asi que en
 # desarrollo (http://localhost) no rompen nada.
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+# La cookie CSRF no necesita leerse desde JS (el form usa {% csrf_token %}
+# y DRF toma el token del elemento #drf_csrf renderizado en el HTML), asi
+# que con HttpOnly un XSS no puede robarla para forzar acciones CSRF.
+CSRF_COOKIE_HTTPONLY = True
+# Caducidad de sesion: 12 h en vez de las 2 semanas por defecto.
+SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", str(12 * 60 * 60)))
 SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "0") == "1"
 SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
@@ -62,6 +86,13 @@ SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
+
+# Detras de un proxy/terminador TLS (nginx, Caddy) el esquema viene en
+# X-Forwarded-Proto; sin esto Django no ve HTTPS y las cookies secure/
+# redirects no se aplican. Activar solo con SECURE_PROXY_SSL_HEADER=1 cuando
+# efectivamente haya proxy delante (si no, un atacante podia forzar el header).
+if os.getenv("SECURE_PROXY_SSL_HEADER", "0") == "1":
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 # Application definition
@@ -82,6 +113,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Whitenoise: sirve /static/ con compresion y cache sin necesidad de
+    # nginx. Sin DEBUG el `static()` de urls.py no sirve nada, asi que sin
+    # esto el CSS/JS quedaria en 404 en produccion.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -89,6 +124,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Ultimo: limita intentos de login/password-recovery por IP (429).
+    'base.middleware.LoginThrottleMiddleware',
 ]
 
 ROOT_URLCONF = 'base.urls'
@@ -170,6 +207,12 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Almacenamiento con whitenoise (compresion gzip/brotli + cabeceras de cache).
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+
 # Archivos subidos por los usuarios (facturas de compra, etc.)
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -198,7 +241,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+        # BasicAuthentication fuera: envia credenciales en cada peticion en
+        # claro y habilita un endpoint de fuerza bruta ilimitado contra /api/.
     ),
     # Sin esto la API quedaba con CRUD publico para cualquiera sin login.
     # Los endpoints /api/token/ y /api/token/refresh/ tienen sus propios
@@ -206,7 +250,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    # Antes no habia limite de peticiones: un cliente autenticado podía
+    # Antes no habia limite de peticiones: un cliente autenticado podia
     # vaciar la cuota de Gemini desde /api/ia/consultar/ con un bucle.
     'DEFAULT_THROTTLE_CLASSES': (
         'rest_framework.throttling.AnonRateThrottle',
@@ -224,8 +268,6 @@ REST_FRAMEWORK = {
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
-    'DEFAULT_THROTTLE_CLASSES': ('rest_framework.throttling.AnonRateThrottle','rest_framework.throttling.UserRateThrottle',),
-    'DEFAULT_THROTTLE_RATES': {'anon': '100/day','user': '1000/day',},
 }
 
 # CORS: solo los origenes explicitos del .env (CORS_ALLOWED_ORIGINS=url1,url2).
@@ -243,6 +285,41 @@ from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
+
+# ==================== LOGGING ====================
+# Los detalles de cada excepcion quedan aqui (consola/servidor) y no se
+# muestran al usuario: evita filtrar rutas, SQL y settings en la UI.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {
+            "format": "[{asctime}] {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "consola": {
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["consola"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+        },
+        "effiadmi": {
+            "handlers": ["consola"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+        },
+        # Fallos de login, bloqueos de throttle, rechazos de CSRF.
+        "django.security": {
+            "handlers": ["consola"],
+            "level": "WARNING",
+        },
+    },
 }
 
 # ==================== LANDING ====================

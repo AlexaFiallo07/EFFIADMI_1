@@ -1,9 +1,12 @@
 ﻿from decimal import Decimal
 import io
 import json
+import logging
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import Http404, HttpResponse
@@ -93,6 +96,8 @@ from .utilidades import (
     _correo_configurado,
 )
 
+logger = logging.getLogger(__name__)
+
 
 RESET_SALT = 'effiadmi-password-reset'
 
@@ -131,6 +136,25 @@ def login(request):
         email = request.POST.get("username")
         contrasena = request.POST.get("password")
 
+        # Candado por usuario: 5 fallos en 15 min bloquean ese usuario aunque
+        # el atacante cambie de IP (el middleware aparte limita por IP).
+        ip_login = (
+            request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
+            or request.META.get("REMOTE_ADDR", "")
+            or "desconocida"
+        )[:45]
+        clave_usuario = (email or "").strip().lower()
+        clave_candado = f"login_lock:{clave_usuario}"
+        if cache.get(clave_candado):
+            logger.warning(
+                "Login bloqueado por candado: usuario=%s ip=%s", email, ip_login
+            )
+            messages.error(
+                request,
+                "Demasiados intentos fallidos. Intenta de nuevo en 15 minutos.",
+            )
+            return redirect("effiadmi:login")
+
         try:
             user = authenticate(request, username=email, password=contrasena)
             if user is not None:
@@ -138,6 +162,8 @@ def login(request):
                     messages.error(request, "Tu cuenta esta desactivada. Contacta al administrador.")
                     return redirect("effiadmi:login")
 
+                cache.delete(clave_candado)
+                cache.delete(f"login_fallos:{clave_usuario}")
                 auth_login(request, user)
                 messages.success(request, f"¡Bienvenido, {user.first_name or user.username}!")
 
@@ -151,18 +177,32 @@ def login(request):
                 }
 
                 try:
-                    ip = (request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
-                          or request.META.get("REMOTE_ADDR", ""))
-                    RegistroIngreso.objects.create(usuario=user, rol=cargo, ip=ip[:45])
+                    RegistroIngreso.objects.create(usuario=user, rol=cargo, ip=ip_login[:45])
                 except Exception:
                     pass
 
                 return redirect("effiadmi:inicio")
             else:
+                fallos = 0
+                try:
+                    fallos = cache.incr(f"login_fallos:{clave_usuario}")
+                except ValueError:
+                    cache.set(f"login_fallos:{clave_usuario}", 1, 900)
+                    fallos = 1
+                logger.warning(
+                    "Login fallido (%d/5): usuario=%s ip=%s", fallos, email, ip_login
+                )
+                if fallos >= 5:
+                    cache.set(clave_candado, 1, 900)
+                    cache.delete(f"login_fallos:{clave_usuario}")
+                # Mensaje identico exista o no el usuario: sin enumeracion.
                 messages.error(request, "Usuario o contraseña incorrectos...")
                 return redirect("effiadmi:login")
-        except Exception as e:
-            messages.error(request, f"Error: {e}")
+        except Exception:
+            # El detalle queda en el LOGGING; el usuario solo ve texto generico
+            # (antes f"Error: {e}" podia filtrar SQL/rutas/settings en la UI).
+            logger.exception("Error inesperado en login (usuario=%s)", email)
+            messages.error(request, "No se pudo iniciar sesion. Intenta de nuevo.")
             return redirect("effiadmi:login")
 
     if request.session.get("logueado", False):
@@ -178,7 +218,8 @@ def logout(request):
         messages.success(request, "¡Sesion cerrada exitosamente!")
         return redirect("effiadmi:login")
     except Exception as e:
-        messages.warning(request, f"Error al cerrar sesion: {str(e)}")
+        logger.exception("Error al cerrar sesion")
+        messages.warning(request, "No se pudo cerrar la sesión. Cierra el navegador para finalizarla.")
         return redirect("effiadmi:inicio")
 
 
@@ -272,7 +313,8 @@ def inicio(request):
         }
         return render(request, "dashboard/index.html", contexto)
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_pedidos")
 
 
@@ -330,7 +372,8 @@ def lista_clientes(request):
             "filtrar_q": q,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -359,7 +402,8 @@ def crear_cliente(request):
             messages.error(request, "El correo ya esta registrado.")
             return render(request, "clientes/formulario_clientes.html")
         except Exception as e:
-            messages.error(request, f"Error: {e}")
+            logger.exception("Error no controlado en la vista")
+            messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
             return render(request, "clientes/formulario_clientes.html")
 
     return render(request, "clientes/formulario_clientes.html")
@@ -381,7 +425,8 @@ def editar_cliente(request, id):
 
         return render(request, "clientes/formulario_clientes.html", {"cliente": cliente})
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_clientes")
 
 
@@ -400,7 +445,8 @@ def eliminar_cliente(request, id):
                 messages.success(request, "Cliente activado exitosamente.")
         return redirect("effiadmi:lista_clientes")
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_clientes")
 
 
@@ -453,7 +499,8 @@ def lista_productos(request):
             "mostrar_inactivos": mostrar_inactivos,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -578,7 +625,8 @@ def crear_producto(request):
             messages.error(request, "El SKU ya esta registrado.")
             return render(request, "productos/crear.html", _ctx)
         except Exception as e:
-            messages.error(request, f"Error: {e}")
+            logger.exception("Error no controlado en la vista")
+            messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
             return render(request, "productos/crear.html", _ctx)
 
     return render(request, "productos/crear.html", _ctx)
@@ -645,7 +693,8 @@ def editar_producto(request, id):
 
         return render(request, "productos/editar.html", _ctx)
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_productos")
 
 
@@ -679,7 +728,8 @@ def eliminar_producto(request, id):
                 messages.success(request, "Producto eliminado exitosamente.")
         return redirect("effiadmi:lista_productos")
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_productos")
 
 
@@ -700,7 +750,8 @@ def lista_categorias(request):
             "filtrar_q": q,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -724,7 +775,8 @@ def crear_categoria(request):
             messages.error(request, "El nombre de la categoria ya existe.")
             return render(request, "categorias/crear.html")
         except Exception as e:
-            messages.error(request, f"Error: {e}")
+            logger.exception("Error no controlado en la vista")
+            messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
             return render(request, "categorias/crear.html")
 
     return render(request, "categorias/crear.html")
@@ -753,7 +805,8 @@ def editar_categoria(request, id):
 
         return render(request, "categorias/editar.html", {"categoria": categoria})
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_categorias")
 
 
@@ -774,7 +827,8 @@ def eliminar_categoria(request, id):
             messages.success(request, "Categoria eliminada exitosamente.")
         return redirect("effiadmi:lista_categorias")
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_categorias")
 
 
@@ -814,7 +868,8 @@ def lista_inventario(request):
         }
         return render(request, "inventario/lista.html", contexto)
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -835,7 +890,8 @@ def detalle_inventario(request, id):
         }
         return render(request, "inventario/detalle.html", contexto)
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_inventario")
 
 
@@ -909,7 +965,8 @@ def registrar_movimiento(request, id):
 
         return render(request, "inventario/movimientos.html", {"inventario": inventario})
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_inventario")
 
 
@@ -930,7 +987,8 @@ def lista_pedidos(request):
             "filtrar_q": q,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -1015,7 +1073,8 @@ def crear_pedido(request):
             "clientes": clientes_activos, "productos": productos_activos
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_pedidos")
 
 
@@ -1031,7 +1090,8 @@ def detalle_pedido(request, id):
             "pedido": pedido, "detalles": detalles, "factura_asociada": factura
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_pedidos")
 
 
@@ -1114,7 +1174,8 @@ def confirmar_pedido(request, id):
         return redirect("effiadmi:detalle_pedido", id=pedido.id)
 
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_pedidos")
 
 
@@ -1208,7 +1269,8 @@ def cancelar_pedido(request, id):
         return redirect("effiadmi:detalle_pedido", id=pedido.id)
 
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_pedidos")
 
 
@@ -1224,7 +1286,8 @@ def eliminar_pedido(request, id):
                 messages.warning(request, "Solo se pueden eliminar pedidos pendientes.")
         return redirect("effiadmi:lista_pedidos")
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_pedidos")
 
 
@@ -1286,7 +1349,8 @@ def pagar_pedido(request, id):
         return redirect("effiadmi:detalle_pedido", id=pedido.id)
 
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_pedidos")
 
 
@@ -1320,7 +1384,8 @@ def lista_facturas(request):
             "anuladas_cuenta": base_facturas.filter(estado="anulada").count(),
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -1335,7 +1400,8 @@ def detalle_factura(request, id):
             "factura": factura, "detalles": detalles
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:facturacion")
 
 
@@ -1364,7 +1430,8 @@ def anular_factura(request, id):
         return redirect("effiadmi:detalle_factura", id=factura.id)
 
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:facturacion")
 
 
@@ -1381,7 +1448,8 @@ def eliminar_factura(request, id):
                 messages.warning(request, "La factura ya esta anulada.")
         return redirect("effiadmi:facturacion")
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:facturacion")
 
 
@@ -1408,7 +1476,8 @@ def lista_usuarios(request):
             "filtrar_q": q,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -1430,6 +1499,18 @@ def crear_usuario(request):
                 messages.error(request, "El correo ya esta registrado.")
                 return render(request, "usuarios/crear.html")
 
+            # Validadores de Django (longitud, similitud con el usuario,
+            # contrasenas comunes, todo numerico). Antes solo se revisaba
+            # que no viniera vacia.
+            try:
+                validate_password(
+                    contrasena,
+                    user=User(username=email, email=email, first_name=nombre, last_name=apellido or ""),
+                )
+            except ValidationError as ve:
+                messages.error(request, " ".join(ve.messages))
+                return render(request, "usuarios/crear.html")
+
             # Atomicidad: si el UserProfile falla, tampoco debe quedar el User
             # huérfano (o al revés). Antes se guardaban por separado.
             with transaction.atomic():
@@ -1448,7 +1529,8 @@ def crear_usuario(request):
             messages.error(request, "El correo ya esta registrado.")
             return render(request, "usuarios/crear.html")
         except Exception as e:
-            messages.error(request, f"Error: {e}")
+            logger.exception("Error no controlado en la vista")
+            messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
             return render(request, "usuarios/crear.html")
 
     return render(request, "usuarios/crear.html")
@@ -1462,6 +1544,13 @@ def editar_usuario(request, id):
 
         if request.method == "POST":
             nueva_contrasena = request.POST.get("contraseña")
+
+            if nueva_contrasena:
+                try:
+                    validate_password(nueva_contrasena, user=user)
+                except ValidationError as ve:
+                    messages.error(request, " ".join(ve.messages))
+                    return render(request, "usuarios/editar.html", {"usuario": user, "perfil": perfil})
 
             # Atomicidad: el User y su UserProfile se guardan juntos, para que
             # un fallo a mitad no deje el cargo desactualizado.
@@ -1483,7 +1572,8 @@ def editar_usuario(request, id):
 
         return render(request, "usuarios/editar.html", {"usuario": user, "perfil": perfil})
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_usuarios")
 
 
@@ -1506,7 +1596,8 @@ def eliminar_usuario(request, id):
                 messages.success(request, "¡Usuario activado exitosamente!")
         return redirect("effiadmi:lista_usuarios")
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_usuarios")
 
 
@@ -1539,7 +1630,8 @@ def lista_proveedores(request):
             "inactivos_cuenta": total_cuenta - activos_cuenta,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -1568,7 +1660,8 @@ def crear_proveedor(request):
             messages.error(request, "El correo ya esta registrado.")
             return render(request, "proveedores/crear.html")
         except Exception as e:
-            messages.error(request, f"Error: {e}")
+            logger.exception("Error no controlado en la vista")
+            messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
             return render(request, "proveedores/crear.html")
 
     return render(request, "proveedores/crear.html")
@@ -1590,7 +1683,8 @@ def editar_proveedor(request, id):
 
         return render(request, "proveedores/editar.html", {"proveedor": proveedor})
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_proveedores")
 
 
@@ -1609,7 +1703,8 @@ def eliminar_proveedor(request, id):
                 messages.success(request, "Proveedor activado exitosamente.")
         return redirect("effiadmi:lista_proveedores")
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_proveedores")
 
 
@@ -1632,7 +1727,8 @@ def detalle_proveedor(request, id):
             "facturas": facturas,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_proveedores")
 
 
@@ -1706,7 +1802,8 @@ def lista_notificaciones(request):
             "filtrar_q": q,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -1728,7 +1825,8 @@ def detalle_notificacion(request, id):
         # en un redirect y un id ajeno devolveria 302 en vez de 404.
         raise
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_notificaciones")
 
 
@@ -1746,7 +1844,8 @@ def eliminar_notificacion(request, id):
     except Http404:
         raise
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_notificaciones")
 
 
@@ -1758,7 +1857,8 @@ def marcar_todas_leidas(request):
         messages.success(request, "Todas las notificaciones marcadas como leidas.")
         return redirect("effiadmi:lista_notificaciones")
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:lista_notificaciones")
 
 
@@ -1944,7 +2044,8 @@ def estadisticas_ia(request):
 
         return render(request, "dashboard/estadisticas.html", contexto)
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -1962,7 +2063,8 @@ def eliminar_conversacion(request, id):
             messages.success(request, "Conversacion eliminada.")
         return redirect("effiadmi:estadisticas_ia")
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:estadisticas_ia")
 
 
@@ -2154,7 +2256,8 @@ def reportes(request):
             "resueltos_cuenta": resueltos_cuenta,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -2203,7 +2306,8 @@ def detalle_reporte(request, id):
             "es_admin": es_admin,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:reportes")
 
 
@@ -2272,7 +2376,8 @@ def lista_correos(request):
             if exitoso:
                 messages.success(request, f"Correo enviado a {destinatario}.")
             else:
-                messages.error(request, f"No se pudo enviar el correo: {error}")
+                logger.error("Fallo de envio de correo: %s", error)
+                messages.error(request, "No se pudo enviar el correo. Intenta de nuevo más tarde.")
             return redirect("effiadmi:lista_correos")
 
         return render(request, "correos/lista.html", {
@@ -2282,7 +2387,8 @@ def lista_correos(request):
             "filtrar_q": q,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -2346,7 +2452,8 @@ def lista_facturas_compra(request):
             "datos": datos,
         })
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect(reverse('effiadmi:facturacion') + '?tab=compras')
 
 
@@ -2414,7 +2521,8 @@ def crear_factura_compra(request):
             messages.success(request, "Factura de compra registrada exitosamente.")
             return redirect(reverse('effiadmi:facturacion') + '?tab=compras')
         except Exception as e:
-            messages.error(request, f"Error: {e}")
+            logger.exception("Error no controlado en la vista")
+            messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
 
     return render(request, "facturas_compra/crear.html", ctx_base)
 
@@ -2487,7 +2595,8 @@ def exportar_facturas_compra_excel(request):
         wb.save(response)
         return response
     except Exception as e:
-        messages.error(request, f"Error al exportar: {e}")
+        logger.exception("Error al exportar")
+        messages.error(request, "No se pudo generar la exportación. Intenta de nuevo.")
         return redirect("effiadmi:facturacion")
 
 
@@ -2566,7 +2675,8 @@ def facturacion(request):
 
         return render(request, "facturacion/facturacion.html", contexto)
     except Exception as e:
-        messages.error(request, f"Error: {e}")
+        logger.exception("Error no controlado en la vista")
+        messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
         return redirect("effiadmi:inicio")
 
 
@@ -2644,6 +2754,10 @@ def restablecer_password(request, token):
             return render(request, "usuarios/restablecer_password.html", {"valido": True, "error": "Las contraseñas no coinciden."})
         if len(password) < 8:
             return render(request, "usuarios/restablecer_password.html", {"valido": True, "error": "Mínimo 8 caracteres."})
+        try:
+            validate_password(password, user=user)
+        except ValidationError as ve:
+            return render(request, "usuarios/restablecer_password.html", {"valido": True, "error": " ".join(ve.messages)})
         user.set_password(password)
         user.save(update_fields=["password"])
         try:
