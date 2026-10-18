@@ -48,6 +48,7 @@ ALLOWED_HOSTS = (
     ["*"]
     if DEBUG
     else [h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()]
+    
 )
 
 # Cabeceras y cookies seguras. Solo tiene efecto sobre HTTPS, asi que en
