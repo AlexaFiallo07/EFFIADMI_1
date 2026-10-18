@@ -751,6 +751,7 @@ textarea.form-control:focus {
     width: 100%;
     max-width: 100%;
 }
+.menu-toggle {
     display: none;
     width: 46px;
     height: 46px;
@@ -767,6 +768,20 @@ textarea.form-control:focus {
     backdrop-filter: blur(10px);
 }
 .menu-toggle .material-symbols-outlined { font-size: 26px; }
+
+/* Botón de menú visible en escritorio para ocultar/mostrar el sidebar */
+@media (min-width: 1025px) {
+    .app-layout:not(.auth-layout) .menu-toggle {
+        display: inline-flex;
+    }
+    .app-layout.sidebar-hidden .app-sidebar {
+        transform: translateX(calc(-100% - var(--sidebar-gap) - 14px));
+    }
+    .app-layout.sidebar-hidden .main-viewport {
+        margin-left: 0;
+    }
+    .main-viewport { transition: margin-left 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
+}
 
 .sidebar-overlay {
     display: none;

@@ -172,7 +172,11 @@
 
         if (toggle && layout) {
             toggle.addEventListener('click', function () {
-                layout.classList.toggle('sidebar-open');
+                if (window.innerWidth > 1024) {
+                    layout.classList.toggle('sidebar-hidden');
+                } else {
+                    layout.classList.toggle('sidebar-open');
+                }
             });
         }
 
