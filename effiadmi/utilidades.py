@@ -1,6 +1,7 @@
 ﻿from django.shortcuts import redirect
 from django.contrib import messages
 from django.urls import reverse
+from django.core.mail import EmailMultiAlternatives
 from functools import wraps
 
 
@@ -78,15 +79,60 @@ def _backend_es_consola():
     return "console" in backend.lower()
 
 
+class _CorreoConLogo(EmailMultiAlternatives):
+    """Correo HTML con recursos inline (logo) en multipart/related.
+
+    Gmail y Outlook solo renderizan <img src="cid:..."> si la imagen vive
+    en un contenedor multipart/related; si queda en multipart/mixed la
+    ignoran y el logo no aparece.
+    """
+
+    def _add_attachments(self, msg):
+        import email.message
+        from email.mime.base import MIMEBase
+
+        if not self.attachments:
+            return
+
+        hay_inline = any(
+            isinstance(a, (email.message.MIMEPart, MIMEBase)) and a.get("Content-ID")
+            for a in self.attachments
+        )
+        if not hay_inline:
+            return super()._add_attachments(msg)
+
+        # Mover el contenido actual (multipart/alternative) a una subparte
+        # y convertir la raiz en multipart/related (mismo patron que usa
+        # email.message.EmailMessage._make_multipart).
+        keep_headers = []
+        part_headers = []
+        for name, value in msg._headers:
+            if name.lower().startswith("content-"):
+                part_headers.append((name, value))
+            else:
+                keep_headers.append((name, value))
+
+        alt = type(msg)(policy=msg.policy)
+        alt._headers = part_headers
+        alt._payload = msg._payload
+        msg._payload = [alt]
+        msg._headers = keep_headers
+        msg["Content-Type"] = "multipart/related"
+
+        for attachment in self.attachments:
+            if isinstance(attachment, (email.message.MIMEPart, MIMEBase)):
+                msg.attach(attachment)
+            else:
+                self._add_attachment(msg, *attachment)
+
+
 def enviar_correo(destinatario, asunto, cuerpo, **kwargs):
     """Envia un correo con plantilla HTML usando la configuracion SMTP del .env.
 
     Devuelve (exitoso, mensaje_error).
     """
     from django.conf import settings
-    from django.core.mail import EmailMultiAlternatives
     from django.template.loader import render_to_string
-    from django.templatetags.static import static
 
     if _backend_es_consola() or not _correo_configurado():
         return (
@@ -102,12 +148,20 @@ def enviar_correo(destinatario, asunto, cuerpo, **kwargs):
         texto_enlace = kwargs.get("texto_enlace") or "Ver detalle"
         template = kwargs.get("template") or "emails/aviso.html"
 
-        logo_url = ""
-        if request:
-            try:
-                logo_url = request.build_absolute_uri(static("img/logoeffiadmi.png"))
-            except Exception:
-                logo_url = ""
+        logo_url = "cid:effiadmi-logo"
+        logo_adjunto = False
+        try:
+            from email.mime.image import MIMEImage
+            from pathlib import Path as _Path
+            _logo_path = _Path(settings.BASE_DIR) / "static" / "img" / "logoeffiadmi.png"
+            if _logo_path.exists():
+                _mime = MIMEImage(_logo_path.read_bytes(), name="logoeffiadmi.png")
+                _mime.add_header("Content-ID", "<effiadmi-logo>")
+                _mime.add_header("Content-Disposition", "inline", filename="logoeffiadmi.png")
+                logo_adjunto = True
+        except Exception:
+            logo_url = ""
+            _mime = None
 
         contexto = {
             "asunto": asunto,
@@ -120,8 +174,10 @@ def enviar_correo(destinatario, asunto, cuerpo, **kwargs):
 
         html_content = render_to_string(template, contexto, request=request if request else None)
         text_content = cuerpo
-        msg = EmailMultiAlternatives(asunto, text_content, settings.DEFAULT_FROM_EMAIL, [destinatario])
+        msg = _CorreoConLogo(asunto, text_content, settings.DEFAULT_FROM_EMAIL, [destinatario])
         msg.attach_alternative(html_content, "text/html")
+        if logo_adjunto:
+            msg.attach(_mime)
         enviados = msg.send(fail_silently=False)
         return (True, "") if enviados else (False, "El servidor de correo no confirmó el envío.")
     except Exception as e:
