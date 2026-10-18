@@ -776,11 +776,17 @@ textarea.form-control:focus {
     }
     .app-layout.sidebar-hidden .app-sidebar {
         transform: translateX(calc(-100% - var(--sidebar-gap) - 14px));
+        visibility: hidden;
     }
     .app-layout.sidebar-hidden .main-viewport {
-        margin-left: 0;
+        margin-left: 0 !important;
+        width: 100% !important;
     }
-    .main-viewport { transition: margin-left 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
+    .app-layout.sidebar-hidden {
+        display: flex;
+    }
+    .app-sidebar { transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.32s ease; }
+    .main-viewport { transition: margin-left 0.32s cubic-bezier(0.22, 1, 0.36, 1), width 0.32s cubic-bezier(0.22, 1, 0.36, 1); }
 }
 
 .sidebar-overlay {
