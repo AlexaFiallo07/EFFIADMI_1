@@ -805,8 +805,8 @@ textarea.form-control:focus {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100dvh;
-    padding: var(--spacing-2xl) var(--spacing-lg);
+    min-height: 100vh;
+    padding: var(--spacing-2xl) var(--spacing-md);
     overflow: hidden;
     background:
         radial-gradient(900px 520px at 12% 8%, var(--lavanda-clara) 0%, transparent 60%),
@@ -832,7 +832,7 @@ textarea.form-control:focus {
     position: relative;
     z-index: 1;
     width: 100%;
-    max-width: 980px;
+    max-width: 940px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     background-color: var(--blanco);
@@ -844,11 +844,11 @@ textarea.form-control:focus {
 
 .login-brand-side {
     position: relative;
-    padding: clamp(44px, 6vw, 58px) clamp(36px, 5vw, 52px);
+    padding: 46px 40px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 40px;
+    justify-content: space-between;
+    gap: 28px;
     color: #fff;
     background-color: var(--uva);
     background-image:
@@ -880,7 +880,7 @@ textarea.form-control:focus {
 .login-brand-points li { display: flex; align-items: center; gap: 10px; font-size: var(--font-size-sm); color: rgba(255, 255, 255, 0.85); }
 .login-brand-points .material-symbols-outlined { font-size: 20px; color: var(--oro); }
 
-.login-form-side { padding: clamp(48px, 5vw, 64px) clamp(40px, 5vw, 60px); }
+.login-form-side { padding: 46px 40px; }
 .login-form-side h2 { margin-bottom: var(--spacing-sm); color: var(--tinta); font-size: var(--font-size-xl); font-family: var(--font-primary); font-weight: 700; }
 .login-form-side > p { margin-bottom: var(--spacing-lg); color: var(--gris); line-height: 1.6; }
 .login-form-side .form-group { margin-bottom: var(--spacing-md); }
