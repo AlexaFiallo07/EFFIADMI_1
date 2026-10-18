@@ -1306,8 +1306,12 @@ textarea.form-control:focus {
    RESPONSIVE
    ============================================================ */
 @media (max-width: 1024px) {
+    body { overflow-x: hidden; }
+
+    .menu-toggle { display: inline-flex; }
+
     .app-layout { display: flex; min-height: 100vh; }
-    .app-sidebar { position: fixed; top: var(--sidebar-gap); left: var(--sidebar-gap); bottom: var(--sidebar-gap); height: auto; }
+    .app-sidebar { position: fixed; top: var(--sidebar-gap); left: var(--sidebar-gap); bottom: var(--sidebar-gap); height: auto; transform: translateX(calc(-100% - var(--sidebar-gap) - 10px)); }
 
     .main-viewport { margin-left: 0; padding: 18px 16px; width: 100%; }
 
