@@ -120,10 +120,12 @@
 
             {% if request.session.logueado %}
             <div class="topbar">
+                {% if request.resolver_match.url_name == 'inicio' or request.resolver_match.url_name == 'lista_inventario' or request.resolver_match.url_name == 'facturacion' %}
                 <div class="topbar-greet">
                     <span class="topbar-hello">Bienvenido de nuevo</span>
                     <strong class="topbar-name">{{ request.session.logueado.nombre|default:"Usuario" }}</strong>
                 </div>
+                {% endif %}
                 <div class="topbar-actions">
                     <span class="topbar-role">{{ request.session.logueado.rol|default:"usuario" }}</span>
                     <span class="topbar-date">{% now "j \d\e F, Y" %}</span>
