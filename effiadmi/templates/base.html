@@ -120,7 +120,7 @@
 
             {% if request.session.logueado %}
             <div class="topbar">
-                {% if request.resolver_match.url_name == 'inicio' or request.resolver_match.url_name == 'lista_inventario' or request.resolver_match.url_name == 'facturacion' %}
+                {% if request.resolver_match.url_name == 'inicio' or request.resolver_match.url_name == 'perfil' %}
                 <div class="topbar-greet">
                     <span class="topbar-hello">Bienvenido de nuevo</span>
                     <strong class="topbar-name">{{ request.session.logueado.nombre|default:"Usuario" }}</strong>
