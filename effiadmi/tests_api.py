@@ -163,10 +163,12 @@ class StockApiTest(ApiBaseTestCase):
         self.assertEqual(len(respuesta.data), 1)
 
     def test_cantidad_disponible_es_solo_lectura(self):
+        # Ajustar el campo directo esta restringido a admin (permission_classes);
+        # el operador cambia stock solo por la accion ajustar-stock.
         respuesta = self.client.patch(
             f"/api/stock/{self.inventario.id}/", {"cantidad_disponible": 999}, format="json"
         )
-        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.status_code, 403)
         self.inventario.refresh_from_db()
         self.assertEqual(self.inventario.cantidad_disponible, 10)
 
@@ -285,6 +287,66 @@ class AsistenteIaApiTest(ApiBaseTestCase):
         for _ in range(limite):
             self.assertEqual(self.client.post(self.URL, {"mensaje": "hola"}, format="json").status_code, 200)
         self.assertEqual(self.client.post(self.URL, {"mensaje": "hola"}, format="json").status_code, 429)
+
+
+class EscaladaDePrivilegiosApiTest(ApiBaseTestCase):
+    """Un operador no debe poder hacer por API lo que la web reserva a admin."""
+
+    def setUp(self):
+        super().setUp()
+        self.cliente_obj = Cliente.objects.create(
+            nombre="Cli", correo="c@api.test", telefono="1", direccion="x"
+        )
+        from .models import Factura, Pedido
+
+        self.factura = Factura.objects.create(
+            cliente=self.cliente_obj, usuario=self.admin, total=1000
+        )
+        self.pedido = Pedido.objects.create(
+            cliente=self.cliente_obj, usuario=self.admin, total=1000
+        )
+
+    def test_operador_no_borra_facturas(self):
+        self.autenticar(self.operador)
+        self.assertEqual(
+            self.client.delete(f"/api/facturas/{self.factura.id}/").status_code, 403
+        )
+        from .models import Factura
+
+        self.assertTrue(Factura.objects.filter(id=self.factura.id).exists())
+
+    def test_operador_no_crea_productos(self):
+        self.autenticar(self.operador)
+        respuesta = self.client.post(
+            "/api/catalogo-productos/",
+            {"sku": "9", "nombre": "Hack", "precio_venta": "9999"},
+            format="json",
+        )
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_operador_no_borra_sucursales(self):
+        self.autenticar(self.operador)
+        self.assertEqual(
+            self.client.delete(f"/api/sucursales/{self.branch.id}/").status_code, 403
+        )
+
+    def test_operador_no_borra_pedidos(self):
+        self.autenticar(self.operador)
+        self.assertEqual(
+            self.client.delete(f"/api/pedidos/{self.pedido.id}/").status_code, 403
+        )
+
+    def test_operador_puede_leer_catalogos(self):
+        self.autenticar(self.operador)
+        self.assertEqual(self.client.get("/api/catalogo-productos/").status_code, 200)
+
+    def test_admin_si_borra_facturas(self):
+        self.autenticar(self.admin)
+        from .models import Factura
+
+        respuesta = self.client.delete(f"/api/facturas/{self.factura.id}/")
+        self.assertEqual(respuesta.status_code, 204)
+        self.assertFalse(Factura.objects.filter(id=self.factura.id).exists())
 
 
 class TokenApiTest(ApiBaseTestCase):

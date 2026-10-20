@@ -27,6 +27,40 @@ def ids_admins():
     )
 
 
+def cargo_de_usuario(user):
+    """Cargo actual del usuario en la BD ('admin' u 'operador'); '' si no hay perfil.
+
+    Se lee en cada peticion (no de la sesion) para que un cambio de rol o una
+    cuenta desactivada surta efecto de inmediato, igual que hace `autorizacion`.
+    """
+    from .models import UserProfile
+
+    if not user or not user.is_authenticated:
+        return ""
+    return (
+        UserProfile.objects.filter(user=user)
+        .values_list("cargo", flat=True)
+        .first()
+        or ""
+    )
+
+
+def limite_alcanzado(clave, maximo, ventana):
+    """Incrementa el contador de `clave` en cache y devuelve True si supero el maximo.
+
+    Ventana en segundos. Usado para limitar envios de correo, el formulario
+    publico de contacto y las consultas al chat IA sin depender de DRF.
+    """
+    from django.core.cache import cache
+
+    try:
+        intentos = cache.incr(clave)
+    except ValueError:
+        cache.set(clave, 1, ventana)
+        intentos = 1
+    return intentos > maximo
+
+
 def notificaciones_no_leidas(request):
     from .models import Notificacion
 

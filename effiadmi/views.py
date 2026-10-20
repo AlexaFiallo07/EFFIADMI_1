@@ -17,12 +17,9 @@ from django.db.models import Sum, F, Count, Max, Q
 from django.db.models.functions import Cast
 from django.db.models import IntegerField
 from django.utils import timezone
-from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.core import signing
 from django.core.signing import salted_hmac
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
 import hmac
 from datetime import timedelta, datetime
 from django import template as django_template
@@ -63,6 +60,19 @@ def actor(value):
     return usuario.first_name or usuario.username or usuario.email or "Sistema"
 
 
+def _celda_excel(valor):
+    """Neutraliza la inyeccion de formulas en exportaciones (CWE-1236).
+
+    openpyxl trata como formula cualquier texto que empieza por =, +, - o @;
+    al abrir el .xlsx en Excel se ejecutaria (phishing/robo de datos locales).
+    Se antepone comilla simple para que se muestre como texto literal.
+    """
+    texto = "" if valor is None else str(valor)
+    if texto[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + texto
+    return texto
+
+
 @register.filter(name="marklight")
 def marklight(value):
     from django.utils.html import escape
@@ -91,9 +101,10 @@ from .models import (
     RegistroIngreso, MAX_ASUNTO_CORREO,
 )
 from .servicio_ia import consultar_asistente_effiadmi
+from base.middleware import ip_real_del_request
 from .utilidades import (
     autorizacion, crear_notificacion, ids_admins, enviar_correo, validar_adjunto,
-    _correo_configurado,
+    _correo_configurado, limite_alcanzado,
 )
 
 logger = logging.getLogger(__name__)
@@ -138,11 +149,7 @@ def login(request):
 
         # Candado por usuario: 5 fallos en 15 min bloquean ese usuario aunque
         # el atacante cambie de IP (el middleware aparte limita por IP).
-        ip_login = (
-            request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
-            or request.META.get("REMOTE_ADDR", "")
-            or "desconocida"
-        )[:45]
+        ip_login = ip_real_del_request(request)
         clave_usuario = (email or "").strip().lower()
         clave_candado = f"login_lock:{clave_usuario}"
         if cache.get(clave_candado):
@@ -1852,6 +1859,9 @@ def eliminar_notificacion(request, id):
 @autorizacion(roles=['admin', 'operador'])
 def marcar_todas_leidas(request):
     try:
+        # Solo POST: un GET via <img> en otra pagina no debe cambiar el estado.
+        if request.method != "POST":
+            return redirect("effiadmi:lista_notificaciones")
         usuario = User.objects.filter(id=request.session["logueado"]["id"]).first()
         Notificacion.objects.filter(usuario=usuario, leido=False).update(leido=True)
         messages.success(request, "Todas las notificaciones marcadas como leidas.")
@@ -2003,13 +2013,21 @@ def estadisticas_ia(request):
                 return redirect(base_chat)
             pregunta = request.POST.get("pregunta", "").strip()
             if pregunta:
-                conversacion_activa, respuesta = _responder_chat(
-                    usuario, pregunta,
-                    conversacion=conversacion_activa,
-                    contexto_negocio=contexto_negocio,
-                )
-                if _es_error_ia(respuesta):
-                    messages.error(request, respuesta)
+                # Mismo limite que el endpoint /api/ia/consultar/ (scope 'ia'):
+                # sin esto el chat web permitia vaciar la cuota de Gemini.
+                if limite_alcanzado(f"ia_chat:{usuario.id}", 20, 60):
+                    messages.error(
+                        request,
+                        "Llegaste al limite de consultas a la IA por minuto. Espera un momento y vuelve a intentarlo.",
+                    )
+                else:
+                    conversacion_activa, respuesta = _responder_chat(
+                        usuario, pregunta,
+                        conversacion=conversacion_activa,
+                        contexto_negocio=contexto_negocio,
+                    )
+                    if _es_error_ia(respuesta):
+                        messages.error(request, respuesta)
                 # POST -> Redirect -> GET: al recargar ya no se reenvia el mensaje
                 # (antes se re-renderizaba el POST y F5 duplicaba la pregunta).
                 if conversacion_activa:
@@ -2333,6 +2351,14 @@ def lista_correos(request):
         enviados = enviados[:50]
 
         if request.method == "POST":
+            # Limite por usuario (10 correos/hora): sin esto cualquier cuenta
+            # usaba el SMTP corporativo como relay ilimitado de phishing.
+            if limite_alcanzado(f"correo_envio:{logueado.get('id') or 'anon'}", 10, 3600):
+                messages.error(
+                    request,
+                    "Enviaste muchos correos recientemente. Intenta de nuevo en una hora.",
+                )
+                return redirect("effiadmi:lista_correos")
             destinatario = (request.POST.get("destinatario", "") or "").strip()
             asunto = (request.POST.get("asunto", "") or "").strip()
             cuerpo = (request.POST.get("cuerpo", "") or "").strip()
@@ -2531,7 +2557,11 @@ def crear_factura_compra(request):
 def exportar_facturas_compra_excel(request):
     try:
         qs = FacturaCompra.objects.select_related("proveedor").all()
-        qs, mes_seleccionado, proveedor_id = _aplicar_filtros_facturas_compra(request, qs)
+        # El helper devuelve 4 valores (incluye el texto de busqueda); sin
+        # desempaquetarlos los cuatro la exportacion estallaba con ValueError.
+        qs, mes_seleccionado, _proveedor_id, _q = _aplicar_filtros_facturas_compra(
+            request, qs
+        )
         qs = qs.order_by("fecha", "id")
 
         wb = Workbook()
@@ -2549,11 +2579,11 @@ def exportar_facturas_compra_excel(request):
         fila = 4
         total = Decimal("0")
         for fc in qs:
-            ws.cell(row=fila, column=1, value=fc.numero or "")
+            ws.cell(row=fila, column=1, value=_celda_excel(fc.numero or ""))
             ws.cell(row=fila, column=2, value=fc.fecha.strftime("%d/%m/%Y"))
-            ws.cell(row=fila, column=3, value=fc.proveedor.nombre if fc.proveedor else "-")
+            ws.cell(row=fila, column=3, value=_celda_excel(fc.proveedor.nombre if fc.proveedor else "-"))
             ws.cell(row=fila, column=4, value=float(fc.monto))
-            ws.cell(row=fila, column=5, value=fc.notas or "")
+            ws.cell(row=fila, column=5, value=_celda_excel(fc.notas or ""))
             total += fc.monto
             fila += 1
 
@@ -2728,6 +2758,12 @@ def solicitar_recuperacion(request):
             validate_email(email)
         except ValidationError:
             return render(request, "usuarios/recuperar_password.html", {"error": "Escribe un correo válido."})
+        # Candado por correo: una sola solicitud cada 10 min por cuenta, asi
+        # nadie puede bombardear la bandeja de un tercero ni usar la vista
+        # como relay. La respuesta es la misma exista o no la cuenta.
+        clave_candado = f"recuperar_lock:{email.lower()}"
+        if cache.get(clave_candado):
+            return render(request, "usuarios/recuperar_password.html", {"enviado": True})
         user = User.objects.filter(email__iexact=email, is_active=True).first()
         if user:
             token = token_recuperacion(user)
@@ -2739,6 +2775,7 @@ def solicitar_recuperacion(request):
                     enviar_correo(user.email, "Recuperación de contraseña - EFFIADMI", cuerpo, request=request, enlace=enlace, texto_enlace="Restablecer contraseña", template="emails/password_reset.html")
                 except Exception:
                     pass
+        cache.set(clave_candado, 1, 600)
         return render(request, "usuarios/recuperar_password.html", {"enviado": True})
     return render(request, "usuarios/recuperar_password.html")
 

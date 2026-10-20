@@ -1,5 +1,6 @@
 """Pruebas de las vistas con sesion (permisos, CRUD, inventario, pedidos, usuarios)."""
 
+from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth.models import User
@@ -10,6 +11,7 @@ from .models import (
     Branch,
     Cliente,
     Factura,
+    FacturaCompra,
     Inventory,
     InventoryLog,
     Notificacion,
@@ -351,3 +353,63 @@ class ProveedoresTest(EffiBaseTestCase):
         self.client.post(reverse("effiadmi:eliminar_proveedor", args=[proveedor.id]), follow=True)
         proveedor.refresh_from_db()
         self.assertFalse(proveedor.activo)
+
+
+class FacturasCompraExportTest(EffiBaseTestCase):
+    """Regresion: la exportacion a Excel reventaba con un ValueError.
+
+    `_aplicar_filtros_facturas_compra` devuelve 4 valores y la vista los
+    desempaquetaba en 3; la excepcion quedaba tragada y el boton entregaba un
+    redirect en lugar del archivo. Aqui se exige el xlsx real con y sin
+    filtros.
+    """
+
+    MIME_XLSX = (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    def setUp(self):
+        super().setUp()
+        self.iniciar_sesion(self.admin)
+        self.proveedor = Proveedor.objects.create(
+            nombre="Distribuidora", correo="dist@test.com", telefono="1", direccion="x"
+        )
+        FacturaCompra.objects.create(
+            proveedor=self.proveedor,
+            usuario=self.admin,
+            numero="FC-001",
+            fecha=date.today(),
+            monto=150000,
+        )
+
+    def test_exporta_un_xlsx_valido(self):
+        respuesta = self.client.get(
+            reverse("effiadmi:exportar_facturas_compra_excel")
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta["Content-Type"], self.MIME_XLSX)
+        self.assertEqual(
+            respuesta.content[:2],
+            b"PK",
+            "El archivo no es un xlsx (zip) valido",
+        )
+
+    def test_exporta_con_cada_filtro(self):
+        consultas = [
+            "",
+            "?q=FC-001",
+            "?q=inexistente",
+            "?mes=2026-10",
+            "?mes=1999-01",
+            f"?proveedor={self.proveedor.id}",
+            "?proveedor=999999",
+            "?q=FC&mes=2026-10&proveedor=" + str(self.proveedor.id),
+        ]
+        for consulta in consultas:
+            with self.subTest(consulta=consulta or "(sin filtros)"):
+                respuesta = self.client.get(
+                    reverse("effiadmi:exportar_facturas_compra_excel") + consulta
+                )
+                self.assertEqual(respuesta.status_code, 200, consulta)
+                self.assertEqual(respuesta["Content-Type"], self.MIME_XLSX, consulta)
+                self.assertTrue(respuesta.content.startswith(b"PK"), consulta)

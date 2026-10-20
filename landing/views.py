@@ -4,6 +4,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.shortcuts import render, redirect
 
+from base.middleware import ip_real_del_request
+from effiadmi.utilidades import limite_alcanzado
+
 from .models import MensajeContacto
 
 # El formulario es publico: sin limites de longitud, un POST directo podria
@@ -287,6 +290,14 @@ def tecnologia(request):
 
 def contacto(request):
     if request.method == "POST":
+        # Formulario publico: limite por IP para frenar el spam/DoS de la BD
+        # de mensajes (5 envios cada 10 min).
+        if limite_alcanzado(f"contacto:{ip_real_del_request(request)}", 5, 600):
+            messages.error(
+                request,
+                "Recibimos varios mensajes tuyos. Espera unos minutos antes de enviar otro.",
+            )
+            return redirect("contacto")
         nombre = request.POST.get("nombre", "").strip()
         correo = request.POST.get("correo", "").strip()
         asunto = request.POST.get("asunto", "").strip()

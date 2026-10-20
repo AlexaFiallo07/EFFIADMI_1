@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 
@@ -6,6 +7,11 @@ from .views import MAX_ASUNTO_CONTACTO, MAX_MENSAJE_CONTACTO
 
 
 class LandingViewTest(TestCase):
+    def setUp(self):
+        # El antispam por IP vive en la cache (locmem) y esta persiste entre
+        # tests; sin limpiarla los POST de un test consumen el cupo del siguiente.
+        cache.clear()
+
     def test_carga_landing(self):
         respuesta = self.client.get(reverse("landing"))
         self.assertEqual(respuesta.status_code, 200)
@@ -85,3 +91,12 @@ class LandingViewTest(TestCase):
             follow=True,
         )
         self.assertEqual(MensajeContacto.objects.count(), 0)
+
+    def test_antispam_bloquea_envios_masivos(self):
+        datos = {"nombre": "Ana", "correo": "ana@test.com", "asunto": "Demo", "mensaje": "Hola"}
+        for _ in range(5):
+            self.client.post(reverse("contacto"), datos, follow=True)
+        self.assertEqual(MensajeContacto.objects.count(), 5)
+        # El sexto POST desde la misma IP queda bloqueado por el limite.
+        self.client.post(reverse("contacto"), datos, follow=True)
+        self.assertEqual(MensajeContacto.objects.count(), 5)

@@ -2,6 +2,7 @@ from django.db import transaction
 from django.db.models import Sum
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
@@ -32,6 +33,65 @@ from .serializers import (
     StockAdjustSerializer,
 )
 from .servicio_ia import consultar_asistente_effiadmi
+from .utilidades import cargo_de_usuario
+
+
+# ============================================================
+# Permisos por rol (paridad con la web)
+# ============================================================
+# Antes todos los ViewSets usaban solo IsAuthenticated: cualquier operador con
+# un JWT podia borrar facturas, crear productos con stock inventado o borrar
+# sucursales enteras (cascada sobre Inventory) desde /api/, aunque en la web
+# esas acciones son exclusivas del admin. Aqui se replica la matriz de roles
+# de effiadmi/views.py (@autorizacion).
+
+def _es_admin(user):
+    return cargo_de_usuario(user) == "admin"
+
+
+class LecturaTodosEscrituraAdmin(BasePermission):
+    """Lectura para admin y operador; cualquier escritura solo para admin."""
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        return request.method in SAFE_METHODS or _es_admin(request.user)
+
+
+class EscrituraClienteApi(BasePermission):
+    """Como la web: operador y admin crean clientes; editar/borrar es admin."""
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.method in SAFE_METHODS or request.method == "POST":
+            return True
+        return _es_admin(request.user)
+
+
+class EscrituraPedidoApi(BasePermission):
+    """Como la web: operador crea/edita/paga pedidos; borrar es solo admin."""
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.method != "DELETE":
+            return True
+        return _es_admin(request.user)
+
+
+class EscrituraInventarioApi(BasePermission):
+    """Ajustar stock = admin y operador (como registrar_movimiento en la web);
+    el CRUD directo de objetos Inventory es solo admin."""
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.method in SAFE_METHODS:
+            return True
+        if getattr(view, "action", None) == "ajustar_stock":
+            return cargo_de_usuario(request.user) in ("admin", "operador")
+        return _es_admin(request.user)
 
 
 # ============================================================
@@ -41,6 +101,9 @@ from .servicio_ia import consultar_asistente_effiadmi
 class BranchViewSet(viewsets.ModelViewSet):
     queryset = Branch.objects.all().order_by("id")
     serializer_class = BranchSerializer
+    # Borrar una sucursal en cascada destruye todo su Inventory (models.py),
+    # asi que la escritura es exclusiva del admin.
+    permission_classes = [LecturaTodosEscrituraAdmin]
 
 
 # ============================================================
@@ -50,6 +113,8 @@ class BranchViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all().order_by("id")
     serializer_class = ProductSerializer
+    # La web limita crear/editar/borrar productos a admin (crear_producto).
+    permission_classes = [LecturaTodosEscrituraAdmin]
 
 
 # ============================================================
@@ -59,6 +124,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 class InventoryViewSet(viewsets.ModelViewSet):
     queryset = Inventory.objects.select_related("product", "branch").all().order_by("id")
     serializer_class = InventorySerializer
+    permission_classes = [EscrituraInventarioApi]
 
     @action(detail=False, methods=["post"], url_path="ajustar-stock")
     def ajustar_stock(self, request):
@@ -148,6 +214,7 @@ class InventoryViewSet(viewsets.ModelViewSet):
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all().order_by("id")
     serializer_class = ClienteSerializer
+    permission_classes = [EscrituraClienteApi]
 
 
 # ============================================================
@@ -157,6 +224,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
 class ProveedorViewSet(viewsets.ModelViewSet):
     queryset = Proveedor.objects.all().order_by("id")
     serializer_class = ProveedorSerializer
+    permission_classes = [LecturaTodosEscrituraAdmin]
 
 
 # ============================================================
@@ -166,6 +234,9 @@ class ProveedorViewSet(viewsets.ModelViewSet):
 class FacturaViewSet(viewsets.ModelViewSet):
     queryset = Factura.objects.select_related("cliente").prefetch_related("detalles__producto").all()
     serializer_class = FacturaSerializer
+    # En la web editar/anular/eliminar facturas es solo admin; un DELETE via
+    # API era borrado fisico sin pasar por la anulacion auditable.
+    permission_classes = [LecturaTodosEscrituraAdmin]
 
     def perform_create(self, serializer):
         # 'usuario' es solo lectura en el serializer; el emisor es quien llama.
@@ -179,6 +250,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 class PedidoViewSet(viewsets.ModelViewSet):
     queryset = Pedido.objects.select_related("cliente").prefetch_related("detalles__producto").all()
     serializer_class = PedidoSerializer
+    permission_classes = [EscrituraPedidoApi]
 
     def perform_create(self, serializer):
         serializer.save(usuario=self.request.user)

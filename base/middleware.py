@@ -7,6 +7,7 @@ de login ademas aplica un candado por usuario (5 fallos = 15 min), de modo
 que entre los dos cubren IP-rotando y usuario-rotando.
 """
 
+from django.conf import settings
 from django.core.cache import cache
 from django.http import HttpResponse
 
@@ -18,6 +19,24 @@ LIMITES = {
     "login": (10, 60),
     "recuperar": (3, 600),
 }
+
+
+def ip_real_del_request(request):
+    """IP del cliente sin dar por buena una cabecera X-Forwarded-For falsificada.
+
+    Por defecto se ignora el XFF (cualquier cliente puede mandarlo) y se usa
+    REMOTE_ADDR. Solo con TRUST_X_FORWARDED_FOR=1 (hay un proxy de confianza
+    delante que SOBRESCRIBE la cabecera) se toma la ULTIMA IP de la lista, que
+    es la que vio el proxy. Antes se leia la primera entrada, con lo que un
+    atacante rotando XFF evadia el limite de login/recuperacion.
+    """
+    if getattr(settings, "TRUST_PROXY_XFF", False):
+        xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if xff:
+            candidata = xff.split(",")[-1].strip()
+            if candidata:
+                return candidata[:45]
+    return (request.META.get("REMOTE_ADDR", "") or "desconocida")[:45]
 
 
 def _clave(path):
@@ -38,11 +57,7 @@ class LoginThrottleMiddleware:
         ):
             tipo = _clave(request.path)
             maximo, ventana = LIMITES[tipo]
-            ip = (
-                request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
-                or request.META.get("REMOTE_ADDR", "")
-                or "desconocida"
-            )[:45]
+            ip = ip_real_del_request(request)
             clave = f"throttle:{tipo}:{ip}"
             try:
                 intentos = cache.incr(clave)

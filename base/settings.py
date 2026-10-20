@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -94,6 +95,12 @@ X_FRAME_OPTIONS = "DENY"
 if os.getenv("SECURE_PROXY_SSL_HEADER", "0") == "1":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# X-Forwarded-For: por defecto se IGNORA y la IP real es REMOTE_ADDR, porque
+# cualquier cliente puede mandar esa cabecera y asi evadir el candado de login.
+# Activa TRUST_X_FORWARDED_FOR=1 SOLO si hay un proxy de confianza (nginx,
+# Caddy, ALB) que sobrescriba la cabecera en cada peticion entrante.
+TRUST_PROXY_XFF = os.getenv("TRUST_X_FORWARDED_FOR", "0") == "1"
+
 
 # Application definition
 
@@ -156,15 +163,33 @@ WSGI_APPLICATION = 'base.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# Base de datos: SQLite por defecto (desarrollo, sin configurar nada). Para
-# produccion/nube define DB_ENGINE=postgres y las credenciales. En Supabase:
-#   DB_HOST=aws-0-<region>.pooler.supabase.com
-#   DB_USER=postgres.<project-ref>
-#   DB_NAME=postgres
-#   DB_PORT=6543  (pooler modo transaccion) o 5432 (conexion directa/sesion)
-# y desactiva cursores del servidor con DB_DISABLE_SERVER_SIDE_CURSORS=1.
-# Requiere el driver 'psycopg[binary]' instalado (ver requirements.txt).
-if os.getenv("DB_ENGINE", "sqlite").lower() in ("postgres", "postgresql"):
+# El Django de test crea y borra una BD 'test_<nombre>'. Con Postgres remoto
+# (Supabase) eso tarda mucho y puede fallar por permisos, asi que por defecto
+# la suite corre en SQLite (en memoria, no toca db.sqlite3 ni la BD remota).
+# Para probar la suite contra Postgres: TEST_DB_ENGINE=postgres manage.py test
+_USAR_SQLITE = os.getenv("DB_ENGINE", "sqlite").lower() not in (
+    "postgres",
+    "postgresql",
+)
+if "test" in sys.argv and os.getenv("TEST_DB_ENGINE", "sqlite").lower() == "sqlite":
+    _USAR_SQLITE = True
+
+if _USAR_SQLITE:
+    # SQLite por defecto (desarrollo local, sin configurar nada).
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+else:
+    # Conexion remota. En Supabase:
+    #   DB_HOST=aws-0-<region>.pooler.supabase.com
+    #   DB_USER=postgres.<project-ref>
+    #   DB_NAME=postgres
+    #   DB_PORT=6543  (pooler modo transaccion) o 5432 (conexion directa/sesion)
+    # y desactiva cursores del servidor con DB_DISABLE_SERVER_SIDE_CURSORS=1.
+    # Requiere el driver 'psycopg[binary]' instalado (ver requirements.txt).
     _db_options = {"connect_timeout": 5}
     _sslmode = os.getenv("DB_SSLMODE", "require").strip()
     if _sslmode:
@@ -185,13 +210,6 @@ if os.getenv("DB_ENGINE", "sqlite").lower() in ("postgres", "postgresql"):
     # lado del servidor; sin esto las consultas grandes fallan.
     if os.getenv("DB_DISABLE_SERVER_SIDE_CURSORS") == "1":
         DISABLE_SERVER_SIDE_CURSORS = True
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
 
 
 # ==================== CACHE ====================
