@@ -6,7 +6,7 @@ from functools import wraps
 
 
 def crear_notificacion(usuarios, mensaje, enlace=""):
-    from .models import Notificacion, UserProfile
+    from .models import Notificacion
 
     if isinstance(usuarios, int):
         usuarios = [usuarios]
@@ -216,10 +216,6 @@ def enviar_correo(destinatario, asunto, cuerpo, **kwargs):
         return (True, "") if enviados else (False, "El servidor de correo no confirmó el envío.")
     except Exception as e:
         return False, str(e)
-
-
-def enviar_correo_html(destinatario, asunto, cuerpo, **kwargs):
-    return enviar_correo(destinatario, asunto, cuerpo, **kwargs)
 
 
 # Tipos de archivo admitidos al adjuntar una factura de compra. Un .html o un

@@ -17,7 +17,6 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path, re_path
 from base.views import media_protegida
-from effiadmi import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),

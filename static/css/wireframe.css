@@ -93,36 +93,6 @@
 .sf-fila .switch { padding: 2px 4px; }
 .sf-fila .switch-label { color: var(--gris); font-size: 12px; }
 
-.perfil-dock {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 11px;
-    border-radius: 16px;
-    background-color: var(--color-primary-light);
-    border: 1px solid var(--color-border);
-}
-.perfil-avatar {
-    width: 38px;
-    height: 38px;
-    flex: 0 0 auto;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background-image: linear-gradient(140deg, var(--plum), var(--iris));
-    color: #fff;
-    font-family: var(--font-primary);
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    box-shadow: 0 8px 18px -10px rgba(58, 35, 112, 0.7);
-}
-.perfil-info { min-width: 0; }
-.perfil-info b { display: block; font-size: 13px; font-weight: 700; color: var(--tinta); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.perfil-info small { font-size: 11.5px; color: var(--humo); }
-.perfil-flecha { margin-left: auto; font-size: 20px; color: var(--humo); }
-
 .menu-link.logout-btn { padding: 9px 12px; border-radius: 12px; color: var(--gris); }
 .menu-link.logout-btn .material-symbols-outlined { font-size: 19px; }
 .menu-link.logout-btn:hover { background-color: var(--rojo-light); color: var(--rojo); transform: none; }
@@ -211,9 +181,6 @@
 .btn-solido:hover { transform: translateY(-2px); box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.5); }
 .btn-fantasma { background-color: rgba(255, 255, 255, 0.16); color: #fff; border-color: rgba(255, 255, 255, 0.34); }
 .btn-fantasma:hover { background-color: rgba(255, 255, 255, 0.26); }
-.btn-secundario { background-color: var(--blanco); color: var(--tinta); border-color: var(--color-border); }
-.btn-secundario:hover { border-color: var(--iris); color: var(--iris); transform: translateY(-2px); }
-
 /* Acciones de riesgo/exito en plano solido (igual familia que btn-primary) */
 .btn-success {
     background-image: none;
@@ -291,7 +258,6 @@
 
 /* ---------- Formularios ---------- */
 .form-control,
-.form-select,
 textarea.form-control { border-width: 1.5px; border-radius: 13px; padding: 11px 15px; }
 
 /* ---------- Alertas ---------- */
@@ -505,6 +471,8 @@ textarea.form-control { border-width: 1.5px; border-radius: 13px; padding: 11px 
     margin-top: 32px;
     align-items: stretch;
 }
+/* La seccion EFFI ahora va arriba: el bloque de KPIs que le sigue separa igual. */
+.effi-section + .kpi-matrix { margin-top: 32px; }
 .effi-section .effi-embed { padding: 0; overflow: hidden; }
 .effi-section .effi-panel {
     position: static;

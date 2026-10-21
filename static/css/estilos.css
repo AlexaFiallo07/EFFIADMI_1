@@ -35,8 +35,6 @@
 
     /* Medidas */
     --max-w: 1180px;
-    --g: 8px;
-    --r-sm: 6px;
     --r: 10px;
     --r-lg: 18px;
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -80,11 +78,6 @@ button { font-family: inherit; cursor: pointer; }
 .contenedor {
     width: min(var(--max-w), 90%);
     margin-inline: auto;
-}
-
-.sr-only {
-    position: absolute; width: 1px; height: 1px;
-    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
 
 /* ============================================================
@@ -131,16 +124,6 @@ button { font-family: inherit; cursor: pointer; }
 .btn-contorno:hover {
     background-color: var(--lavanda-clara);
     transform: translateY(-2px);
-}
-
-.btn-claro {
-    background-color: var(--blanco);
-    color: var(--uva);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, .16);
-}
-.btn-claro:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 30px rgba(0, 0, 0, .22);
 }
 
 .btn .flecha { transition: transform .28s var(--ease); }

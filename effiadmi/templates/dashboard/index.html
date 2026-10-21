@@ -22,7 +22,7 @@
     </div>
 
     <!-- ============ FILA 1 · BIENVENIDA + CALENDARIO ============ -->
-    <section class="dashboard-panel-card placa-bienvenida span-7"
+    <section class="dashboard-panel-card placa-bienvenida span-6"
              id="bienvenida"
              data-nombre="{{ request.session.logueado.nombre|default:'Usuario' }}">
         <div class="bienvenida-fila">
@@ -61,7 +61,7 @@
         </div>
     </section>
 
-    <section class="dashboard-panel-card span-5">
+    <section class="dashboard-panel-card span-6">
         <div class="cal-enc">
             <div class="cal-mes" id="calMes">&nbsp;</div>
             <div class="cal-nav">
@@ -214,7 +214,7 @@
         </div>
     </section>
 
-    <section class="dashboard-panel-card span-5">
+    <section class="dashboard-panel-card span-4">
         <div class="placa-head">
             <div class="placa-titulo">
                 <span class="material-symbols-outlined">bar_chart</span>
@@ -232,7 +232,7 @@
         {% endif %}
     </section>
 
-    <section class="dashboard-panel-card span-3">
+    <section class="dashboard-panel-card span-4">
         <div class="placa-head">
             <div class="placa-titulo">
                 <span class="material-symbols-outlined">warning_amber</span>
@@ -259,7 +259,7 @@
     </section>
 
     <!-- ============ FILA 4 · ACTIVIDAD + CATEGORÍAS ============ -->
-    <section class="dashboard-panel-card span-7">
+    <section class="dashboard-panel-card span-6">
         <div class="placa-head">
             <div class="placa-titulo">
                 <span class="material-symbols-outlined">history</span>
@@ -296,7 +296,7 @@
         </div>
     </section>
 
-    <section class="dashboard-panel-card span-5">
+    <section class="dashboard-panel-card span-6">
         <div class="placa-head">
             <div class="placa-titulo">
                 <span class="material-symbols-outlined">pie_chart</span>
@@ -313,54 +313,7 @@
         {% endif %}
     </section>
 
-    <!-- ============ FILA 5 · ACCIONES RÁPIDAS + PERFIL ============ -->
-    <section class="dashboard-panel-card span-7">
-        <div class="placa-head">
-            <div class="placa-titulo">
-                <span class="material-symbols-outlined">bolt</span>
-                <div>
-                    <h3>Acciones rápidas</h3>
-                    <span class="placa-sub">Lo que más usas</span>
-                </div>
-            </div>
-        </div>
-        <div class="acciones-rap">
-            <a class="accion" href="{% url 'effiadmi:crear_producto' %}">
-                <span class="acc-ico"><span class="material-symbols-outlined">add_box</span></span>
-                <span class="accion-txt">Nuevo producto</span>
-            </a>
-            <a class="accion" href="{% url 'effiadmi:crear_cliente' %}">
-                <span class="acc-ico"><span class="material-symbols-outlined">person_add</span></span>
-                <span class="accion-txt">Agregar cliente</span>
-            </a>
-            <a class="accion" href="{% url 'effiadmi:crear_pedido' %}">
-                <span class="acc-ico"><span class="material-symbols-outlined">shopping_cart</span></span>
-                <span class="accion-txt">Nuevo pedido</span>
-            </a>
-            <a class="accion" href="{% url 'effiadmi:crear_factura_compra' %}">
-                <span class="acc-ico"><span class="material-symbols-outlined">upload_file</span></span>
-                <span class="accion-txt">Subir factura</span>
-            </a>
-        </div>
-    </section>
-
-    <section class="dashboard-panel-card span-5 perfil-rapido">
-        <div class="avatar-grande">{{ perfil_iniciales }}</div>
-        <div class="perfil-rapido-nombre">{{ request.session.logueado.nombre|default:'Usuario' }}</div>
-        <span class="rol-pastilla">{{ perfil_cargo }}</span>
-        <div class="perfil-stats">
-            <div class="pstat"><b>{{ total_productos }}</b><small>Productos</small></div>
-            <div class="pstat"><b>{{ total_clientes }}</b><small>Clientes</small></div>
-            <div class="pstat"><b>{{ total_pedidos }}</b><small>Pedidos</small></div>
-        </div>
-        <a class="btn btn-solido" style="width:100%;justify-content:center;margin-top:16px"
-           href="{% url 'effiadmi:perfil' %}">
-            <span class="material-symbols-outlined" style="font-size:18px">person</span>
-            Ver mi perfil
-        </a>
-    </section>
-
-    <!-- ============ FILA 6 · PEDIDOS RECIENTES ============ -->
+    <!-- ============ FILA 5 · PEDIDOS RECIENTES ============ -->
     <section class="dashboard-panel-card span-12">
         <div class="placa-head">
             <div class="placa-titulo">

@@ -24,7 +24,6 @@ from landing.views import MODULOS
 
 from .models import (
     ChatHistorial,
-    Cliente,
     Conversacion,
     CorreoEnviado,
     Factura,
@@ -33,7 +32,6 @@ from .models import (
     Notificacion,
     Pedido,
     PedidoDetalle,
-    Product,
     Proveedor,
     ProveedorProducto,
     Reporte,

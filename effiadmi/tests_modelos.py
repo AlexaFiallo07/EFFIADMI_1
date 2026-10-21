@@ -20,7 +20,6 @@ from .models import (
     Product,
     Proveedor,
     ProveedorProducto,
-    UserProfile,
 )
 from .soporte_pruebas import EffiBaseTestCase
 

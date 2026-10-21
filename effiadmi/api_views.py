@@ -16,7 +16,6 @@ from .models import (
     InventoryLog,
     Notificacion,
     Pedido,
-    PedidoDetalle,
     Product,
     Proveedor,
 )
