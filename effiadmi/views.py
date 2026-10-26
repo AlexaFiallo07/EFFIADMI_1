@@ -7,7 +7,6 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -137,7 +136,7 @@ from .servicio_ia import consultar_asistente_effiadmi
 from base.middleware import ip_real_del_request
 from .utilidades import (
     autorizacion, crear_notificacion, ids_admins, enviar_correo, validar_adjunto,
-    _correo_configurado, limite_alcanzado,
+    _correo_configurado, limite_alcanzado, validar_correo_electronico,
 )
 
 logger = logging.getLogger(__name__)
@@ -177,13 +176,22 @@ def usuario_desde_token(token):
 
 def login(request):
     if request.method == "POST":
-        email = request.POST.get("username")
+        email = (request.POST.get("username") or "").strip()
         contrasena = request.POST.get("password")
+
+        if not email or not contrasena:
+            messages.error(request, "Escribe tu correo y tu contraseña.")
+            return redirect("effiadmi:login")
+
+        correo_valido, error_correo = validar_correo_electronico(email)
+        if not correo_valido:
+            messages.error(request, error_correo)
+            return redirect("effiadmi:login")
 
         # Candado por usuario: 5 fallos en 15 min bloquean ese usuario aunque
         # el atacante cambie de IP (el middleware aparte limita por IP).
         ip_login = ip_real_del_request(request)
-        clave_usuario = (email or "").strip().lower()
+        clave_usuario = email.lower()
         clave_candado = f"login_lock:{clave_usuario}"
         if cache.get(clave_candado):
             logger.warning(
@@ -371,9 +379,18 @@ def perfil(request):
     perfil, _ = UserProfile.objects.get_or_create(user=user)
 
     if request.method == "POST":
+        nuevo_email = (request.POST.get("email") or "").strip()
+        correo_valido, error_correo = validar_correo_electronico(nuevo_email)
+        if not correo_valido:
+            messages.error(request, error_correo)
+            ctx = {"usuario": user, "perfil": perfil}
+            if perfil.cargo == "admin":
+                ctx["usuarios"] = User.objects.select_related("profile").all().order_by("-id")
+            return render(request, "usuarios/perfil.html", ctx)
+
         user.first_name = request.POST.get("nombre", "")
         user.last_name = request.POST.get("apellido", "")
-        user.email = request.POST.get("email", "")
+        user.email = nuevo_email
         user.save()
 
         perfil.telefono = request.POST.get("telefono", "")
@@ -426,6 +443,11 @@ def crear_cliente(request):
                 messages.error(request, "Por favor completa todos los campos.")
                 return render(request, "clientes/formulario_clientes.html")
 
+            correo_valido, error_correo = validar_correo_electronico(correo)
+            if not correo_valido:
+                messages.error(request, error_correo)
+                return render(request, "clientes/formulario_clientes.html")
+
             Cliente.objects.create(
                 nombre=nombre,
                 correo=correo,
@@ -451,8 +473,16 @@ def editar_cliente(request, id):
         cliente = get_object_or_404(Cliente, pk=id)
 
         if request.method == "POST":
+            correo = (request.POST.get("correo") or "").strip()
+            correo_valido, error_correo = validar_correo_electronico(correo)
+            if not correo_valido:
+                messages.error(request, error_correo)
+                return render(
+                    request, "clientes/formulario_clientes.html", {"cliente": cliente}
+                )
+
             cliente.nombre = request.POST.get("nombre", "").strip()
-            cliente.correo = request.POST.get("correo", "").strip()
+            cliente.correo = correo
             cliente.telefono = request.POST.get("telefono", "").strip()
             cliente.direccion = request.POST.get("direccion", "").strip()
             cliente.save()
@@ -1523,12 +1553,17 @@ def crear_usuario(request):
         try:
             nombre = request.POST.get("nombre_usuario")
             apellido = request.POST.get("apellido_usuario")
-            email = request.POST.get("email")
+            email = (request.POST.get("email") or "").strip()
             contrasena = request.POST.get("contraseña")
             cargo = request.POST.get("cargo", "operador")
 
             if not all([nombre, email, contrasena]):
                 messages.error(request, "Por favor completa todos los campos.")
+                return render(request, "usuarios/crear.html")
+
+            correo_valido, error_correo = validar_correo_electronico(email)
+            if not correo_valido:
+                messages.error(request, error_correo)
                 return render(request, "usuarios/crear.html")
 
             if User.objects.filter(email=email).exists():
@@ -1580,6 +1615,12 @@ def editar_usuario(request, id):
 
         if request.method == "POST":
             nueva_contrasena = request.POST.get("contraseña")
+            email = (request.POST.get("email") or "").strip()
+
+            correo_valido, error_correo = validar_correo_electronico(email)
+            if not correo_valido:
+                messages.error(request, error_correo)
+                return render(request, "usuarios/editar.html", {"usuario": user, "perfil": perfil})
 
             if nueva_contrasena:
                 try:
@@ -1593,7 +1634,7 @@ def editar_usuario(request, id):
             with transaction.atomic():
                 user.first_name = request.POST.get("nombre_usuario", "")
                 user.last_name = request.POST.get("apellido_usuario", "")
-                user.email = request.POST.get("email", "")
+                user.email = email
 
                 if nueva_contrasena:
                     user.set_password(nueva_contrasena)
@@ -1684,6 +1725,11 @@ def crear_proveedor(request):
                 messages.error(request, "Por favor completa todos los campos.")
                 return render(request, "proveedores/crear.html")
 
+            correo_valido, error_correo = validar_correo_electronico(correo)
+            if not correo_valido:
+                messages.error(request, error_correo)
+                return render(request, "proveedores/crear.html")
+
             Proveedor.objects.create(
                 nombre=nombre,
                 correo=correo,
@@ -1709,8 +1755,14 @@ def editar_proveedor(request, id):
         proveedor = get_object_or_404(Proveedor, pk=id)
 
         if request.method == "POST":
+            correo = (request.POST.get("correo") or "").strip()
+            correo_valido, error_correo = validar_correo_electronico(correo)
+            if not correo_valido:
+                messages.error(request, error_correo)
+                return render(request, "proveedores/editar.html", {"proveedor": proveedor})
+
             proveedor.nombre = request.POST.get("nombre_proveedor", "").strip()
-            proveedor.correo = request.POST.get("correo", "").strip()
+            proveedor.correo = correo
             proveedor.telefono = request.POST.get("telefono", "").strip()
             proveedor.direccion = request.POST.get("direccion", "").strip()
             proveedor.save()
@@ -2421,12 +2473,8 @@ def lista_correos(request):
             elif len(asunto) > MAX_ASUNTO_CORREO:
                 error = f"El asunto no puede superar los {MAX_ASUNTO_CORREO} caracteres."
             else:
-                try:
-                    validate_email(destinatario)
-                except ValidationError:
-                    error = "Ingresa un correo electronico valido."
-                else:
-                    error = ""
+                correo_valido, error_correo = validar_correo_electronico(destinatario)
+                error = "" if correo_valido else error_correo
 
             if error:
                 messages.error(request, error)
@@ -2805,10 +2853,9 @@ def solicitar_recuperacion(request):
         email = request.POST.get("email", "").strip()
         if not email:
             return render(request, "usuarios/recuperar_password.html", {"error": "Escribe el correo de tu cuenta."})
-        try:
-            validate_email(email)
-        except ValidationError:
-            return render(request, "usuarios/recuperar_password.html", {"error": "Escribe un correo válido."})
+        correo_valido, error_correo = validar_correo_electronico(email)
+        if not correo_valido:
+            return render(request, "usuarios/recuperar_password.html", {"error": error_correo})
         # Candado por correo: una sola solicitud cada 10 min por cuenta, asi
         # nadie puede bombardear la bandeja de un tercero ni usar la vista
         # como relay. La respuesta es la misma exista o no la cuenta.

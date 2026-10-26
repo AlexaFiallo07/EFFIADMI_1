@@ -1,8 +1,10 @@
-﻿from django.shortcuts import redirect
+﻿import re
+from functools import wraps
+
+from django.shortcuts import redirect
 from django.contrib import messages
 from django.urls import reverse
 from django.core.mail import EmailMultiAlternatives
-from functools import wraps
 
 
 def crear_notificacion(usuarios, mensaje, enlace=""):
@@ -280,6 +282,170 @@ def validar_adjunto(archivo):
         return None, "El contenido del archivo no coincide con su extension."
 
     return archivo, ""
+
+
+_EXTENSIONES_CORREO = frozenset("""
+com co net org edu gov mil int info biz name pro aero asia cat coop jobs mobi
+museum post tel travel xxx
+app dev io ai tech online site store shop blog cloud digital email live life
+world today news media studio design art xyz top club vip link click website
+space fun icu buzz monster quest rest bar cafe pizza fitness health care clinic
+academy school university institute finance financial bank capital money market
+markets business enterprise industries engineering construction contractors
+realestate properties estate homes house land farm garden photo photography
+pics video audio music band show theater tickets events vacations holidays
+hotel hotels restaurant recipes food coffee wine beer organic green eco earth
+energy solar water city town zone center community social team group family
+friends love dating games game play toys kids baby wedding gifts deals discount
+sale auction download stream tube chat wiki help support expert consulting
+coach training education courses law legal attorney lawyer tax accountant
+insurance doctor dentist hospital pharmacy dental vision yoga golf tennis soccer
+football basketball baseball hockey cricket rugby fishing hunting camping
+outdoors adventure tours cruises flights airline airport taxi cars auto
+motorcycles boats yachts trucks parts repair tools equipment supplies materials
+glass wood metal steel gold silver diamond jewelry watches fashion shoes bags
+clothing style beauty hair skin makeup perfume pets dog cat vet veterinary
+horse plumbing electrician roofing painting cleaning security protection
+storage moving shipping delivery courier logistics freight transport
+tienda mercado compras salud belleza moda hogar jardin abogado contador
+seguros inmobiliaria propiedades construccion ingenieria educacion escuela
+universidad noticias periodico radio tv cine teatro musica arte fotografia
+deporte futbol restaurante comida turismo vuelos autos carros motos muebles
+ropa zapatos joyas mascotas veterinaria farmacia clinica dentista medico
+impuestos finanzas banco dinero inversion negocios empresa servicios
+soluciones sistemas redes tecnologia software nube correo web sitio
+ad ae af ag al am ao aq ar as at au aw ax az ba bb bd be bf bg bh bi bj bm
+bn bo br bs bt bw by bz ca cc cd cf cg ch ci ck cl cm cn cr cu cv cw cx cy cz
+de dj dk dm do dz ec ee eg er es et eu fi fj fk fm fo fr ga gb gd ge gf gg gh
+gi gl gm gn gp gq gr gs gt gu gw gy hk hm hn hr ht hu id ie il im in iq ir is
+it je jm jo jp ke kg kh ki km kn kp kr kw ky kz la lb lc li lk lr ls lt lu lv
+ly ma mc md me mg mh mk ml mm mn mo mp mq mr ms mt mu mv mw mx my mz na nc ne
+nf ng ni nl no np nr nu nz om pa pe pf pg ph pk pl pm pn pr ps pt pw py qa re
+ro rs ru rw sa sb sc sd se sg sh si sk sl sm sn so sr ss st su sv sx sy sz tc
+td tf tg th tj tk tl tm tn to tr tt tv tw tz ua ug uk us uy uz va vc ve vg vi
+vn vu wf ws ye yt za zm zw
+""".split())
+
+_LOCAL_CORREO_RE = re.compile(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+")
+_ETIQUETA_DOMINIO_RE = re.compile(r"[a-z0-9-]+")
+_EXTENSION_RE = re.compile(r"[a-z]{2,63}")
+
+
+def _dominio_existe(dominio):
+    """True/False si el DNS confirma o niega el dominio; None si no se pudo saber."""
+    import socket
+    import threading
+
+    from django.conf import settings
+    from django.core.cache import cache
+
+    if not getattr(settings, "VALIDAR_DOMINIO_CORREO", True):
+        return True
+
+    clave = f"correo_dominio:{dominio}"
+    cacheado = cache.get(clave)
+    if cacheado is not None:
+        return cacheado
+
+    resultado = [None]
+
+    def consultar():
+        try:
+            socket.getaddrinfo(dominio, 443, type=socket.SOCK_STREAM)
+            resultado[0] = True
+        except socket.gaierror as exc:
+            no_existe = {
+                getattr(socket, "EAI_NONAME", -2),
+                getattr(socket, "EAI_NODATA", -5),
+                11001,
+                11004,
+            }
+            resultado[0] = False if exc.errno in no_existe else None
+        except Exception:
+            resultado[0] = None
+
+    hilo = threading.Thread(target=consultar, daemon=True)
+    hilo.start()
+    hilo.join(3)
+
+    if resultado[0] is None:
+        return None
+    cache.set(clave, resultado[0], 3600 if resultado[0] else 900)
+    return resultado[0]
+
+
+def validar_correo_electronico(correo):
+    """Valida formato, dominio y extensión de un correo. Devuelve (válido, error)."""
+    from django.conf import settings
+    from django.core.exceptions import ValidationError
+    from django.core.validators import validate_email
+
+    correo = (correo or "").strip()
+    if not correo:
+        return False, "Escribe el correo electrónico."
+    if correo.count("@") != 1:
+        return False, "El correo debe contener un solo símbolo '@'."
+
+    local, dominio = correo.split("@")
+    if not local or not dominio:
+        return False, "El correo está incompleto. Usa el formato usuario@dominio.com."
+    if len(correo) > 254 or len(local) > 64:
+        return False, "El correo es demasiado largo."
+    if (
+        not _LOCAL_CORREO_RE.fullmatch(local)
+        or local.startswith(".")
+        or local.endswith(".")
+        or ".." in local
+    ):
+        return False, "La parte anterior al '@' no es válida."
+
+    dominio = dominio.strip().lower().rstrip(".")
+    if len(dominio) > 253 or ".." in dominio:
+        return False, "El dominio del correo no es válido."
+
+    etiquetas = dominio.split(".")
+    if len(etiquetas) < 2:
+        return False, (
+            "El correo debe incluir un dominio y una extensión, "
+            "por ejemplo: usuario@dominio.com."
+        )
+    for etiqueta in etiquetas:
+        if (
+            not etiqueta
+            or len(etiqueta) > 63
+            or etiqueta.startswith("-")
+            or etiqueta.endswith("-")
+            or not _ETIQUETA_DOMINIO_RE.fullmatch(etiqueta)
+        ):
+            return False, "El dominio del correo no es válido."
+
+    extension = etiquetas[-1]
+    if not _EXTENSION_RE.fullmatch(extension):
+        return False, (
+            "La extensión del correo no es válida. Usa una como .com o .co."
+        )
+
+    try:
+        validate_email(correo)
+    except ValidationError:
+        return False, "El correo no es válido. Usa el formato usuario@dominio.com."
+
+    verificar_dominio = getattr(settings, "VALIDAR_DOMINIO_CORREO", True)
+    if extension not in _EXTENSIONES_CORREO and not verificar_dominio:
+        return False, (
+            "La extensión del correo no es válida. Usa una como .com o .co."
+        )
+
+    existe = _dominio_existe(dominio)
+    if existe is False:
+        return False, "El dominio del correo no existe. Revisa la dirección."
+    if existe is None and extension not in _EXTENSIONES_CORREO:
+        return False, (
+            "No se pudo comprobar el dominio del correo. "
+            "Usa una extensión como .com o .co."
+        )
+
+    return True, ""
 
 
 def autorizacion(roles=[]):

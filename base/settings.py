@@ -246,6 +246,14 @@ AUTHENTICATION_BACKENDS = [
     'effiadmi.views.EmailOrUsernameBackend',
 ]
 
+# Comprueba por DNS que el dominio del correo exista antes de guardarlo o
+# iniciar sesion. En la suite se desactiva para no depender de la red.
+VALIDAR_DOMINIO_CORREO = os.getenv("VALIDAR_DOMINIO_CORREO", "1").lower() in (
+    "1", "true", "yes", "si",
+)
+if "test" in sys.argv:
+    VALIDAR_DOMINIO_CORREO = False
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',

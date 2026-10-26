@@ -20,7 +20,7 @@
                     </div>
                     <div class="form-group">
                         <label for="correo" class="form-label">Correo</label>
-                        <input type="email" id="correo" name="correo" class="form-control" value="{{ cliente.correo|default:'' }}" required>
+                        <input type="email" id="correo" name="correo" class="form-control" value="{{ cliente.correo|default:'' }}" pattern="[^\s@]+@[^\s@]+\.[A-Za-z]{2,}" title="Ejemplo: usuario@dominio.com" required>
                     </div>
                     <div class="form-group">
                         <label for="telefono" class="form-label">Telefono</label>
