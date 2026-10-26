@@ -71,3 +71,38 @@ class LoginThrottleMiddleware:
                     content_type="text/plain; charset=utf-8",
                 )
         return self.get_response(request)
+
+
+class CabecerasSeguridadMiddleware:
+    """Anade Content-Security-Policy y Permissions-Policy.
+
+    Django no las pone por defecto. Sin CSP, un XSS (o un CDN comprometido)
+    ejecuta cualquier script en el origen de la app. La politica permite los
+    dos CDN que ya usa el front (jsdelivr para Chart.js y Google Fonts) y
+    'unsafe-inline' porque las plantillas usan estilos y scripts inline; aun
+    asi bloquea cualquier origen no listado.
+    """
+
+    CSP = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com data:; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none'; "
+        "form-action 'self'"
+    )
+
+    PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=()"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        response.headers.setdefault("Content-Security-Policy", self.CSP)
+        response.headers.setdefault("Permissions-Policy", self.PERMISSIONS_POLICY)
+        return response

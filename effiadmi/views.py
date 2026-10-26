@@ -204,6 +204,10 @@ def login(request):
 
                 cache.delete(clave_candado)
                 cache.delete(f"login_fallos:{clave_usuario}")
+                # Sin esto, cada login EXITOSO contaba para el limite por IP
+                # del middleware: 10 accesos legitimos desde la misma IP en un
+                # minuto bloqueaban a todos los usuarios de esa IP (NAT, oficina).
+                cache.delete(f"throttle:login:{ip_login}")
                 auth_login(request, user)
                 messages.success(request, f"¡Bienvenido, {user.first_name or user.username}!")
 
@@ -2787,10 +2791,10 @@ class EmailOrUsernameBackend:
         return is_active or is_active is None
 
     def get_user(self, user_id):
-        try:
-            return User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            return None
+        # `is_active=True`: antes una cuenta desactivada seguia autenticada en
+        # las peticiones con sesion (get_user la devolvia igual y
+        # SessionAuthentication la aceptaba).
+        return User.objects.filter(pk=user_id, is_active=True).first()
 
 
 

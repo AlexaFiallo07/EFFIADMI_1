@@ -107,6 +107,9 @@ class Inventory(models.Model):
         verbose_name = "Inventario"
         verbose_name_plural = "Inventarios"
         unique_together = ("product", "branch")
+        # unique_together cubre el par exacto; este indice sirve a las
+        # consultas que filtran solo por sucursal (listados del dashboard).
+        indexes = [models.Index(fields=["branch"])]
 
     def __str__(self):
         return f"{self.product.nombre} - {self.branch.nombre}: {self.cantidad_disponible}"
@@ -215,7 +218,10 @@ class Pedido(models.Model):
         ("cancelado", "Cancelado"),
     ]
 
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="pedidos")
+    # PROTECT: borrar un cliente no debe destruir sus pedidos (registros
+    # contables). La web ya desactiva el cliente en vez de borrarlo; esto
+    # impide que la API o el admin lo borren en cascada.
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="pedidos")
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     fecha_pedido = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default="pendiente")
@@ -232,7 +238,9 @@ class Pedido(models.Model):
 
 class PedidoDetalle(models.Model):
     pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name="detalles")
-    producto = models.ForeignKey(Product, on_delete=models.CASCADE)
+    # PROTECT: borrar un producto no debe eliminar las lineas de documentos
+    # ya emitidos (rompe el historial y el total del documento).
+    producto = models.ForeignKey(Product, on_delete=models.PROTECT)
     cantidad = models.PositiveIntegerField()
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
@@ -259,7 +267,9 @@ class Factura(models.Model):
         ("anulada", "Anulada"),
     ]
 
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="facturas")
+    # PROTECT: borrar un cliente no debe destruir sus facturas (registros
+    # fiscales). La web las anula; nunca las borra en cascada.
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="facturas")
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     pedido = models.ForeignKey(Pedido, on_delete=models.SET_NULL, null=True, blank=True, related_name="facturas")
     fecha_emision = models.DateTimeField(auto_now_add=True)
@@ -270,6 +280,12 @@ class Factura(models.Model):
         verbose_name = "Factura"
         verbose_name_plural = "Facturas"
         ordering = ["-fecha_emision"]
+        # Se filtra y ordena constantemente por fecha y por estado
+        # (facturacion, dashboard, reportes) y no tenian indice.
+        indexes = [
+            models.Index(fields=["-fecha_emision"]),
+            models.Index(fields=["estado"]),
+        ]
 
     def __str__(self):
         return f"Factura {self.id} - {self.cliente.nombre}"
@@ -277,7 +293,9 @@ class Factura(models.Model):
 
 class FacturaDetalle(models.Model):
     factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name="detalles")
-    producto = models.ForeignKey(Product, on_delete=models.CASCADE)
+    # PROTECT: borrar un producto no debe eliminar las lineas de documentos
+    # ya emitidos (rompe el historial y el total del documento).
+    producto = models.ForeignKey(Product, on_delete=models.PROTECT)
     cantidad = models.PositiveIntegerField()
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
@@ -456,7 +474,11 @@ class FacturaCompra(models.Model):
 # ============================================================
 
 class RegistroIngreso(models.Model):
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="ingresos")
+    # SET_NULL: la auditoria de ingresos debe sobrevivir al borrado del
+    # usuario. Con CASCADE, eliminar una cuenta borraba todo su historial.
+    usuario = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="ingresos"
+    )
     rol = models.CharField(max_length=20, blank=True, default="")
     fecha = models.DateTimeField(auto_now_add=True)
     ip = models.CharField(max_length=45, blank=True, default="")
@@ -470,4 +492,5 @@ class RegistroIngreso(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.usuario.username} - {self.fecha:%Y-%m-%d %H:%M}"
+        nombre = self.usuario.username if self.usuario else "usuario eliminado"
+        return f"{nombre} - {self.fecha:%Y-%m-%d %H:%M}"

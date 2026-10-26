@@ -3,6 +3,7 @@
 import os
 import shutil
 import tempfile
+from datetime import date
 
 from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
@@ -25,35 +26,65 @@ class CabecerasSeguridadTest(TestCase):
         self.assertEqual(respuesta["X-Content-Type-Options"], "nosniff")
         self.assertEqual(respuesta["Referrer-Policy"], "same-origin")
 
+    def test_csp_y_permissions_policy(self):
+        respuesta = self.client.get("/")
+        self.assertIn("default-src 'self'", respuesta["Content-Security-Policy"])
+        self.assertIn("frame-ancestors 'none'", respuesta["Content-Security-Policy"])
+        self.assertIn("camera=()", respuesta["Permissions-Policy"])
 
-class MediaProtegidaTest(TestCase):
+
+class MediaProtegidaTest(EffiBaseTestCase):
+    """El /media/ ya no se sirve con solo tener sesion: se valida propiedad."""
+
     def setUp(self):
+        super().setUp()
+        from .models import FacturaCompra
+
         self.media = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.media, ignore_errors=True)
-        with open(os.path.join(self.media, "factura.txt"), "w", encoding="utf-8") as archivo:
+        self.ruta = "facturas_compra/2026/10/factura.txt"
+        destino = os.path.join(self.media, *self.ruta.split("/"))
+        os.makedirs(os.path.dirname(destino), exist_ok=True)
+        with open(destino, "w", encoding="utf-8") as archivo:
             archivo.write("contenido privado")
+        self.factura = FacturaCompra.objects.create(
+            fecha=date.today(), usuario=self.admin, archivo=self.ruta
+        )
+
+    def _get(self, ruta):
+        with override_settings(MEDIA_ROOT=self.media):
+            return self.client.get(f"/media/{ruta}")
 
     def test_anonimo_recibe_404(self):
-        with override_settings(MEDIA_ROOT=self.media):
-            respuesta = self.client.get("/media/factura.txt")
-        self.assertEqual(respuesta.status_code, 404)
+        self.assertEqual(self._get(self.ruta).status_code, 404)
 
-    def test_con_sesion_recibe_el_archivo(self):
-        session = self.client.session
-        session["logueado"] = {"id": 1, "nombre": "X", "rol": "admin"}
-        session.save()
-        with override_settings(MEDIA_ROOT=self.media):
-            respuesta = self.client.get("/media/factura.txt")
+    def test_admin_recibe_el_archivo(self):
+        self.iniciar_sesion(self.admin)
+        respuesta = self._get(self.ruta)
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(b"".join(respuesta.streaming_content), b"contenido privado")
 
+    def test_operador_ajeno_recibe_404(self):
+        self.iniciar_sesion(self.operador)
+        self.assertEqual(self._get(self.ruta).status_code, 404)
+
+    def test_duenio_operador_recibe_el_archivo(self):
+        self.factura.usuario = self.operador
+        self.factura.save(update_fields=["usuario"])
+        self.iniciar_sesion(self.operador)
+        self.assertEqual(self._get(self.ruta).status_code, 200)
+
+    def test_archivo_sin_factura_da_404(self):
+        with open(os.path.join(self.media, "suelto.txt"), "w", encoding="utf-8") as archivo:
+            archivo.write("x")
+        self.iniciar_sesion(self.admin)
+        self.assertEqual(self._get("suelto.txt").status_code, 404)
+
     def test_archivo_inexistente_da_404(self):
-        session = self.client.session
-        session["logueado"] = {"id": 1, "nombre": "X", "rol": "admin"}
-        session.save()
-        with override_settings(MEDIA_ROOT=self.media):
-            respuesta = self.client.get("/media/no-existe.txt")
-        self.assertEqual(respuesta.status_code, 404)
+        self.iniciar_sesion(self.admin)
+        self.assertEqual(
+            self._get("facturas_compra/2026/10/no-existe.txt").status_code, 404
+        )
 
 
 class LoginCandadoTest(EffiBaseTestCase):

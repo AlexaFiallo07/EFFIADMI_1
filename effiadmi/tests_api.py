@@ -234,9 +234,17 @@ class FacturasPedidosApiTest(ApiBaseTestCase):
         super().setUp()
         self.autenticar()
         self.cliente = Cliente.objects.create(nombre="Cli", correo="c@api.test", telefono="1", direccion="x")
+        self.producto, _ = self.crear_inventario()
+
+    def _linea(self):
+        return {"producto": self.producto.id, "cantidad": 1, "precio_unitario": "5000"}
 
     def test_factura_asigna_usuario_emisor(self):
-        respuesta = self.client.post("/api/facturas/", {"cliente": self.cliente.id}, format="json")
+        respuesta = self.client.post(
+            "/api/facturas/",
+            {"cliente": self.cliente.id, "detalles": [self._linea()]},
+            format="json",
+        )
         self.assertEqual(respuesta.status_code, 201)
         from .models import Factura
 
@@ -244,7 +252,9 @@ class FacturasPedidosApiTest(ApiBaseTestCase):
 
     def test_pedido_no_permite_mass_assignment_de_estado(self):
         respuesta = self.client.post(
-            "/api/pedidos/", {"cliente": self.cliente.id, "estado": "pagado"}, format="json"
+            "/api/pedidos/",
+            {"cliente": self.cliente.id, "estado": "pagado", "detalles": [self._linea()]},
+            format="json",
         )
         self.assertEqual(respuesta.status_code, 201)
         from .models import Pedido

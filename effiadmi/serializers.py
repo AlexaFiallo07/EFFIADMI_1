@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 
 from .models import (
@@ -16,6 +17,7 @@ from .models import (
     ProveedorProducto,
     UserProfile,
 )
+from .utilidades import cargo_de_usuario
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -68,8 +70,6 @@ class ProductSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        from django.db import transaction
-
         sucursal_id = validated_data.pop("sucursal_id", None)
         stock_inicial = validated_data.pop("stock_inicial", 0)
         stock_minimo_inicial = validated_data.pop("stock_minimo_inicial", 5)
@@ -134,7 +134,7 @@ class InventoryLogSerializer(serializers.ModelSerializer):
             "id", "inventory", "tipo_movimiento", "cantidad",
             "cantidad_resultante", "motivo", "usuario", "fecha",
         ]
-        read_only_fields = ["fecha", "cantidad_resultante"]
+        read_only_fields = ["fecha", "cantidad_resultante", "usuario"]
 
 
 class StockAdjustSerializer(serializers.Serializer):
@@ -184,7 +184,9 @@ class FacturaDetalleSerializer(serializers.ModelSerializer):
 
 
 class FacturaSerializer(serializers.ModelSerializer):
-    detalles = FacturaDetalleSerializer(many=True, read_only=True)
+    # Writable en la creacion: antes era read_only y POST /api/facturas/
+    # generaba una factura 'emitida' con total=0 y sin lineas.
+    detalles = FacturaDetalleSerializer(many=True, required=False)
     cliente_nombre = serializers.CharField(source="cliente.nombre", read_only=True)
     usuario_username = serializers.CharField(source="usuario.username", read_only=True, default="")
 
@@ -192,10 +194,49 @@ class FacturaSerializer(serializers.ModelSerializer):
         model = Factura
         fields = [
             "id", "cliente", "cliente_nombre", "usuario", "usuario_username",
-            "fecha_emision", "total", "detalles",
+            "fecha_emision", "total", "estado", "detalles",
         ]
         # 'usuario' writable dejaba emitir facturas a nombre de otro usuario.
-        read_only_fields = ["fecha_emision", "total", "usuario"]
+        # 'estado' solo se cambia con la accion de anulacion (web).
+        read_only_fields = ["fecha_emision", "total", "usuario", "estado"]
+
+    def validate(self, attrs):
+        # required=False evita que DRF exija 'detalles', asi que la exigencia
+        # se hace aqui: sin lineas no hay factura que emitir.
+        if self.instance is None and not attrs.get("detalles"):
+            raise serializers.ValidationError({
+                "detalles": "La factura debe incluir al menos una linea en 'detalles'."
+            })
+        return attrs
+
+    def validate_cliente(self, value):
+        if self.instance is not None:
+            request = self.context.get("request")
+            if cargo_de_usuario(getattr(request, "user", None)) != "admin":
+                raise serializers.ValidationError(
+                    "Solo un administrador puede reasignar el cliente de una factura."
+                )
+        return value
+
+    def create(self, validated_data):
+        detalles = validated_data.pop("detalles", [])
+        with transaction.atomic():
+            factura = Factura.objects.create(**validated_data)
+            total = 0
+            for linea in detalles:
+                detalle = FacturaDetalle.objects.create(factura=factura, **linea)
+                total += detalle.subtotal
+            factura.total = total
+            factura.save(update_fields=["total"])
+        return factura
+
+    def update(self, instance, validated_data):
+        # Una factura emitida no se reescribe: se anula y se crea otra.
+        if "detalles" in validated_data:
+            raise serializers.ValidationError({
+                "detalles": "Las facturas emitidas no se editan. Anula y crea una nueva."
+            })
+        return super().update(instance, validated_data)
 
 
 class PedidoDetalleSerializer(serializers.ModelSerializer):
@@ -211,7 +252,9 @@ class PedidoDetalleSerializer(serializers.ModelSerializer):
 
 
 class PedidoSerializer(serializers.ModelSerializer):
-    detalles = PedidoDetalleSerializer(many=True, read_only=True)
+    # Writable en la creacion: antes era read_only y POST /api/pedidos/
+    # generaba un pedido 'pendiente' con total=0 y sin lineas.
+    detalles = PedidoDetalleSerializer(many=True, required=False)
     cliente_nombre = serializers.CharField(source="cliente.nombre", read_only=True)
     usuario_username = serializers.CharField(source="usuario.username", read_only=True, default="")
 
@@ -224,6 +267,52 @@ class PedidoSerializer(serializers.ModelSerializer):
         # 'estado' editable permitia marcar un pedido como pagado por la API sin
         # pasar por pagar_pedido (que es genera la factura y avisa a los admins).
         read_only_fields = ["fecha_pedido", "total", "usuario", "estado"]
+
+    def validate(self, attrs):
+        if self.instance is None and not attrs.get("detalles"):
+            raise serializers.ValidationError({
+                "detalles": "El pedido debe incluir al menos una linea en 'detalles'."
+            })
+        return attrs
+
+    def validate_cliente(self, value):
+        # Un operador puede editar un pedido, pero no reasignarlo a otro
+        # cliente (en la web editar_pedido es solo admin).
+        if self.instance is not None:
+            request = self.context.get("request")
+            if cargo_de_usuario(getattr(request, "user", None)) != "admin":
+                raise serializers.ValidationError(
+                    "Solo un administrador puede reasignar el cliente de un pedido."
+                )
+        return value
+
+    def create(self, validated_data):
+        detalles = validated_data.pop("detalles", [])
+        with transaction.atomic():
+            pedido = Pedido.objects.create(**validated_data)
+            total = 0
+            for linea in detalles:
+                detalle = PedidoDetalle.objects.create(pedido=pedido, **linea)
+                total += detalle.subtotal
+            pedido.total = total
+            pedido.save(update_fields=["total"])
+        return pedido
+
+    def update(self, instance, validated_data):
+        detalles = validated_data.pop("detalles", None)
+        with transaction.atomic():
+            for campo, valor in validated_data.items():
+                setattr(instance, campo, valor)
+            instance.save()
+            if detalles is not None:
+                instance.detalles.all().delete()
+                total = 0
+                for linea in detalles:
+                    detalle = PedidoDetalle.objects.create(pedido=instance, **linea)
+                    total += detalle.subtotal
+                instance.total = total
+                instance.save(update_fields=["total"])
+        return instance
 
 
 class NotificacionSerializer(serializers.ModelSerializer):

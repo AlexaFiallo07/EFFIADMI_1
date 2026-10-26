@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.db.models import Sum
+from django.db.models.deletion import ProtectedError
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, BasePermission
@@ -93,6 +94,29 @@ class EscrituraInventarioApi(BasePermission):
         return _es_admin(request.user)
 
 
+class BorradoProtegidoMixin:
+    """Convierte ProtectedError en 409 en vez de un 500.
+
+    Al pasar Pedido/Factura/PedidoDetalle/FacturaDetalle a on_delete=PROTECT,
+    borrar un cliente o un producto con documentos asociados deja de ser
+    posible. La respuesta correcta es 409 (conflicto) pidiendo desactivarlo.
+    """
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {
+                    "detail": (
+                        "No se puede borrar: tiene registros asociados "
+                        "(pedidos, facturas o inventario). Desactivalo en su lugar."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+
 # ============================================================
 # Branch
 # ============================================================
@@ -109,7 +133,7 @@ class BranchViewSet(viewsets.ModelViewSet):
 # Product (auto-creates Inventory on save)
 # ============================================================
 
-class ProductViewSet(viewsets.ModelViewSet):
+class ProductViewSet(BorradoProtegidoMixin, viewsets.ModelViewSet):
     queryset = Product.objects.all().order_by("id")
     serializer_class = ProductSerializer
     # La web limita crear/editar/borrar productos a admin (crear_producto).
@@ -210,7 +234,7 @@ class InventoryViewSet(viewsets.ModelViewSet):
 # Cliente
 # ============================================================
 
-class ClienteViewSet(viewsets.ModelViewSet):
+class ClienteViewSet(BorradoProtegidoMixin, viewsets.ModelViewSet):
     queryset = Cliente.objects.all().order_by("id")
     serializer_class = ClienteSerializer
     permission_classes = [EscrituraClienteApi]

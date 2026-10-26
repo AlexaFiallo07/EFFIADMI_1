@@ -115,6 +115,9 @@ INSTALLED_APPS = [
     'landing',
     'rest_framework',
     'rest_framework_simplejwt',
+    # Necesaria para ROTATE_REFRESH_TOKENS / BLACKLIST_AFTER_ROTATION: guarda
+    # los refresh tokens usados para que no se puedan reutilizar.
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
 ]
 
@@ -133,6 +136,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Ultimo: limita intentos de login/password-recovery por IP (429).
     'base.middleware.LoginThrottleMiddleware',
+    # CSP y Permissions-Policy (Django no las pone por defecto).
+    'base.middleware.CabecerasSeguridadMiddleware',
 ]
 
 ROOT_URLCONF = 'base.urls'
@@ -361,8 +366,17 @@ CORS_ALLOW_CREDENTIALS = False
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
+    # 12 h era demasiado: un token robado servia medio dia. Con 1 h y
+    # rotacion + blacklist, el refresh usado deja de valer y el access
+    # caduca pronto. El cliente debe usar /api/token/refresh/.
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    # SimpleJWT ya lo comprueba por defecto; se declara explicito para que un
+    # cambio futuro no reactive el acceso de cuentas desactivadas.
+    'CHECK_USER_IS_ACTIVE': True,
 }
 
 # ==================== LOGGING ====================
