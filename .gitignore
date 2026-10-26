@@ -2,7 +2,6 @@
 env/
 .venv/
 venv/
-.env
 
 # Python
 __pycache__/
@@ -14,8 +13,8 @@ build/
 dist/
 
 # Base de datos y archivos locales
-db.sqlite3
-db.sqlite3-journal
+*.sqlite3
+*.sqlite3-journal
 staticfiles/
 media/
 
@@ -23,6 +22,10 @@ media/
 respaldo.json
 respaldos/
 *.fixture.json
+
+# Documentacion local (puede contener datos operativos)
+documentacion/
+ddocumentacion/
 
 # Claves y configuración local
 .env
