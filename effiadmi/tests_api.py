@@ -109,6 +109,17 @@ class ProductosApiTest(ApiBaseTestCase):
         self.assertEqual(respuesta.status_code, 400)
         self.assertIn("precio_venta", respuesta.data)
 
+    def test_precio_fuera_de_rango_o_con_decimales_da_400(self):
+        for precio in ("999", "100000001", "5000.50"):
+            with self.subTest(precio=precio):
+                respuesta = self.client.post(
+                    "/api/catalogo-productos/",
+                    {"sku": "4", "nombre": "X", "precio_venta": precio},
+                    format="json",
+                )
+                self.assertEqual(respuesta.status_code, 400)
+                self.assertIn("precio_venta", respuesta.data)
+
     def test_sucursal_inexistente_da_400(self):
         respuesta = self.client.post(
             "/api/catalogo-productos/",
@@ -260,6 +271,25 @@ class FacturasPedidosApiTest(ApiBaseTestCase):
         from .models import Pedido
 
         self.assertEqual(Pedido.objects.get(id=respuesta.data["id"]).estado, "pendiente")
+
+    def test_facturas_y_pedidos_rechazan_precios_y_cantidades_invalidos(self):
+        for url in ("/api/facturas/", "/api/pedidos/"):
+            for campo, valor in (
+                ("precio_unitario", "-1"),
+                ("precio_unitario", "999"),
+                ("precio_unitario", "100000001"),
+                ("cantidad", "0"),
+            ):
+                with self.subTest(url=url, campo=campo, valor=valor):
+                    linea = self._linea()
+                    linea[campo] = valor
+                    respuesta = self.client.post(
+                        url,
+                        {"cliente": self.cliente.id, "detalles": [linea]},
+                        format="json",
+                    )
+                    self.assertEqual(respuesta.status_code, 400)
+                    self.assertIn("detalles", respuesta.data)
 
 
 class DashboardApiTest(ApiBaseTestCase):

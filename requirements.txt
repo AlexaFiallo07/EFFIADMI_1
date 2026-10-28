@@ -1,6 +1,8 @@
-Django==6.0.7
-djangorestframework==3.18.0
+Django==6.0.8
+djangorestframework==3.18.2
 djangorestframework_simplejwt==5.5.1
+PyJWT==2.15.0
+sqlparse==0.6.0
 django-cors-headers==4.9.0
 openai>=3.35.1
 python-dotenv==1.2.3
@@ -11,5 +13,5 @@ waitress==3.0.2
 whitenoise==6.12.0
 # Driver PostgreSQL: necesario para Supabase (DB_ENGINE=postgres)
 psycopg[binary]==3.3.6
-# Opcional: cliente Redis (necesario si CACHE_URL=redis://...)
-# redis==5.2.1
+# Cliente Redis: necesario si CACHE_URL=redis://... (throttling compartido)
+redis==5.2.1

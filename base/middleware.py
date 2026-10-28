@@ -7,9 +7,15 @@ de login ademas aplica un candado por usuario (5 fallos = 15 min), de modo
 que entre los dos cubren IP-rotando y usuario-rotando.
 """
 
+import logging
+
 from django.conf import settings
 from django.core.cache import cache
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
+
+from base.seguridad import ip_en_redes
+
+logger = logging.getLogger("django.security")
 
 # Rutas que reciben POST de credenciales (subcadenas del path).
 RUTAS_CREDENCIALES = ("/login", "/recuperar-password", "/restablecer-password")
@@ -106,3 +112,21 @@ class CabecerasSeguridadMiddleware:
         response.headers.setdefault("Content-Security-Policy", self.CSP)
         response.headers.setdefault("Permissions-Policy", self.PERMISSIONS_POLICY)
         return response
+
+
+class AdminAccessMiddleware:
+    """Oculta /admin/ a las IP que no esten en ADMIN_ALLOWED_IPS."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        redes = getattr(settings, "ADMIN_ALLOWED_NETWORKS", ())
+        ruta_admin = f"/{getattr(settings, 'ADMIN_URL', 'admin/').rstrip('/')}"
+        path = request.path_info
+        if redes and (path == ruta_admin or path.startswith(f"{ruta_admin}/")):
+            ip = ip_real_del_request(request)
+            if not ip_en_redes(ip, redes):
+                logger.warning("Acceso a admin bloqueado para IP %s en %s", ip, path)
+                return HttpResponseNotFound("No encontrado.")
+        return self.get_response(request)

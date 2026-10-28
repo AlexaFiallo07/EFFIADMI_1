@@ -1,4 +1,4 @@
-﻿from decimal import Decimal
+﻿from decimal import Decimal, InvalidOperation
 import json
 import logging
 from django.contrib import messages
@@ -398,6 +398,7 @@ def perfil(request):
         perfil.save()
 
         request.session["logueado"]["nombre"] = user.first_name or user.username
+        request.session.modified = True
 
         messages.success(request, "¡Perfil actualizado exitosamente!")
         return redirect("effiadmi:perfil")
@@ -612,7 +613,7 @@ def crear_producto(request):
 
             try:
                 precio_venta = Decimal(precio_venta_str)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, InvalidOperation):
                 messages.error(request, "El precio de venta no es valido.")
                 return render(request, "productos/crear.html", _ctx)
 
@@ -721,7 +722,7 @@ def editar_producto(request, id):
             precio_venta_str = request.POST.get("precio_venta", "0")
             try:
                 precio_venta = Decimal(precio_venta_str)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, InvalidOperation):
                 messages.error(request, "El precio de venta no es valido.")
                 return render(request, "productos/editar.html", _ctx)
 
@@ -2608,7 +2609,7 @@ def crear_factura_compra(request):
 
             try:
                 monto = Decimal(monto_str)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, InvalidOperation):
                 messages.error(request, "El monto no es valido.")
                 return render(request, "facturas_compra/crear.html", ctx_base)
 

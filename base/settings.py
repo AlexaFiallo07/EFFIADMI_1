@@ -16,6 +16,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from base.seguridad import normalizar_ruta_admin, parsear_redes_admin
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -69,6 +71,11 @@ else:
             "Falta ALLOWED_HOSTS en el .env con DEBUG=0. "
             "Define tus dominios: ALLOWED_HOSTS=tudominio.com,www.tudominio.com"
         )
+    if "*" in ALLOWED_HOSTS:
+        raise RuntimeError(
+            "ALLOWED_HOSTS no puede contener '*' con DEBUG=0: desactiva la "
+            "validacion del cabecero Host. Declara tus dominios exactos."
+        )
 
 # Cabeceras y cookies seguras. Solo tiene efecto sobre HTTPS, asi que en
 # desarrollo (http://localhost) no rompen nada.
@@ -82,11 +89,37 @@ CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", str(12 * 60 * 60)))
 SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "0") == "1"
 SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0"))
-SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
-SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = (
+    SECURE_HSTS_SECONDS > 0
+    and os.getenv("SECURE_HSTS_INCLUDE_SUBDOMAINS", "0") == "1"
+)
+SECURE_HSTS_PRELOAD = (
+    SECURE_HSTS_SECONDS > 0 and os.getenv("SECURE_HSTS_PRELOAD", "0") == "1"
+)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
+
+CSRF_TRUSTED_ORIGINS = [
+    o.strip().rstrip("/")
+    for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if o.strip()
+]
+for _origen in CSRF_TRUSTED_ORIGINS:
+    if not _origen.startswith(("https://", "http://")):
+        raise RuntimeError(
+            "CSRF_TRUSTED_ORIGINS debe incluir el esquema: "
+            "https://tudominio.com,https://www.tudominio.com"
+        )
+    if not DEBUG and not _origen.startswith("https://"):
+        raise RuntimeError(
+            "CSRF_TRUSTED_ORIGINS debe usar https:// con DEBUG=0."
+        )
+
+ADMIN_URL = normalizar_ruta_admin(os.getenv("ADMIN_URL", "admin"))
+ADMIN_ALLOWED_NETWORKS = parsear_redes_admin(
+    os.getenv("ADMIN_ALLOWED_IPS", "")
+)
 
 # Detras de un proxy/terminador TLS (nginx, Caddy) el esquema viene en
 # X-Forwarded-Proto; sin esto Django no ve HTTPS y las cookies secure/
@@ -138,6 +171,8 @@ MIDDLEWARE = [
     'base.middleware.LoginThrottleMiddleware',
     # CSP y Permissions-Policy (Django no las pone por defecto).
     'base.middleware.CabecerasSeguridadMiddleware',
+    # Restringe /admin/ a las IP/CIDR de ADMIN_ALLOWED_IPS (si se define).
+    'base.middleware.AdminAccessMiddleware',
 ]
 
 ROOT_URLCONF = 'base.urls'

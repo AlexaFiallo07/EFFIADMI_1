@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import transaction
 from rest_framework import serializers
 
@@ -65,8 +67,18 @@ class ProductSerializer(serializers.ModelSerializer):
         return value
 
     def validate_precio_venta(self, value):
-        if value is not None and value <= 0:
+        if value is None:
+            return value
+        if value <= 0:
             raise serializers.ValidationError("El precio de venta debe ser mayor a 0.")
+        if value != value.to_integral_value():
+            raise serializers.ValidationError(
+                "El precio debe ser un valor entero en pesos colombianos, sin decimales."
+            )
+        if value < 1000 or value > 100000000:
+            raise serializers.ValidationError(
+                "El precio de venta debe estar entre $1.000 y $100.000.000 (pesos colombianos)."
+            )
         return value
 
     def create(self, validated_data):
@@ -173,6 +185,13 @@ class ProveedorProductoSerializer(serializers.ModelSerializer):
 
 class FacturaDetalleSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.CharField(source="producto.nombre", read_only=True)
+    cantidad = serializers.IntegerField(min_value=1)
+    precio_unitario = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal("1000"),
+        max_value=Decimal("100000000"),
+    )
 
     class Meta:
         model = FacturaDetalle
@@ -241,6 +260,13 @@ class FacturaSerializer(serializers.ModelSerializer):
 
 class PedidoDetalleSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.CharField(source="producto.nombre", read_only=True)
+    cantidad = serializers.IntegerField(min_value=1)
+    precio_unitario = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal("1000"),
+        max_value=Decimal("100000000"),
+    )
 
     class Meta:
         model = PedidoDetalle

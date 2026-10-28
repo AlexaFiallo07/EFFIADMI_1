@@ -14,12 +14,13 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
 from base.views import media_protegida
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls),
     path('api/', include('effiadmi.api_urls')),
     # /media/ solo con sesion (facturas, adjuntos): en produccion DEBUG=0
     # no sirve nada, y sin auth cualquiera con la URL se bajaria los PDFs.

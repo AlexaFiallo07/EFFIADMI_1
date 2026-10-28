@@ -4,10 +4,13 @@ import os
 import shutil
 import tempfile
 from datetime import date
+from ipaddress import ip_network
 
 from django.core.cache import cache
-from django.test import Client, TestCase, override_settings
+from django.test import Client, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
+
+from base.seguridad import ip_en_redes, normalizar_ruta_admin, parsear_redes_admin
 
 from .soporte_pruebas import EffiBaseTestCase, textos_mensajes
 
@@ -31,6 +34,42 @@ class CabecerasSeguridadTest(TestCase):
         self.assertIn("default-src 'self'", respuesta["Content-Security-Policy"])
         self.assertIn("frame-ancestors 'none'", respuesta["Content-Security-Policy"])
         self.assertIn("camera=()", respuesta["Permissions-Policy"])
+
+
+class AdminAccesoTest(TestCase):
+    @override_settings(ADMIN_ALLOWED_NETWORKS=(ip_network("10.0.0.0/8"),))
+    def test_ip_no_permitida_recibe_404(self):
+        respuesta = self.client.get("/admin/")
+        self.assertEqual(respuesta.status_code, 404)
+
+    @override_settings(ADMIN_ALLOWED_NETWORKS=(ip_network("127.0.0.1/32"),))
+    def test_ip_permitida_llega_al_admin(self):
+        respuesta = self.client.get("/admin/")
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertIn("/admin/login/", respuesta["Location"])
+
+    @override_settings(ADMIN_ALLOWED_NETWORKS=())
+    def test_sin_lista_de_ips_el_admin_sigue_abierto(self):
+        self.assertEqual(self.client.get("/admin/").status_code, 302)
+
+
+class SeguridadConfigTest(SimpleTestCase):
+    def test_normaliza_ruta_admin(self):
+        self.assertEqual(normalizar_ruta_admin(" panel-privado/ "), "panel-privado/")
+
+    def test_rechaza_ruta_admin_invalida(self):
+        with self.assertRaises(RuntimeError):
+            normalizar_ruta_admin("panel/privado")
+
+    def test_parsea_ips_y_cidr(self):
+        redes = parsear_redes_admin("127.0.0.1, 10.0.0.0/8")
+        self.assertEqual(len(redes), 2)
+        self.assertTrue(ip_en_redes("10.2.3.4", redes))
+        self.assertFalse(ip_en_redes("192.168.1.1", redes))
+
+    def test_rechaza_ip_invalida(self):
+        with self.assertRaises(RuntimeError):
+            parsear_redes_admin("no-es-una-ip")
 
 
 class MediaProtegidaTest(EffiBaseTestCase):

@@ -31,5 +31,14 @@ jobs:
       - name: Comprobar la configuracion de Django
         run: python manage.py check
 
+      - name: Comprobar la configuracion de produccion
+        env:
+          SECURE_SSL_REDIRECT: "1"
+          SECURE_HSTS_SECONDS: "31536000"
+          SECURE_HSTS_INCLUDE_SUBDOMAINS: "1"
+          SECURE_HSTS_PRELOAD: "1"
+          SECURE_PROXY_SSL_HEADER: "1"
+        run: python manage.py check --deploy --fail-level WARNING
+
       - name: Ejecutar la suite de pruebas
         run: python manage.py test --verbosity 2
