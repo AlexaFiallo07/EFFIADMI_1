@@ -39,7 +39,7 @@
                 {% csrf_token %}
                 <div class="form-group">
                     <label for="username" class="form-label">Correo electrónico</label>
-                    <input type="email" name="username" id="username" class="form-control"
+                    <input type="email" name="username" id="username" class="form-control" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}" title="Ejemplo: usuario@dominio.com" inputmode="email" autocomplete="email"
                            placeholder="usuario@dominio.com" autocomplete="username"
                            autocapitalize="none" spellcheck="false"
                            pattern="[^\s@]+@[^\s@]+\.[A-Za-z]{2,}"

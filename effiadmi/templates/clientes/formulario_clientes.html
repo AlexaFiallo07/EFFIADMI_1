@@ -20,11 +20,11 @@
                     </div>
                     <div class="form-group">
                         <label for="correo" class="form-label">Correo</label>
-                        <input type="email" id="correo" name="correo" class="form-control" value="{{ cliente.correo|default:'' }}" pattern="[^\s@]+@[^\s@]+\.[A-Za-z]{2,}" title="Ejemplo: usuario@dominio.com" required>
+                        <input type="email" id="correo" name="correo" class="form-control" value="{{ cliente.correo|default:'' }}" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}" title="Ejemplo: usuario@dominio.com" inputmode="email" autocomplete="email" required>
                     </div>
                     <div class="form-group">
                         <label for="telefono" class="form-label">Telefono</label>
-                        <input type="text" id="telefono" name="telefono" class="form-control" value="{{ cliente.telefono|default:'' }}" required>
+                        <input type="tel" id="telefono" name="telefono" class="form-control" value="{{ cliente.telefono|default:'' }}" pattern="[0-9+\-\s()]{7,15}" inputmode="tel" maxlength="15" title="Solo numeros, espacios, +, - o () (7 a 15 caracteres)" required>
                     </div>
                     <div class="form-group">
                         <label for="direccion" class="form-label">Direccion</label>

@@ -46,8 +46,10 @@
                         name="email"
                         class="form-control"
                         value="{{ request.POST.email|default:'' }}"
-                        pattern="[^\s@]+@[^\s@]+\.[A-Za-z]{2,}"
+                        pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}"
                         title="Ejemplo: usuario@dominio.com"
+                        inputmode="email"
+                        autocomplete="email"
                         required
                     >
                 </div>

@@ -22,8 +22,8 @@
                     <input type="text" id="apellido_usuario" name="apellido_usuario" class="form-control" value="{{ usuario.last_name }}" required>
                 </div>
                 <div class="form-group">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" id="email" name="email" class="form-control" value="{{ usuario.email }}" pattern="[^\s@]+@[^\s@]+\.[A-Za-z]{2,}" title="Ejemplo: usuario@dominio.com" required>
+                    <label for="email" class="form-label">Correo Electrónico</label>
+                    <input type="email" id="email" name="email" class="form-control" value="{{ usuario.email }}" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}" title="Ejemplo: usuario@dominio.com" inputmode="email" autocomplete="email" required>
                 </div>
                 <div class="form-group">
                     <label for="contraseña" class="form-label">Contraseña (dejar en blanco para no cambiar)</label>

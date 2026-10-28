@@ -33,8 +33,10 @@
                             id="correo"
                             name="correo"
                             class="form-control"
-                            pattern="[^\s@]+@[^\s@]+\.[A-Za-z]{2,}"
+                            pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}"
                             title="Ejemplo: usuario@dominio.com"
+                            inputmode="email"
+                            autocomplete="email"
                             required
                         >
                     </div>
@@ -42,10 +44,14 @@
                     <div class="form-group">
                         <label for="telefono" class="form-label">Telefono</label>
                         <input
-                            type="text"
+                            type="tel"
                             id="telefono"
                             name="telefono"
                             class="form-control"
+                            pattern="[0-9+\-\s()]{7,15}"
+                            inputmode="tel"
+                            maxlength="15"
+                            title="Solo numeros, espacios, +, - o () (7 a 15 caracteres)"
                             required
                         >
                     </div>

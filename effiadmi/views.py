@@ -393,7 +393,14 @@ def perfil(request):
         user.email = nuevo_email
         user.save()
 
-        perfil.telefono = request.POST.get("telefono", "")
+        telefono = (request.POST.get("telefono") or "").strip()
+        if telefono and not re.fullmatch(r"^[0-9+\-\s()]{7,15}$", telefono):
+            messages.error(request, "El telefono solo puede contener numeros, espacios, +, - o ().")
+            ctx = {"usuario": user, "perfil": perfil}
+            if perfil.cargo == "admin":
+                ctx["usuarios"] = User.objects.select_related("profile").all().order_by("-id")
+            return render(request, "usuarios/perfil.html", ctx)
+        perfil.telefono = telefono
         perfil.direccion = request.POST.get("direccion", "")
         perfil.save()
 
@@ -444,6 +451,10 @@ def crear_cliente(request):
                 messages.error(request, "Por favor completa todos los campos.")
                 return render(request, "clientes/formulario_clientes.html")
 
+            if not re.fullmatch(r"^[0-9+\-\s()]{7,15}$", telefono):
+                messages.error(request, "El telefono solo puede contener numeros, espacios, +, - o ().")
+                return render(request, "clientes/formulario_clientes.html")
+
             correo_valido, error_correo = validar_correo_electronico(correo)
             if not correo_valido:
                 messages.error(request, error_correo)
@@ -475,6 +486,12 @@ def editar_cliente(request, id):
 
         if request.method == "POST":
             correo = (request.POST.get("correo") or "").strip()
+            telefono = (request.POST.get("telefono") or "").strip()
+            if not re.fullmatch(r"^[0-9+\-\s()]{7,15}$", telefono):
+                messages.error(request, "El telefono solo puede contener numeros, espacios, +, - o ().")
+                return render(
+                    request, "clientes/formulario_clientes.html", {"cliente": cliente}
+                )
             correo_valido, error_correo = validar_correo_electronico(correo)
             if not correo_valido:
                 messages.error(request, error_correo)
@@ -484,7 +501,7 @@ def editar_cliente(request, id):
 
             cliente.nombre = request.POST.get("nombre", "").strip()
             cliente.correo = correo
-            cliente.telefono = request.POST.get("telefono", "").strip()
+            cliente.telefono = telefono
             cliente.direccion = request.POST.get("direccion", "").strip()
             cliente.save()
             messages.success(request, "¡Cliente actualizado exitosamente!")
@@ -1726,6 +1743,10 @@ def crear_proveedor(request):
                 messages.error(request, "Por favor completa todos los campos.")
                 return render(request, "proveedores/crear.html")
 
+            if not re.fullmatch(r"^[0-9+\-\s()]{7,15}$", telefono):
+                messages.error(request, "El telefono solo puede contener numeros, espacios, +, - o ().")
+                return render(request, "proveedores/crear.html")
+
             correo_valido, error_correo = validar_correo_electronico(correo)
             if not correo_valido:
                 messages.error(request, error_correo)
@@ -1757,6 +1778,10 @@ def editar_proveedor(request, id):
 
         if request.method == "POST":
             correo = (request.POST.get("correo") or "").strip()
+            telefono = (request.POST.get("telefono") or "").strip()
+            if not re.fullmatch(r"^[0-9+\-\s()]{7,15}$", telefono):
+                messages.error(request, "El telefono solo puede contener numeros, espacios, +, - o ().")
+                return render(request, "proveedores/editar.html", {"proveedor": proveedor})
             correo_valido, error_correo = validar_correo_electronico(correo)
             if not correo_valido:
                 messages.error(request, error_correo)
@@ -1764,7 +1789,7 @@ def editar_proveedor(request, id):
 
             proveedor.nombre = request.POST.get("nombre_proveedor", "").strip()
             proveedor.correo = correo
-            proveedor.telefono = request.POST.get("telefono", "").strip()
+            proveedor.telefono = telefono
             proveedor.direccion = request.POST.get("direccion", "").strip()
             proveedor.save()
             messages.success(request, "¡Proveedor actualizado exitosamente!")
