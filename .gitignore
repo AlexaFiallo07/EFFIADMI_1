@@ -1,42 +1,63 @@
-# Entorno virtual
-env/
-.venv/
+﻿# Entorno
+.env
+.env.local
+.env.*.local
 venv/
+.venv/
+env/
 
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-*.egg-info/
+*.class
+*.so
+.Python
 build/
+develop-eggs/
 dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Base de datos y archivos locales
-*.sqlite3
-*.sqlite3-journal
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/*
+!media/.gitkeep
 staticfiles/
-media/
 
-# Respaldos de datos (contienen hashes de contraseñas y datos personales)
-respaldo.json
-respaldos/
-*.fixture.json
+# Testing / Coverage
+.coverage
+.coverage.*
+coverage.json
+htmlcov/
+.pytest_cache/
+.tox/
 
-# Documentacion local (puede contener datos operativos)
-documentacion/
-ddocumentacion/
-
-# Claves y configuración local
-.env
-*.env
-config.local.json
-
-# IDE / editor
-.idea/
+# IDEs
 .vscode/
+.idea/
 *.swp
+*.swo
+*~
 
-# Sistemas operativos
-Thumbs.db
+# OS
 .DS_Store
+Thumbs.db
+
+# Reportes/archivos temporales
+*.bak
+*.tmp
+casos_de_prueba_totales_EFFIADMI.txt
+respaldo.json
