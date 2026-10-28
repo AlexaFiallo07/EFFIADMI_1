@@ -11,7 +11,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form method="POST" autocomplete="off">
+            <form method="POST" autocomplete="off" novalidate>
                 {% csrf_token %}
 
                 <div class="form-group">
@@ -21,6 +21,7 @@
                         id="nombre_usuario"
                         name="nombre_usuario"
                         class="form-control"
+                        value="{{ request.POST.nombre_usuario|default:'' }}"
                         required
                     >
                 </div>
@@ -32,6 +33,7 @@
                         id="apellido_usuario"
                         name="apellido_usuario"
                         class="form-control"
+                        value="{{ request.POST.apellido_usuario|default:'' }}"
                         required
                     >
                 </div>
@@ -43,6 +45,7 @@
                         id="email"
                         name="email"
                         class="form-control"
+                        value="{{ request.POST.email|default:'' }}"
                         pattern="[^\s@]+@[^\s@]+\.[A-Za-z]{2,}"
                         title="Ejemplo: usuario@dominio.com"
                         required
@@ -64,9 +67,9 @@
                 <div class="form-group">
                     <label for="cargo" class="form-label">Cargo</label>
                     <select id="cargo" name="cargo" class="form-control" required>
-                        <option value="">Selecciona un cargo</option>
-                        <option value="admin">Administrador</option>
-                        <option value="operador">Operador</option>
+                        <option value="" {% if not request.POST.cargo %}selected{% endif %}>Selecciona un cargo</option>
+                        <option value="admin" {% if request.POST.cargo == 'admin' %}selected{% endif %}>Administrador</option>
+                        <option value="operador" {% if request.POST.cargo == 'operador' %}selected{% endif %}>Operador</option>
                     </select>
                 </div>
 

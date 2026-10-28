@@ -132,7 +132,7 @@
                     <a href="{% url 'effiadmi:lista_notificaciones' %}"
                        class="topbar-bell{% if request.resolver_match.url_name == 'lista_notificaciones' %} active{% endif %}"
                        title="Notificaciones" aria-label="Notificaciones">
-                        <span class="material-symbols-outlined">notifications</span>
+                        <span class="material-symbols-outlined notificacion-icono">notifications</span>
                         {% if no_leidas_notificaciones %}
                         <span class="bell-count">{{ no_leidas_notificaciones }}</span>
                         {% endif %}
