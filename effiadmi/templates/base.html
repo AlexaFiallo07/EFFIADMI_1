@@ -131,8 +131,8 @@
                     <span class="topbar-date">{% now "j \d\e F, Y" %}</span>
                     <a href="{% url 'effiadmi:lista_notificaciones' %}"
                        class="topbar-bell{% if request.resolver_match.url_name == 'lista_notificaciones' %} active{% endif %}"
-                       title="Notificaciones" aria-label="Notificaciones">
-                        <span class="material-symbols-outlined notificacion-icono">notifications</span>
+                       title="Notificaciones" aria-label="Notificaciones" style="color: #ffffff;">
+                        <span class="material-symbols-outlined notificacion-icono" style="color: #ffffff; -webkit-text-fill-color: #ffffff; fill: #ffffff;">notifications</span>
                         {% if no_leidas_notificaciones %}
                         <span class="bell-count">{{ no_leidas_notificaciones }}</span>
                         {% endif %}

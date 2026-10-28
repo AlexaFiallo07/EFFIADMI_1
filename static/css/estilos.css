@@ -1,5 +1,16 @@
 
 
 /* Notificaciones */
-.topbar-bell .notificacion-icono { color: #ffffff !important; }
-.topbar-bell:hover .notificacion-icono { color: #ffffff !important; opacity: 0.9; }
+.topbar-bell .notificacion-icono,
+.topbar-bell .material-symbols-outlined.notificacion-icono {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  fill: #ffffff !important;
+}
+.topbar-bell:hover .notificacion-icono,
+.topbar-bell:hover .material-symbols-outlined.notificacion-icono {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  fill: #ffffff !important;
+  opacity: 0.9;
+}
