@@ -53,8 +53,10 @@
                                 {% if cat.total_productos %}
                                     <span class="btn btn-ghost btn-sm" title="No se puede eliminar porque tiene {{ cat.total_productos }} producto(s) asignado(s)">Eliminar</span>
                                 {% else %}
-                                    <a href="{% url 'effiadmi:eliminar_categoria' cat.id %}" class="btn btn-error btn-sm" data-confirmar="Esta seguro de eliminar la categoria '{{ cat.nombre }}'? Esta accion no se puede deshacer." data-confirmar-form="formEliminar{{ cat.id }}">Eliminar</a>
-                                    <form id="formEliminar{{ cat.id }}" method="POST" action="{% url 'effiadmi:eliminar_categoria' cat.id %}" hidden>{% csrf_token %}</form>
+                                    <form method="POST" action="{% url 'effiadmi:eliminar_categoria' cat.id %}" style="display: inline;" onsubmit="return confirm('Esta seguro de eliminar la categoria \'{{ cat.nombre|escapejs }}\'? Esta accion no se puede deshacer.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-error btn-sm">Eliminar</button>
+                                    </form>
                                 {% endif %}
                             </td>
                         </tr>
