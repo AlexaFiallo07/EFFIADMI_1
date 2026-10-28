@@ -2503,7 +2503,7 @@ def lista_correos(request):
                 messages.success(request, f"Correo enviado a {destinatario}.")
             else:
                 logger.error("Fallo de envio de correo: %s", error)
-                messages.error(request, "No se pudo enviar el correo. Intenta de nuevo más tarde.")
+                messages.error(request, f"No se pudo enviar el correo: {error}")
             return redirect("effiadmi:lista_correos")
 
         return render(request, "correos/lista.html", {
