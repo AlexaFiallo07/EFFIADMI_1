@@ -91,6 +91,36 @@ class ProductosApiTest(ApiBaseTestCase):
         self.assertEqual(inventario.cantidad_disponible, 7)
         self.assertTrue(InventoryLog.objects.filter(inventory=inventario, tipo_movimiento="ENTRADA").exists())
 
+    @patch(
+        "effiadmi.servicio_ia.generar_recomendacion_stock",
+        return_value="Verifica existencias.",
+    )
+    def test_producto_creado_con_stock_bajo_notifica(self, generar):
+        respuesta = self.client.post(
+            "/api/catalogo-productos/",
+            {
+                "sku": "80001",
+                "nombre": "Producto bajo",
+                "precio_venta": "5000",
+                "sucursal_id": self.branch.id,
+                "stock_inicial": 1,
+                "stock_minimo_inicial": 3,
+            },
+            format="json",
+        )
+
+        self.assertEqual(respuesta.status_code, 201, respuesta.data)
+        inventory = Inventory.objects.get(product__sku="80001")
+        generar.assert_called_once_with(
+            "Producto bajo", 1, 3, self.branch.nombre
+        )
+        self.assertTrue(
+            Notificacion.objects.filter(
+                enlace=f"inventario/{inventory.id}/",
+                mensaje__contains="Verifica existencias.",
+            ).exists()
+        )
+
     def test_sku_no_numerico_da_400(self):
         respuesta = self.client.post(
             "/api/catalogo-productos/",
@@ -158,6 +188,24 @@ class StockApiTest(ApiBaseTestCase):
 
     def test_cantidad_cero_da_400(self):
         self.assertEqual(self._ajustar("ENTRADA", 0).status_code, 400)
+
+    @patch(
+        "effiadmi.servicio_ia.generar_recomendacion_stock",
+        return_value="Revisa la reposicion.",
+    )
+    def test_ajuste_api_al_stock_minimo_genera_notificacion(self, generar):
+        respuesta = self._ajustar("SALIDA", 8)
+
+        self.assertEqual(respuesta.status_code, 200)
+        generar.assert_called_once_with(
+            self.producto.nombre, 2, self.inventario.stock_minimo, self.branch.nombre
+        )
+        self.assertTrue(
+            Notificacion.objects.filter(
+                mensaje__contains="Revisa la reposicion.",
+                enlace=f"inventario/{self.inventario.id}/",
+            ).exists()
+        )
 
     def test_inventario_inexistente_da_404(self):
         respuesta = self.client.post(

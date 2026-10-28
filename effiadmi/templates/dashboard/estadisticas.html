@@ -143,45 +143,52 @@
 </div>
 
 <div class="bottom-layout">
-    <div class="charts-section">
-        <div class="dashboard-panel-card">
-            <h3 class="panel-card-title">Top Productos por Unidades Vendidas</h3>
-            {% if top_productos %}
-                <div class="chart-box"><canvas id="canvasTopProductos"></canvas></div>
-            {% else %}
-                <p class="empty-note">No hay ventas registradas aún.</p>
-            {% endif %}
-        </div>
-
-        <div class="dashboard-panel-card">
-            <h3 class="panel-card-title">Reposición Sugerida</h3>
-            {% if productos_bajos %}
-                <div class="stack">
-                    {% for producto in productos_bajos %}
-                    <div class="system-alert-row warn-alert">
-                        <strong>{{ producto.product.nombre }}</strong> — stock actual {{ producto.cantidad_disponible }} / mínimo {{ producto.stock_minimo }}
-                    </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <p class="empty-note sm">Todos los productos están por encima de su stock mínimo. ¡Buen trabajo!</p>
-            {% endif %}
-        </div>
+    <div class="dashboard-panel-card">
+        <h3 class="panel-card-title">Productos más vendidos · Histórico</h3>
+        {% if top_productos %}
+            <div class="chart-box">
+                <canvas id="canvasTopProductos" aria-label="Productos más vendidos en facturas emitidas"></canvas>
+                <div class="chart-fallback" id="fallbackTopProductos" role="img" aria-label="Gráfico de productos más vendidos" hidden></div>
+            </div>
+        {% else %}
+            <p class="empty-note">No hay ventas registradas en facturas emitidas.</p>
+        {% endif %}
     </div>
 
-    <div class="side-widgets-section">
-        <div class="dashboard-panel-card">
-            <h3 class="panel-card-title">Movimientos de Inventario</h3>
-            <div class="chart-box-sm"><canvas id="canvasMovimientos"></canvas></div>
-        </div>
-
-        <div class="dashboard-panel-card">
-            <h3 class="panel-card-title">Resumen</h3>
-            <div class="stack">
-                <div class="system-alert-row info-alert"><span class="material-symbols-outlined icon-sm">arrow_downward</span> Entradas: {{ entradas }}</div>
-                <div class="system-alert-row info-alert"><span class="material-symbols-outlined icon-sm">arrow_upward</span> Salidas: {{ salidas }}</div>
-                <div class="system-alert-row info-alert"><span class="material-symbols-outlined icon-sm">manage_accounts</span> Usuarios: {{ total_usuarios }}</div>
+    <div class="dashboard-panel-card">
+        <h3 class="panel-card-title">Movimientos registrados · Histórico</h3>
+        {% if entradas or salidas or ajustes %}
+            <div class="chart-box">
+                <canvas id="canvasMovimientos" aria-label="Entradas, salidas y ajustes de inventario"></canvas>
+                <div class="chart-fallback" id="fallbackMovimientos" role="img" aria-label="Gráfico de movimientos de inventario" hidden></div>
             </div>
+        {% else %}
+            <p class="empty-note">No hay movimientos de inventario registrados.</p>
+        {% endif %}
+    </div>
+
+    <div class="dashboard-panel-card">
+        <h3 class="panel-card-title">Reposición sugerida</h3>
+        {% if productos_bajos %}
+            <div class="stack">
+                {% for producto in productos_bajos %}
+                <div class="system-alert-row warn-alert">
+                    <strong>{{ producto.product.nombre }}</strong> — stock actual {{ producto.cantidad_disponible }} / mínimo {{ producto.stock_minimo }}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-note sm">Todos los productos están por encima de su stock mínimo. ¡Buen trabajo!</p>
+        {% endif %}
+    </div>
+
+    <div class="dashboard-panel-card">
+        <h3 class="panel-card-title">Resumen</h3>
+        <div class="stack">
+            <div class="system-alert-row info-alert"><span class="material-symbols-outlined icon-sm">arrow_downward</span> Entradas: {{ entradas }}</div>
+            <div class="system-alert-row info-alert"><span class="material-symbols-outlined icon-sm">arrow_upward</span> Salidas: {{ salidas }}</div>
+            <div class="system-alert-row info-alert"><span class="material-symbols-outlined icon-sm">tune</span> Ajustes: {{ ajustes }}</div>
+            <div class="system-alert-row info-alert"><span class="material-symbols-outlined icon-sm">manage_accounts</span> Usuarios: {{ total_usuarios }}</div>
         </div>
     </div>
 </div>
@@ -238,65 +245,119 @@
 {% block js %}
 <script>
     try {
-        const ctxMov = document.getElementById('canvasMovimientos');
-        if (ctxMov && typeof Chart !== 'undefined') {
-            const estilos = getComputedStyle(document.documentElement);
-            const varCss = function (nombre, fallback) {
-                const valor = estilos.getPropertyValue(nombre).trim();
-                return valor || fallback;
-            };
-            new Chart(ctxMov, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Entradas', 'Salidas'],
-                    datasets: [{
-                        data: [{{ entradas }}, {{ salidas }}],
-                        backgroundColor: [varCss('--verde', '#27AE60'), varCss('--rojo', '#EB5757')],
-                        borderWidth: 2,
-                        borderColor: varCss('--blanco', '#FFFFFF')
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 }, color: varCss('--gris', '#5E5870') } } }
-                }
+        const estilos = getComputedStyle(document.documentElement);
+        const varCss = function (nombre, fallback) {
+            return estilos.getPropertyValue(nombre).trim() || fallback;
+        };
+        const crearFallback = function (canvas, fallback, labels, valores) {
+            if (!canvas || !fallback) return;
+            canvas.hidden = true;
+            fallback.hidden = false;
+            const maximo = Math.max.apply(null, valores.concat([1]));
+            labels.forEach(function (label, indice) {
+                const fila = document.createElement('div');
+                fila.className = 'chart-fallback-row';
+                const datos = document.createElement('div');
+                datos.className = 'chart-fallback-label';
+                const nombre = document.createElement('span');
+                nombre.textContent = label;
+                const valor = document.createElement('strong');
+                valor.textContent = String(valores[indice]);
+                const pista = document.createElement('div');
+                pista.className = 'chart-fallback-track';
+                const barra = document.createElement('span');
+                barra.style.width = Math.max(0, valores[indice] / maximo * 100) + '%';
+                pista.appendChild(barra);
+                datos.appendChild(nombre);
+                datos.appendChild(valor);
+                fila.appendChild(datos);
+                fila.appendChild(pista);
+                fallback.appendChild(fila);
             });
-        }
-    } catch (e) { console.warn('Chart no disponible:', e); }
-</script>
-
-<script>
-    try {
-        const ctxTop = document.getElementById('canvasTopProductos');
-        if (ctxTop && typeof Chart !== 'undefined') {
-            const estilos = getComputedStyle(document.documentElement);
-            const varCss = function (nombre, fallback) {
-                const valor = estilos.getPropertyValue(nombre).trim();
-                return valor || fallback;
-            };
-            new Chart(ctxTop, {
-                type: 'bar',
-                data: {
-                    labels: JSON.parse('{{ top_productos_labels_json|escapejs|default:"[]" }}'),
-                    datasets: [{
-                        label: 'Unidades vendidas',
-                        data: JSON.parse('{{ top_productos_valores_json|escapejs|default:"[]" }}'),
-                        backgroundColor: varCss('--iris', '#6A4DAB'),
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { grid: { color: varCss('--acero', '#E8E0F2') }, beginAtZero: true, ticks: { color: varCss('--gris', '#5E5870') } },
-                        x: { grid: { display: false }, ticks: { color: varCss('--gris', '#5E5870') } }
+        };
+        const iniciarGrafica = function (canvas, fallback, labels, valores, config) {
+            if (!canvas) return;
+            if (typeof Chart !== 'undefined') {
+                try {
+                    new Chart(canvas, config);
+                    return;
+                } catch (error) {
+                    console.warn('Se usará el gráfico alternativo:', error);
+                }
+            }
+            crearFallback(canvas, fallback, labels, valores);
+        };
+        const topCanvas = document.getElementById('canvasTopProductos');
+        const topLabels = JSON.parse('{{ top_productos_labels_json|escapejs|default:"[]" }}');
+        const topValores = JSON.parse('{{ top_productos_valores_json|escapejs|default:"[]" }}');
+        iniciarGrafica(
+            topCanvas,
+            document.getElementById('fallbackTopProductos'),
+            topLabels,
+            topValores,
+            {
+                    type: 'bar',
+                    data: {
+                        labels: topLabels,
+                        datasets: [{
+                            label: 'Unidades vendidas',
+                            data: topValores,
+                            backgroundColor: varCss('--iris', '#6A4DAB'),
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { grid: { color: varCss('--acero', '#E8E0F2') }, beginAtZero: true, ticks: { precision: 0, color: varCss('--gris', '#5E5870') } },
+                            x: { grid: { display: false }, ticks: { color: varCss('--gris', '#5E5870') } }
+                        }
                     }
-                }
-            });
-        }
-    } catch (e) { console.warn('Chart no disponible:', e); }
+            }
+        );
+
+        const movimientosCanvas = document.getElementById('canvasMovimientos');
+        const movimientosLabels = JSON.parse('{{ movimientos_labels_json|escapejs|default:"[]" }}');
+        const movimientosValores = JSON.parse('{{ movimientos_valores_json|escapejs|default:"[]" }}');
+        iniciarGrafica(
+            movimientosCanvas,
+            document.getElementById('fallbackMovimientos'),
+            movimientosLabels,
+            movimientosValores,
+            {
+                    type: 'doughnut',
+                    data: {
+                        labels: movimientosLabels,
+                        datasets: [{
+                            data: movimientosValores,
+                            backgroundColor: [
+                                varCss('--verde', '#27AE60'),
+                                varCss('--rojo', '#EB5757'),
+                                varCss('--oro', '#C4A35A')
+                            ],
+                            borderWidth: 2,
+                            borderColor: varCss('--blanco', '#FFFFFF')
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    font: { size: 12 },
+                                    color: varCss('--gris', '#5E5870')
+                                }
+                            }
+                        }
+                    }
+            }
+        );
+    } catch (e) { console.error('No se pudieron cargar las gráficas de IA:', e); }
 </script>
 
 <script>

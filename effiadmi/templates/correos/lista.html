@@ -11,11 +11,10 @@
     {% if not smtp_configurado %}
     <div class="card block-lg">
         <div class="system-alert-row warn-alert">
-            <strong>Correos en modo prueba.</strong>
-            El SMTP no esta configurado en el archivo .env (faltan EMAIL_HOST_USER y
-            EMAIL_HOST_PASSWORD). Los correos NO se envian de verdad: se imprimen en la
-            consola donde corre el servidor. Para enviarlos realmente, configura una
-            contrasena de aplicacion de Gmail (gratis) en el .env y reinicia el servidor.
+            <strong>El envio SMTP no esta activo.</strong>
+            Los correos no se envian mientras falten credenciales o el backend este en
+            modo consola. Verifica EMAIL_HOST_USER, EMAIL_HOST_PASSWORD y la configuracion
+            SMTP en el archivo .env; con Gmail se requiere una contrasena de aplicacion.
         </div>
     </div>
     {% endif %}
@@ -46,19 +45,25 @@
                 <div class="card-body">
                     <div class="form-group">
                         <label for="destinatario" class="form-label">Destinatario</label>
-                        <input type="email" id="destinatario" name="destinatario" class="form-control" placeholder="correo@ejemplo.com" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}" title="Ejemplo: usuario@dominio.com" inputmode="email" autocomplete="email" required>
+                        <input type="email" id="destinatario" name="destinatario" class="form-control" placeholder="correo@ejemplo.com" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}" title="Ejemplo: usuario@dominio.com" inputmode="email" autocomplete="email" value="{{ form_destinatario }}" required>
                     </div>
                     <div class="form-group">
                         <label for="asunto" class="form-label">Asunto</label>
-                        <input type="text" id="asunto" name="asunto" class="form-control" placeholder="Asunto del correo" required>
+                        <input type="text" id="asunto" name="asunto" class="form-control" placeholder="Asunto del correo" value="{{ form_asunto }}" maxlength="200" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="instrucciones_borrador" class="form-label">¿Qué debe decir el correo?</label>
+                        <textarea id="instrucciones_borrador" name="instrucciones_borrador" class="form-control" rows="3" maxlength="4000" placeholder="Describe el propósito y los datos que debe incluir el mensaje...">{{ form_instrucciones }}</textarea>
+                        <small class="form-text">La IA redacta un borrador para que lo revises. No se envía automáticamente.</small>
                     </div>
                     <div class="form-group">
                         <label for="cuerpo" class="form-label">Mensaje</label>
-                        <textarea id="cuerpo" name="cuerpo" class="form-control" rows="5" placeholder="Escribe el contenido del correo..." required></textarea>
+                        <textarea id="cuerpo" name="cuerpo" class="form-control" rows="5" placeholder="Escribe el contenido o genera un borrador con IA..." required>{{ form_cuerpo }}</textarea>
                     </div>
                 </div>
-                <div class="card-footer">
-                    <button type="submit" class="btn btn-primary">Enviar Correo</button>
+                <div class="card-footer hstack">
+                    <button type="submit" name="accion" value="borrador_ia" formnovalidate class="btn btn-outline">Generar borrador con IA</button>
+                    <button type="submit" name="accion" value="enviar" class="btn btn-primary">Enviar correo</button>
                 </div>
             </form>
         </div>

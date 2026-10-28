@@ -33,7 +33,7 @@ from .serializers import (
     StockAdjustSerializer,
 )
 from .servicio_ia import consultar_asistente_effiadmi
-from .utilidades import cargo_de_usuario
+from .utilidades import cargo_de_usuario, notificar_stock_bajo
 
 
 # ============================================================
@@ -139,6 +139,11 @@ class ProductViewSet(BorradoProtegidoMixin, viewsets.ModelViewSet):
     # La web limita crear/editar/borrar productos a admin (crear_producto).
     permission_classes = [LecturaTodosEscrituraAdmin]
 
+    def perform_create(self, serializer):
+        producto = serializer.save()
+        for inventory in producto.inventories.select_related("branch"):
+            notificar_stock_bajo(inventory)
+
 
 # ============================================================
 # Inventory (ajustar-stock + kardex)
@@ -167,6 +172,7 @@ class InventoryViewSet(viewsets.ModelViewSet):
                 )
 
                 cantidad = data["cantidad"]
+                cantidad_anterior = inventory.cantidad_disponible
                 tipo = data["tipo_movimiento"]
 
                 if tipo == InventoryLog.ENTRADA:
@@ -202,6 +208,7 @@ class InventoryViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        notificar_stock_bajo(inventory, cantidad_anterior)
         alerta = inventory.cantidad_disponible <= inventory.stock_minimo
 
         return Response(

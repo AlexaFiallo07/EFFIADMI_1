@@ -78,7 +78,7 @@ class FormularioCorreoTest(EffiBaseTestCase):
     def test_no_guarda_cliente_con_correo_sin_arroba(self):
         respuesta = self.client.post(
             reverse("effiadmi:crear_cliente"),
-            {"nombre": "Juan", "correo": "juangmail.com", "telefono": "300", "direccion": "Calle"},
+            {"nombre": "Juan", "correo": "juangmail.com", "telefono": "3000000000", "direccion": "Calle"},
             follow=True,
         )
         self.assertFalse(Cliente.objects.filter(nombre="Juan").exists())
@@ -87,7 +87,7 @@ class FormularioCorreoTest(EffiBaseTestCase):
     def test_no_guarda_cliente_con_extension_invalida(self):
         respuesta = self.client.post(
             reverse("effiadmi:crear_cliente"),
-            {"nombre": "Juan", "correo": "juan@gmail.con", "telefono": "300", "direccion": "Calle"},
+            {"nombre": "Juan", "correo": "juan@gmail.con", "telefono": "3000000000", "direccion": "Calle"},
             follow=True,
         )
         self.assertFalse(Cliente.objects.filter(nombre="Juan").exists())
@@ -96,7 +96,7 @@ class FormularioCorreoTest(EffiBaseTestCase):
     def test_guarda_cliente_con_correo_valido(self):
         self.client.post(
             reverse("effiadmi:crear_cliente"),
-            {"nombre": "Juan", "correo": "juan@test.com", "telefono": "300", "direccion": "Calle"},
+            {"nombre": "Juan", "correo": "juan@test.com", "telefono": "3000000000", "direccion": "Calle"},
             follow=True,
         )
         self.assertTrue(Cliente.objects.filter(correo="juan@test.com").exists())
@@ -104,7 +104,7 @@ class FormularioCorreoTest(EffiBaseTestCase):
     def test_no_guarda_proveedor_con_correo_invalido(self):
         respuesta = self.client.post(
             reverse("effiadmi:crear_proveedor"),
-            {"nombre_proveedor": "Prov", "correo": "provgmail.com", "telefono": "1", "direccion": "Calle"},
+            {"nombre_proveedor": "Prov", "correo": "provgmail.com", "telefono": "1000000", "direccion": "Calle"},
             follow=True,
         )
         self.assertFalse(Proveedor.objects.filter(nombre="Prov").exists())
