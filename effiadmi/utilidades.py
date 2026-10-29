@@ -245,20 +245,12 @@ def enviar_correo(destinatario, asunto, cuerpo, **kwargs):
         texto_enlace = kwargs.get("texto_enlace") or "Ver detalle"
         template = kwargs.get("template") or "emails/aviso.html"
 
-        logo_url = "cid:effiadmi-logo"
-        logo_adjunto = False
-        try:
-            from email.mime.image import MIMEImage
-            from pathlib import Path as _Path
-            _logo_path = _Path(settings.BASE_DIR) / "static" / "img" / "logoeffiadmi.png"
-            if _logo_path.exists():
-                _mime = MIMEImage(_logo_path.read_bytes(), name="logoeffiadmi.png")
-                _mime.add_header("Content-ID", "<effiadmi-logo>")
-                _mime.add_header("Content-Disposition", "inline", filename="logoeffiadmi.png")
-                logo_adjunto = True
-        except Exception:
-            logo_url = ""
-            _mime = None
+        # El logo dejo de adjuntarse como imagen inline por CID: en celulares
+        # los clientes de correo lo mostraban como un archivo adjunto suelto
+        # y quedaba feo. La plantilla emails/base_email.html dibuja en su
+        # lugar el distintivo "E" en HTML puro, que se ve siempre bien
+        # porque solo usa el caso sin logo (logo_url vacio).
+        logo_url = ""
 
         contexto = {
             "asunto": asunto,
@@ -273,8 +265,6 @@ def enviar_correo(destinatario, asunto, cuerpo, **kwargs):
         text_content = cuerpo
         msg = _CorreoConLogo(asunto, text_content, settings.DEFAULT_FROM_EMAIL, [destinatario])
         msg.attach_alternative(html_content, "text/html")
-        if logo_adjunto:
-            msg.attach(_mime)
         enviados = msg.send(fail_silently=False)
         return (True, "") if enviados else (False, "El servidor de correo no confirmó el envío.")
     except Exception as exc:
