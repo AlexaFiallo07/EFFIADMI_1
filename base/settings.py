@@ -361,6 +361,10 @@ if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
     )
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# En la suite de pruebas nunca se toca el SMTP real: los correos quedan en
+# locmem (django.core.mail.outbox) y los tests son rapidos y seguros.
+if "test" in sys.argv or os.getenv("TEST_DB_ENGINE"):
+    EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 # ==================== API REST (Django REST Framework) ====================
 
 REST_FRAMEWORK = {

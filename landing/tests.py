@@ -23,6 +23,9 @@ class LandingViewTest(TestCase):
         self.assertContains(respuesta, "/login/")
 
     def test_formulario_valido(self):
+        from django.conf import settings as cfg
+        from django.core import mail
+
         respuesta = self.client.post(
             reverse("contacto"),
             {"nombre": "Juan", "correo": "juan@test.com", "asunto": "Demo", "mensaje": "Hola"},
@@ -31,6 +34,17 @@ class LandingViewTest(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         mensajes = [m for m in respuesta.context["messages"]]
         self.assertTrue(any("Gracias por escribirnos" in m.message for m in mensajes))
+
+        # En la suite el SMTP es locmem, asi que el aviso de contacto debe
+        # estar en el outbox dirigido al Gmail del sistema (el mismo SMTP
+        # que envia los correos del modulo de Correos).
+        if cfg.EMAIL_BACKEND.endswith("locmem.EmailBackend"):
+            self.assertTrue(
+                any(cfg.EMAIL_HOST_USER in m.to for m in mail.outbox)
+            )
+            self.assertTrue(
+                any("juan@test.com" in m.body for m in mail.outbox)
+            )
 
     def test_formulario_requiere_correo_valido(self):
         respuesta = self.client.post(

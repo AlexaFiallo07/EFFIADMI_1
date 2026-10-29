@@ -5,7 +5,7 @@ from django.core.validators import validate_email
 from django.shortcuts import render, redirect
 
 from base.middleware import ip_real_del_request
-from effiadmi.utilidades import limite_alcanzado
+from effiadmi.utilidades import limite_alcanzado, enviar_correo
 
 from .models import MensajeContacto
 
@@ -331,6 +331,23 @@ def contacto(request):
                     correo=correo,
                     asunto=asunto,
                     mensaje=mensaje,
+                )
+                # Ademas de guardar en la base de datos, el mensaje viaja por
+                # el mismo Gmail SMTP del sistema (el que envia los correos
+                # del modulo de Correos) para que llegue al buzon real.
+                from django.conf import settings as dj_settings
+                destino_contacto = (
+                    dj_settings.EMAIL_HOST_USER
+                    or dj_settings.DEFAULT_FROM_EMAIL
+                    or "effiadmi042@gmail.com"
+                )
+                enviar_correo(
+                    destino_contacto,
+                    "[Pagina de contacto] " + (asunto or "Nuevo mensaje"),
+                    f"Mensaje de la landing de EFFIADMI.\n\n"
+                    f"Nombre: {nombre}\n"
+                    f"Correo de quien escribe: {correo}\n\n"
+                    f"Mensaje:\n{mensaje}",
                 )
                 messages.success(
                     request,
