@@ -65,56 +65,5 @@
             </div>
         </form>
     </div>
-
-    {% if usuarios %}
-    <!-- Seccion: Gestion de Usuarios (solo admin) -->
-    <div class="card">
-        <div class="section-head">
-            <div class="section-title">
-                <span class="material-symbols-outlined">manage_accounts</span>
-                <h3 class="card-title">Gestion de Usuarios</h3>
-            </div>
-            <a href="{% url 'effiadmi:crear_usuario' %}" class="btn btn-primary btn-sm">+ Nuevo Usuario</a>
-        </div>
-        <div class="card-body">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Email</th>
-                        <th>Cargo</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for u in usuarios %}
-                        <tr>
-                            <td>{{ u.first_name }} {{ u.last_name }}</td>
-                            <td>{{ u.email }}</td>
-                            <td>{% if u.profile %}{{ u.profile.get_cargo_display }}{% else %}Sin perfil{% endif %}</td>
-                            <td>
-                                {% if u.is_active %}
-                                    <span class="badge badge-success">Activo</span>
-                                {% else %}
-                                    <span class="badge badge-error">Inactivo</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <a href="{% url 'effiadmi:editar_usuario' u.id %}" class="btn btn-outline btn-sm">Editar</a>
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="5" class="empty-row">
-                                No hay usuarios registrados.
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}

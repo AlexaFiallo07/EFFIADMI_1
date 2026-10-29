@@ -225,7 +225,10 @@ def _formatear_contexto(contexto_negocio):
     return "\n".join(lineas)
 
 
-def consultar_asistente_effiadmi(mensaje_usuario, contexto_negocio=None):
+def consultar_asistente_effiadmi(mensaje_usuario, contexto_negocio=None, historial=None):
+    """Consulta al asistente. `historial` es una lista de pares
+    (mensaje, respuesta) con lo que ya se hablo en la conversacion: sin ella
+    la IA no recuerda nada del hilo y cada respuesta sale suelta."""
     try:
         if not _tema_permitido(mensaje_usuario):
             return (
@@ -238,12 +241,21 @@ def consultar_asistente_effiadmi(mensaje_usuario, contexto_negocio=None):
         system_content = _SYSTEM_PROMPT
         if contexto_negocio:
             system_content += "\n\n" + _formatear_contexto(contexto_negocio)
+        # Memoria del hilo: las ultimas interacciones guardadas en BD van
+        # ANTES de la pregunta nueva. Se limita a 6 intercambios y a ~1500
+        # caracteres por texto para no disparar el consumo de tokens.
+        mensajes_chat = [{"role": "system", "content": system_content}]
+        for p_mensaje, p_respuesta in list(historial or [])[-6:]:
+            texto_mensaje = str(p_mensaje or "")[:1500].strip()
+            texto_respuesta = str(p_respuesta or "")[:1500].strip()
+            if texto_mensaje:
+                mensajes_chat.append({"role": "user", "content": texto_mensaje})
+            if texto_respuesta:
+                mensajes_chat.append({"role": "assistant", "content": texto_respuesta})
+        mensajes_chat.append({"role": "user", "content": mensaje_usuario})
         respuesta = _obtener_cliente().chat.completions.create(
             model="gemini-3.1-flash-lite",
-            messages=[
-                {"role": "system", "content": system_content},
-                {"role": "user", "content": mensaje_usuario}
-            ]
+            messages=mensajes_chat
         )
         contenido = respuesta.choices[0].message.content
         # Cuando el filtro de seguridad de Gemini bloquea el tema devuelve

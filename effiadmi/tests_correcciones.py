@@ -299,3 +299,52 @@ class CorreccionAjusteInventario(EffiBaseTestCase):
         self.client.post(self.url, {"tipo_movimiento": "SALIDA", "cantidad": "0"}, follow=True)
         self.inventario.refresh_from_db()
         self.assertEqual(self.inventario.cantidad_disponible, 8)
+
+
+class ChatIaConMemoria(EffiBaseTestCase):
+    """El historial de conversaciones se le pasa a la IA: sin esto, el
+    asistente respondia cada pregunta como si fuera la primera y el hilo
+    se perdia aunque los mensajes estuvieran guardados en la BD."""
+
+    def setUp(self):
+        super().setUp()
+        from .models import ChatHistorial, Conversacion
+
+        self.ChatHistorial = ChatHistorial
+        self.Conversacion = Conversacion
+
+    def test_responder_chat_envia_historial_previo(self):
+        from unittest.mock import patch
+
+        from .views import _responder_chat
+
+        conv = self.Conversacion.objects.create(usuario=self.admin)
+        self.ChatHistorial.objects.create(
+            usuario=self.admin, conversacion=conv,
+            mensaje="cuales proveedores surten cafe?", respuesta="El proveedor X surte cafe.",
+        )
+
+        with patch(
+            "effiadmi.views.consultar_asistente_effiadmi",
+            return_value="Respuesta normal",
+        ) as mock_ia:
+            _, respuesta = _responder_chat(self.admin, "y que mas surte?", conversacion=conv)
+
+        self.assertEqual(respuesta, "Respuesta normal")
+        historial = mock_ia.call_args.kwargs["historial"]
+        self.assertEqual(historial, [("cuales proveedores surten cafe?", "El proveedor X surte cafe.")])
+
+    def test_responder_chat_primer_mensaje_sin_historial(self):
+        from unittest.mock import patch
+
+        from .views import _responder_chat
+
+        with patch(
+            "effiadmi.views.consultar_asistente_effiadmi",
+            return_value="Respuesta inicial",
+        ) as mock_ia:
+            conv, _ = _responder_chat(self.admin, "primera pregunta")
+
+        historial = mock_ia.call_args.kwargs["historial"]
+        self.assertEqual(historial, [])
+        self.assertTrue(conv.mensajes.filter(mensaje="primera pregunta").exists())

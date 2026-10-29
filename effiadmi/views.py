@@ -386,15 +386,13 @@ def _motivo_salida_confirmacion(pedido_id):
 def perfil(request):
     user = User.objects.get(pk=request.session.get("logueado", {}).get("id"))
     perfil, _ = UserProfile.objects.get_or_create(user=user)
+    ctx = {"usuario": user, "perfil": perfil}
 
     if request.method == "POST":
         nuevo_email = (request.POST.get("email") or "").strip()
         correo_valido, error_correo = validar_correo_electronico(nuevo_email)
         if not correo_valido:
             messages.error(request, error_correo)
-            ctx = {"usuario": user, "perfil": perfil}
-            if perfil.cargo == "admin":
-                ctx["usuarios"] = User.objects.select_related("profile").all().order_by("-id")
             return render(request, "usuarios/perfil.html", ctx)
 
         user.first_name = request.POST.get("nombre", "")
@@ -405,9 +403,6 @@ def perfil(request):
         telefono = (request.POST.get("telefono") or "").strip()
         if telefono and not re.fullmatch(r"^[0-9+\-\s()]{7,15}$", telefono):
             messages.error(request, "El telefono solo puede contener numeros, espacios, +, - o ().")
-            ctx = {"usuario": user, "perfil": perfil}
-            if perfil.cargo == "admin":
-                ctx["usuarios"] = User.objects.select_related("profile").all().order_by("-id")
             return render(request, "usuarios/perfil.html", ctx)
         perfil.telefono = telefono
         perfil.direccion = request.POST.get("direccion", "")
@@ -419,9 +414,6 @@ def perfil(request):
         messages.success(request, "¡Perfil actualizado exitosamente!")
         return redirect("effiadmi:perfil")
 
-    ctx = {"usuario": user, "perfil": perfil}
-    if perfil.cargo == "admin":
-        ctx["usuarios"] = User.objects.select_related("profile").all().order_by("-id")
     return render(request, "usuarios/perfil.html", ctx)
 
 
@@ -2417,7 +2409,20 @@ def _responder_chat(usuario, mensaje, conversacion=None, contexto_negocio=None):
     es_primero = not conversacion.mensajes.exists()
     if contexto_negocio is None:
         contexto_negocio = _contexto_negocio_effiadmi()
-    respuesta = consultar_asistente_effiadmi(mensaje, contexto_negocio=contexto_negocio)
+    # Memoria del hilo: los ultimos 6 intercambios YA guardados llegan a la
+    # IA para que entienda referencias tipo "y de ese mismo proveedor?".
+    historial_previo = []
+    if conversacion.pk:
+        historial_previo = list(
+            conversacion.mensajes.order_by("-fecha").values_list(
+                "mensaje", "respuesta"
+            )[:6]
+        )[::-1]
+    respuesta = consultar_asistente_effiadmi(
+        mensaje,
+        contexto_negocio=contexto_negocio,
+        historial=historial_previo,
+    )
     if _es_error_ia(respuesta):
         if es_primero and not conversacion.mensajes.exists():
             conversacion.delete()
