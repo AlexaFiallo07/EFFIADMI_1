@@ -182,7 +182,12 @@
     function calcularTotal() {
         let total = 0;
         document.querySelectorAll(".subtotal-fila").forEach(function (el) {
-            total += parseFloat(el.textContent.replace(/[^0-9.-]/g, "")) || 0;
+            // formatoCOP usa el separador de miles de es-CO (punto):
+            // "50.000" debe leerse como cincuenta mil, no como 50 (el punto
+            // NO es un decimal aqui). Quedarse solo con los digitos lo
+            // resuelve porque los montos se redondean a pesos enteros.
+            const soloDigitos = el.textContent.replace(/[^0-9]/g, "");
+            total += parseFloat(soloDigitos) || 0;
         });
         document.getElementById("totalPedido").textContent = formatoCOP(total);
     }

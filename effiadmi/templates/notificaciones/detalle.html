@@ -35,6 +35,9 @@
             </div>
 
             <div class="card-footer">
+                {% if notificacion.enlace %}
+                <a href="{% url 'effiadmi:inicio' %}{{ notificacion.enlace }}" class="btn btn-primary">Ir al documento</a>
+                {% endif %}
                 <a href="{% url 'effiadmi:lista_notificaciones' %}" class="btn btn-outline">Volver</a>
                 <form method="POST" action="{% url 'effiadmi:eliminar_notificacion' notificacion.id %}" style="display: inline;">
                     {% csrf_token %}

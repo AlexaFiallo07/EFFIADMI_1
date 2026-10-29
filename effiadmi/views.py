@@ -1,6 +1,7 @@
 ﻿from decimal import Decimal, InvalidOperation
 import json
 import logging
+import re
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
@@ -359,7 +360,10 @@ def inicio(request):
     except Exception:
         logger.exception("Error no controlado en la vista")
         messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
-        return redirect("effiadmi:lista_pedidos")
+        # Antes redirigia a lista_pedidos: al administrador le aparecia de
+        # pronto el listado de pedidos sin relacion con lo que estaba viendo.
+        # Perfil es una vista segura y te deja seguir navegando.
+        return redirect("effiadmi:perfil")
 
 
 def _motivo_salida_confirmacion(pedido_id):
@@ -449,16 +453,16 @@ def crear_cliente(request):
 
             if not all([nombre, correo, telefono, direccion]):
                 messages.error(request, "Por favor completa todos los campos.")
-                return render(request, "clientes/formulario_clientes.html")
+                return render(request, "clientes/formulario_clientes.html", {"datos": request.POST})
 
             if not re.fullmatch(r"^[0-9+\-\s()]{7,15}$", telefono):
                 messages.error(request, "El telefono solo puede contener numeros, espacios, +, - o ().")
-                return render(request, "clientes/formulario_clientes.html")
+                return render(request, "clientes/formulario_clientes.html", {"datos": request.POST})
 
             correo_valido, error_correo = validar_correo_electronico(correo)
             if not correo_valido:
                 messages.error(request, error_correo)
-                return render(request, "clientes/formulario_clientes.html")
+                return render(request, "clientes/formulario_clientes.html", {"datos": request.POST})
 
             Cliente.objects.create(
                 nombre=nombre,
@@ -470,11 +474,11 @@ def crear_cliente(request):
             return redirect("effiadmi:lista_clientes")
         except IntegrityError:
             messages.error(request, "El correo ya esta registrado.")
-            return render(request, "clientes/formulario_clientes.html")
+            return render(request, "clientes/formulario_clientes.html", {"datos": request.POST})
         except Exception:
             logger.exception("Error no controlado en la vista")
             messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
-            return render(request, "clientes/formulario_clientes.html")
+            return render(request, "clientes/formulario_clientes.html", {"datos": request.POST})
 
     return render(request, "clientes/formulario_clientes.html")
 
@@ -490,13 +494,15 @@ def editar_cliente(request, id):
             if not re.fullmatch(r"^[0-9+\-\s()]{7,15}$", telefono):
                 messages.error(request, "El telefono solo puede contener numeros, espacios, +, - o ().")
                 return render(
-                    request, "clientes/formulario_clientes.html", {"cliente": cliente}
+                    request, "clientes/formulario_clientes.html",
+                    {"cliente": cliente, "datos": request.POST},
                 )
             correo_valido, error_correo = validar_correo_electronico(correo)
             if not correo_valido:
                 messages.error(request, error_correo)
                 return render(
-                    request, "clientes/formulario_clientes.html", {"cliente": cliente}
+                    request, "clientes/formulario_clientes.html",
+                    {"cliente": cliente, "datos": request.POST},
                 )
 
             cliente.nombre = request.POST.get("nombre", "").strip()
@@ -997,7 +1003,7 @@ def registrar_movimiento(request, id):
                 messages.error(request, "La cantidad no es valida.")
                 return redirect("effiadmi:registrar_movimiento", id=inventario.id)
 
-            if cantidad <= 0:
+            if cantidad <= 0 and tipo != "AJUSTE":
                 messages.error(request, "La cantidad debe ser mayor a 0.")
                 return redirect("effiadmi:registrar_movimiento", id=inventario.id)
 
@@ -1013,6 +1019,9 @@ def registrar_movimiento(request, id):
                         return redirect("effiadmi:registrar_movimiento", id=inventario.id)
                     inventario.cantidad_disponible -= cantidad
                 elif tipo == "AJUSTE":
+                    # El ajuste declara el stock FINAL que quedo en bodega:
+                    # un ajuste a 0 es valido (el producto quedo en cero
+                    # unidades fisicas) y antes quedaba bloqueado.
                     if cantidad < 0:
                         messages.error(request, "La cantidad de ajuste no puede ser negativa.")
                         return redirect("effiadmi:registrar_movimiento", id=inventario.id)
@@ -1062,9 +1071,14 @@ def lista_pedidos(request):
         q = (request.GET.get("q", "") or "").strip()
         pedidos_registrados = Pedido.objects.select_related("cliente").all().order_by("-id")
         if q:
-            pedidos_registrados = pedidos_registrados.filter(
-                Q(id__icontains=q) | Q(cliente__nombre__icontains=q)
-            )
+            # PostgreSQL no admite LIKE sobre un entero (id__icontains rompe
+            # con 'operator does not exist'). Buscar por numero de pedido
+            # solo si q es numerico (coincidencia exacta); el nombre del
+            # cliente se filtra siempre con icontains.
+            filtro = Q(cliente__nombre__icontains=q)
+            if q.isdigit():
+                filtro |= Q(id=int(q))
+            pedidos_registrados = pedidos_registrados.filter(filtro)
         return render(request, "pedidos/lista.html", {
             "pedidos": pedidos_registrados,
             "total_filtrados": pedidos_registrados.count(),
@@ -1263,6 +1277,50 @@ def confirmar_pedido(request, id):
         return redirect("effiadmi:lista_pedidos")
 
 
+def _devolver_stock_pedido(pedido, usuario, branch):
+    """Devuelve al inventario el stock descontado por confirmar_pedido.
+
+    Se devuelve al inventario exacto del que salio el stock, rastreandolo por
+    el movimiento de kardex. Elegir la sucursal principal aqui no servia: si
+    entre la confirmacion y la cancelacion cambiaba la principal (o hay
+    varias marcadas), el stock se iba a otra sucursal. El motivo se compara
+    EXACTO (no 'contains') porque "Pedido #1" tambien esta dentro de
+    "Pedido #11". Lo usan cancelar_pedido y anular_factura.
+    """
+    detalles = PedidoDetalle.objects.filter(pedido=pedido).select_related("producto")
+    for det in detalles:
+        salida = (
+            InventoryLog.objects
+            .filter(
+                inventory__product=det.producto,
+                tipo_movimiento="SALIDA",
+                motivo=_motivo_salida_confirmacion(pedido.id),
+            )
+            .select_related("inventory")
+            .order_by("-fecha")
+            .first()
+        )
+        if salida:
+            inv = salida.inventory
+        else:
+            # Sin rastro en kardex: cae a la sucursal principal.
+            inv = Inventory.objects.filter(
+                product=det.producto, branch=branch
+            ).first()
+        if not inv:
+            continue
+        inv.cantidad_disponible += det.cantidad
+        inv.save()
+        InventoryLog.objects.create(
+            inventory=inv,
+            tipo_movimiento="ENTRADA",
+            cantidad=det.cantidad,
+            cantidad_resultante=inv.cantidad_disponible,
+            motivo=f"Devolucion por cancelacion de Pedido #{pedido.id}",
+            usuario=usuario,
+        )
+
+
 @autorizacion(roles=['admin', 'operador'])
 def cancelar_pedido(request, id):
     try:
@@ -1298,51 +1356,13 @@ def cancelar_pedido(request, id):
                 factura.estado = "anulada"
                 factura.save()
 
-            detalles = PedidoDetalle.objects.filter(pedido=pedido).select_related("producto")
             if devolver_stock and branch:
                 usuario = None
                 if request.session.get("logueado"):
                     usuario = User.objects.filter(
                         id=request.session["logueado"]["id"]
                     ).first()
-                for det in detalles:
-                    # Se devuelve al inventario exacto del que salio el stock,
-                    # rastreandolo por el movimiento de kardex. Elegir la
-                    # sucursal principal aqui no servia: si entre la
-                    # confirmacion y la cancelacion cambiaba la principal (o
-                    # hay varias marcadas), el stock se iba a otra sucursal.
-                    # El motivo se compara EXACTO (no 'contains') porque
-                    # "Pedido #1" tambien esta dentro de "Pedido #11".
-                    salida = (
-                        InventoryLog.objects
-                        .filter(
-                            inventory__product=det.producto,
-                            tipo_movimiento="SALIDA",
-                            motivo=_motivo_salida_confirmacion(pedido.id),
-                        )
-                        .select_related("inventory")
-                        .order_by("-fecha")
-                        .first()
-                    )
-                    if salida:
-                        inv = salida.inventory
-                    else:
-                        # Sin rastro en kardex: cae a la sucursal principal.
-                        inv = Inventory.objects.filter(
-                            product=det.producto, branch=branch
-                        ).first()
-                    if not inv:
-                        continue
-                    inv.cantidad_disponible += det.cantidad
-                    inv.save()
-                    InventoryLog.objects.create(
-                        inventory=inv,
-                        tipo_movimiento="ENTRADA",
-                        cantidad=det.cantidad,
-                        cantidad_resultante=inv.cantidad_disponible,
-                        motivo=f"Devolucion por cancelacion de Pedido #{pedido.id}",
-                        usuario=usuario,
-                    )
+                _devolver_stock_pedido(pedido, usuario, branch)
 
         crear_notificacion(
             ids_admins(),
@@ -1449,9 +1469,11 @@ def lista_facturas(request):
             "cliente", "pedido"
         ).all().order_by("-id")
         if q:
-            facturas_registradas = facturas_registradas.filter(
-                Q(cliente__nombre__icontains=q) | Q(id__icontains=q)
-            )
+            # Mismo motivo que lista_pedidos: id__icontains rompe en Postgres.
+            filtro = Q(cliente__nombre__icontains=q)
+            if q.isdigit():
+                filtro |= Q(id=int(q))
+            facturas_registradas = facturas_registradas.filter(filtro)
         if estado == "emitida":
             facturas_registradas = facturas_registradas.filter(estado="emitida")
         elif estado == "anulada":
@@ -1489,6 +1511,40 @@ def detalle_factura(request, id):
         return redirect("effiadmi:facturacion")
 
 
+def _efecto_de_anular_factura(request, factura):
+    """Efectos de anular una factura, con los efectos sobre su pedido.
+
+    Anular la factura de un pedido pagado implica cancelar ese pedido y
+    devolver el stock que confirmar_pedido desconto. Sin esto el pedido
+    quedaba congelado en "pagado": cancelar_pedido lo rechazaba ("anula la
+    factura"), pero al anular la factura el pedido seguia en "pagado" y el
+    stock nunca regresaba: el usuario quedaba atrapado en el ciclo
+    cancelar pedido / anular factura.
+
+    La llaman anular_factura y eliminar_factura para que ambas rutas dejen
+    el mismo estado.
+    """
+    factura.estado = "anulada"
+    factura.save()
+
+    pedido = factura.pedido
+    if pedido and pedido.estado == "pagado":
+        branch = (
+            Branch.objects.filter(es_principal=True).first()
+            or Branch.objects.first()
+        )
+        usuario = None
+        if request.session.get("logueado"):
+            usuario = User.objects.filter(
+                id=request.session["logueado"]["id"]
+            ).first()
+        pedido.estado = "cancelado"
+        pedido.save()
+        if branch:
+            _devolver_stock_pedido(pedido, usuario, branch)
+    return pedido
+
+
 @autorizacion(roles=['admin'])
 def anular_factura(request, id):
     try:
@@ -1502,12 +1558,12 @@ def anular_factura(request, id):
             return redirect("effiadmi:detalle_factura", id=factura.id)
 
         with transaction.atomic():
-            factura.estado = "anulada"
-            factura.save()
+            pedido = _efecto_de_anular_factura(request, factura)
 
         crear_notificacion(
             ids_admins(),
-            f"Factura #{factura.id} anulada (cliente: {factura.cliente.nombre}).",
+            f"Factura #{factura.id} anulada (cliente: {factura.cliente.nombre})."
+            + (f" Pedido #{pedido.id} cancelado y stock devuelto." if pedido and pedido.estado == "cancelado" else ""),
             enlace=f"facturas/{factura.id}/",
         )
         messages.success(request, f"Factura #{factura.id} anulada.")
@@ -1525,9 +1581,12 @@ def eliminar_factura(request, id):
         factura = get_object_or_404(Factura, pk=id)
         if request.method == "POST":
             if factura.estado == "emitida":
-                factura.estado = "anulada"
-                factura.save()
+                # Antes solo ponia la factura en "anulada" sin tocar el
+                # pedido ni el stock (mismo bug del ciclo cancelar/anular).
+                pedido = _efecto_de_anular_factura(request, factura)
                 messages.success(request, "Factura anulada.")
+                if pedido and pedido.estado == "cancelado":
+                    messages.info(request, f"Pedido #{pedido.id} cancelado y stock devuelto al inventario.")
             else:
                 messages.warning(request, "La factura ya esta anulada.")
         return redirect("effiadmi:facturacion")
@@ -1741,16 +1800,16 @@ def crear_proveedor(request):
 
             if not all([nombre, correo, telefono, direccion]):
                 messages.error(request, "Por favor completa todos los campos.")
-                return render(request, "proveedores/crear.html")
+                return render(request, "proveedores/crear.html", {"datos": request.POST})
 
             if not re.fullmatch(r"^[0-9+\-\s()]{7,15}$", telefono):
                 messages.error(request, "El telefono solo puede contener numeros, espacios, +, - o ().")
-                return render(request, "proveedores/crear.html")
+                return render(request, "proveedores/crear.html", {"datos": request.POST})
 
             correo_valido, error_correo = validar_correo_electronico(correo)
             if not correo_valido:
                 messages.error(request, error_correo)
-                return render(request, "proveedores/crear.html")
+                return render(request, "proveedores/crear.html", {"datos": request.POST})
 
             Proveedor.objects.create(
                 nombre=nombre,
@@ -1762,11 +1821,11 @@ def crear_proveedor(request):
             return redirect("effiadmi:lista_proveedores")
         except IntegrityError:
             messages.error(request, "El correo ya esta registrado.")
-            return render(request, "proveedores/crear.html")
+            return render(request, "proveedores/crear.html", {"datos": request.POST})
         except Exception:
             logger.exception("Error no controlado en la vista")
             messages.error(request, 'Ocurrió un error inesperado. El detalle quedó registrado; contacta al administrador.')
-            return render(request, "proveedores/crear.html")
+            return render(request, "proveedores/crear.html", {"datos": request.POST})
 
     return render(request, "proveedores/crear.html")
 
@@ -1781,11 +1840,11 @@ def editar_proveedor(request, id):
             telefono = (request.POST.get("telefono") or "").strip()
             if not re.fullmatch(r"^[0-9+\-\s()]{7,15}$", telefono):
                 messages.error(request, "El telefono solo puede contener numeros, espacios, +, - o ().")
-                return render(request, "proveedores/editar.html", {"proveedor": proveedor})
+                return render(request, "proveedores/editar.html", {"proveedor": proveedor, "datos": request.POST})
             correo_valido, error_correo = validar_correo_electronico(correo)
             if not correo_valido:
                 messages.error(request, error_correo)
-                return render(request, "proveedores/editar.html", {"proveedor": proveedor})
+                return render(request, "proveedores/editar.html", {"proveedor": proveedor, "datos": request.POST})
 
             proveedor.nombre = request.POST.get("nombre_proveedor", "").strip()
             proveedor.correo = correo
@@ -2808,9 +2867,11 @@ def facturacion(request):
             q = (request.GET.get("q", "") or "").strip()
             facturas_qs = Factura.objects.select_related("cliente", "pedido").all().order_by("-id")
             if q:
-                facturas_qs = facturas_qs.filter(
-                    Q(cliente__nombre__icontains=q) | Q(id__icontains=q)
-                )
+                # Mismo motivo que lista_pedidos: id__icontains rompe en Postgres.
+                filtro = Q(cliente__nombre__icontains=q)
+                if q.isdigit():
+                    filtro |= Q(id=int(q))
+                facturas_qs = facturas_qs.filter(filtro)
             if estado == "emitida":
                 facturas_qs = facturas_qs.filter(estado="emitida")
             elif estado == "anulada":

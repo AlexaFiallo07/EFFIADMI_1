@@ -57,6 +57,11 @@
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Desactivar este usuario?')">Desactivar</button>
                                     </form>
+                                {% else %}
+                                    <form method="POST" action="{% url 'effiadmi:eliminar_usuario' usuario.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Reactivar este usuario?')">Activar</button>
+                                    </form>
                                 {% endif %}
                             </td>
                         </tr>

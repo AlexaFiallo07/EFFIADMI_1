@@ -642,7 +642,7 @@ class UsuariosCoberturaTest(EffiBaseTestCase):
                 "email": "oper-nuevo@test.com",
                 "nombre": "Oscar Nuevo",
                 "apellido": "Oper",
-                "telefono": "300",
+                "telefono": "3001234567",
                 "direccion": "Calle 2",
             },
             follow=True,
@@ -676,7 +676,7 @@ class ProveedoresCoberturaTest(EffiBaseTestCase):
         url = reverse("effiadmi:editar_proveedor", args=[self.proveedor.id])
         respuesta = self.client.post(
             url,
-            {"nombre_proveedor": "X", "correo": "mal", "telefono": "1", "direccion": "x"},
+            {"nombre_proveedor": "X", "correo": "mal", "telefono": "3001234567", "direccion": "x"},
             follow=True,
         )
         self.proveedor.refresh_from_db()
@@ -688,7 +688,7 @@ class ProveedoresCoberturaTest(EffiBaseTestCase):
             {
                 "nombre_proveedor": "Proveedor Editado",
                 "correo": "proveedor-editado@test.com",
-                "telefono": "2",
+                "telefono": "3001234567",
                 "direccion": "Otra",
             },
             follow=True,

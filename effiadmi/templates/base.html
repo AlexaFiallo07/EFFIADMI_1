@@ -48,6 +48,11 @@
                 <a href="{% url 'effiadmi:inicio' %}" class="menu-link {% if request.resolver_match.url_name == 'inicio' %}active{% endif %}">
                     <span class="material-symbols-outlined">dashboard</span> Inicio
                 </a>
+                {% if request.session.logueado.rol == 'admin' %}
+                <a href="{% url 'effiadmi:lista_usuarios' %}" class="menu-link {% if request.resolver_match.url_name == 'lista_usuarios' or request.resolver_match.url_name == 'crear_usuario' or request.resolver_match.url_name == 'editar_usuario' %}active{% endif %}">
+                    <span class="material-symbols-outlined">manage_accounts</span> Usuarios
+                </a>
+                {% endif %}
 
                 <div class="nav-sep"></div>
                 <div class="nav-titulo">Operación</div>

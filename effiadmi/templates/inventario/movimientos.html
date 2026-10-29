@@ -31,7 +31,11 @@
 
                 <div class="form-group">
                     <label class="form-label">Cantidad</label>
-                    <input type="number" name="cantidad" class="form-control" min="1" required>
+                    <!-- min=0: en AJUSTE la cantidad es el stock FINAL, y
+                    dejar el producto en 0 unidades es un caso valido. Para
+                    ENTRADA/SALIDA la vista rechaza el 0 con un mensaje. -->
+                    <input type="number" name="cantidad" class="form-control" min="0" required>
+                    <small class="form-text text-muted">Entradas/Salidas: unidades a mover. Ajuste: stock final en bodega (puede ser 0).</small>
                 </div>
 
                 <div class="form-group">

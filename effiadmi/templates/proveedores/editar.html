@@ -16,19 +16,19 @@
                 <div class="form-grid-2">
                     <div class="form-group">
                         <label for="nombre_proveedor" class="form-label">Nombre Proveedor</label>
-                        <input type="text" id="nombre_proveedor" name="nombre_proveedor" class="form-control" value="{{ proveedor.nombre }}" required>
+                        <input type="text" id="nombre_proveedor" name="nombre_proveedor" class="form-control" value="{% if datos %}{{ datos.nombre_proveedor }}{% else %}{{ proveedor.nombre }}{% endif %}" required>
                     </div>
                     <div class="form-group">
                         <label for="correo" class="form-label">Correo</label>
-                        <input type="email" id="correo" name="correo" class="form-control" value="{{ proveedor.correo }}" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}" title="Ejemplo: usuario@dominio.com" inputmode="email" autocomplete="email" required>
+                        <input type="email" id="correo" name="correo" class="form-control" value="{% if datos %}{{ datos.correo }}{% else %}{{ proveedor.correo }}{% endif %}" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}" title="Ejemplo: usuario@dominio.com" inputmode="email" autocomplete="email" required>
                     </div>
                     <div class="form-group">
                         <label for="telefono" class="form-label">Telefono</label>
-                        <input type="tel" id="telefono" name="telefono" class="form-control" value="{{ proveedor.telefono }}" pattern="[0-9+\-\s()]{7,15}" inputmode="tel" maxlength="15" title="Solo numeros, espacios, +, - o () (7 a 15 caracteres)" required>
+                        <input type="tel" id="telefono" name="telefono" class="form-control" value="{% if datos %}{{ datos.telefono }}{% else %}{{ proveedor.telefono }}{% endif %}" pattern="[0-9+\-\s()]{7,15}" inputmode="tel" maxlength="15" title="Solo numeros, espacios, +, - o () (7 a 15 caracteres)" required>
                     </div>
                     <div class="form-group">
                         <label for="direccion" class="form-label">Direccion</label>
-                        <input type="text" id="direccion" name="direccion" class="form-control" value="{{ proveedor.direccion }}" required>
+                        <input type="text" id="direccion" name="direccion" class="form-control" value="{% if datos %}{{ datos.direccion }}{% else %}{{ proveedor.direccion }}{% endif %}" required>
                     </div>
                 </div>
             </div>

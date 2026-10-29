@@ -51,7 +51,10 @@
                             <td>
                                 <a href="{% url 'effiadmi:editar_categoria' cat.id %}" class="btn btn-outline btn-sm">Editar</a>
                                 {% if cat.total_productos %}
-                                    <span class="btn btn-ghost btn-sm" title="No se puede eliminar porque tiene {{ cat.total_productos }} producto(s) asignado(s)">Eliminar</span>
+                                    <span class="btn btn-ghost btn-sm" aria-disabled="true"
+                                        title="No se puede eliminar: tiene {{ cat.total_productos }} producto(s) asignado(s). Reasigna los productos a otra categoria y vuelve a intentarlo.">
+                                        Eliminar (bloqueada)
+                                    </span>
                                 {% else %}
                                     <form method="POST" action="{% url 'effiadmi:eliminar_categoria' cat.id %}" style="display: inline;" onsubmit="return confirm('Esta seguro de eliminar la categoria \'{{ cat.nombre|escapejs }}\'? Esta accion no se puede deshacer.');">
                                         {% csrf_token %}

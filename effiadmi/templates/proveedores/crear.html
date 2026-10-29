@@ -22,6 +22,7 @@
                             id="nombre_proveedor"
                             name="nombre_proveedor"
                             class="form-control"
+                            value="{{ datos.nombre_proveedor }}"
                             required
                         >
                     </div>
@@ -33,6 +34,7 @@
                             id="correo"
                             name="correo"
                             class="form-control"
+                            value="{{ datos.correo }}"
                             pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}"
                             title="Ejemplo: usuario@dominio.com"
                             inputmode="email"
@@ -48,6 +50,7 @@
                             id="telefono"
                             name="telefono"
                             class="form-control"
+                            value="{{ datos.telefono }}"
                             pattern="[0-9+\-\s()]{7,15}"
                             inputmode="tel"
                             maxlength="15"
@@ -63,6 +66,7 @@
                             id="direccion"
                             name="direccion"
                             class="form-control"
+                            value="{{ datos.direccion }}"
                             required
                         >
                     </div>

@@ -91,7 +91,7 @@ class ClientesTest(EffiBaseTestCase):
     def test_operador_crea_cliente(self):
         respuesta = self.client.post(
             reverse("effiadmi:crear_cliente"),
-            {"nombre": "Juan", "correo": "juan@test.com", "telefono": "300", "direccion": "Calle"},
+            {"nombre": "Juan", "correo": "juan@test.com", "telefono": "3001234567", "direccion": "Calle"},
             follow=True,
         )
         self.assertTrue(Cliente.objects.filter(correo="juan@test.com").exists())
@@ -106,7 +106,7 @@ class ClientesTest(EffiBaseTestCase):
         self.iniciar_sesion(self.admin)
         self.client.post(
             reverse("effiadmi:editar_cliente", args=[cliente.id]),
-            {"nombre": "Editado", "correo": cliente.correo, "telefono": "9", "direccion": "Y"},
+            {"nombre": "Editado", "correo": cliente.correo, "telefono": "3001234567", "direccion": "Y"},
             follow=True,
         )
         cliente.refresh_from_db()
@@ -342,7 +342,7 @@ class ProveedoresTest(EffiBaseTestCase):
     def test_crear_proveedor(self):
         self.client.post(
             reverse("effiadmi:crear_proveedor"),
-            {"nombre_proveedor": "Prov", "correo": "prov@test.com", "telefono": "1", "direccion": "Calle"},
+            {"nombre_proveedor": "Prov", "correo": "prov@test.com", "telefono": "3001234567", "direccion": "Calle"},
             follow=True,
         )
         self.assertTrue(Proveedor.objects.filter(correo="prov@test.com").exists())
