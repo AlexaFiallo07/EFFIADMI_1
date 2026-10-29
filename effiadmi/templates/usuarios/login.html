@@ -8,6 +8,9 @@
 {% block contenido %}
 <section class="login-page">
     <div class="login-topbar">
+        <a href="{% url 'landing' %}" class="login-volver" title="Volver a la página de EFFIADMI">
+            <span class="material-symbols-outlined">arrow_back</span> Volver al sitio
+        </a>
         <button class="theme-toggle" id="loginThemeToggle" type="button" aria-label="Cambiar tema">
             <span class="material-symbols-outlined" id="loginThemeIcon">dark_mode</span>
         </button>

@@ -348,3 +348,20 @@ class ChatIaConMemoria(EffiBaseTestCase):
         historial = mock_ia.call_args.kwargs["historial"]
         self.assertEqual(historial, [])
         self.assertTrue(conv.mensajes.filter(mensaje="primera pregunta").exists())
+
+
+class BotonVolverALanding(EffiBaseTestCase):
+    """Enlaces a la landing: en la pantalla de login y dentro del sistema."""
+
+    def test_login_tiene_boton_volver_al_sitio(self):
+        respuesta = self.client.get(reverse("effiadmi:login"))
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, "Volver al sitio")
+        # La landing vive en la raiz (/)
+        self.assertContains(respuesta, 'href="/"')
+
+    def test_sistema_logueado_tiene_ir_al_sitio(self):
+        self.iniciar_sesion(self.admin)
+        respuesta = self.client.get(reverse("effiadmi:inicio"))
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, "Ir al sitio")

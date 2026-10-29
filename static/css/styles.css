@@ -903,6 +903,20 @@ textarea.form-control:focus {
 .login-form-side .btn { width: 100%; }
 
 .login-topbar { position: absolute; top: 20px; right: 24px; display: flex; align-items: center; gap: 10px; z-index: 10; }
+
+/* Enlace "Volver al sitio" (landing) en la pantalla de login */
+.login-volver {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; color: var(--gris);
+    text-decoration: none; padding: 8px 14px; border-radius: 999px;
+    border: 1px solid var(--color-border, #e3ddf0);
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.login-volver .material-symbols-outlined { font-size: 16px; }
+.login-volver:hover { background: var(--lavanda-suave); color: var(--uva); border-color: var(--lavanda); }
+
+/* Enlace "Ir al sitio" (landing) en el pie de la barra lateral */
+.sidebar-footer > .menu-link { margin-top: 4px; }
 .login-hint { text-align: center; margin-top: var(--spacing-md); font-size: var(--font-size-sm); color: var(--humo); }
 
 /* ============================================================
