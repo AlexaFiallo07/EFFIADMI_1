@@ -247,10 +247,14 @@ def enviar_correo(destinatario, asunto, cuerpo, **kwargs):
 
         # El logo dejo de adjuntarse como imagen inline por CID: en celulares
         # los clientes de correo lo mostraban como un archivo adjunto suelto
-        # y quedaba feo. La plantilla emails/base_email.html dibuja en su
-        # lugar el distintivo "E" en HTML puro, que se ve siempre bien
-        # porque solo usa el caso sin logo (logo_url vacio).
-        logo_url = ""
+        # y quedaba feo. Ahora la plantilla lo carga desde la URL publica del
+        # repositorio (raw.githubusercontent.com): se ve el logo real y el
+        # correo nunca trae adjuntos de imagen. Si algun dia el repo cambia
+        # de nombre o se vuelve privado, solo hay que actualizar esta URL.
+        logo_url = (
+            "https://raw.githubusercontent.com/AlexaFiallo07/EFFIADMI_1/main/"
+            "static/img/logoeffiadmi.png"
+        )
 
         contexto = {
             "asunto": asunto,
