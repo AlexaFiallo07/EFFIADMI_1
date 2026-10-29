@@ -3,7 +3,7 @@
 {% block titulo %}Proveedores{% endblock %}
 
 {% block contenido %}
-<div class="container">
+<div class="container proveedores-lista">
     <div class="page-head">
         <h1>Listado de Proveedores</h1>
         {% if request.session.logueado.rol == 'admin' %}
@@ -11,24 +11,48 @@
         {% endif %}
     </div>
 
-    <div class="card block-lg">
+    <div class="kpi-matrix proveedores-kpis">
+        <div class="kpi-card-custom">
+            <div class="kpi-icon-box geo-purple"><span class="material-symbols-outlined">local_shipping</span></div>
+            <div class="kpi-core-data">
+                <span class="kpi-tag">Total proveedores</span>
+                <h3 class="kpi-number">{{ total_cuenta }}</h3>
+            </div>
+        </div>
+        <div class="kpi-card-custom">
+            <div class="kpi-icon-box geo-green"><span class="material-symbols-outlined">check_circle</span></div>
+            <div class="kpi-core-data">
+                <span class="kpi-tag">Proveedores activos</span>
+                <h3 class="kpi-number">{{ activos_cuenta }}</h3>
+            </div>
+        </div>
+        <div class="kpi-card-custom">
+            <div class="kpi-icon-box geo-blue"><span class="material-symbols-outlined">payments</span></div>
+            <div class="kpi-core-data">
+                <span class="kpi-tag">Total de compras</span>
+                <h3 class="kpi-number">{{ total_compras|cop }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="card block-lg filter-card">
         <div class="card-body">
-            <form method="GET" class="toolbar">
+            <form method="GET" class="toolbar toolbar-filters">
                 <input type="hidden" name="estado" value="{{ filtro_estado }}">
                 <div class="form-group">
                     <label class="form-label">Buscar</label>
                     <input type="search" name="q" class="form-control" value="{{ filtrar_q }}" placeholder="Nombre, correo o teléfono…" autocomplete="off">
                 </div>
-                <div class="hstack gap-sm">
+                <div class="hstack gap-sm filter-actions">
                     <button type="submit" class="btn btn-primary">Filtrar</button>
                     <a href="{% url 'effiadmi:lista_proveedores' %}" class="btn btn-outline">Limpiar</a>
                     <span class="badge badge-primary">{{ total_filtrados }} resultado{{ total_filtrados|pluralize }}</span>
                 </div>
             </form>
-            <div class="filtros-pills">
-                <a href="?estado=&q={{ filtrar_q|urlencode }}" class="{% if not filtro_estado %}active{% endif %}">Todos <span class="cnt">{{ total_cuenta }}</span></a>
-                <a href="?estado=activo&q={{ filtrar_q|urlencode }}" class="{% if filtro_estado == 'activo' %}active{% endif %}">Activos <span class="cnt">{{ activos_cuenta }}</span></a>
-                <a href="?estado=inactivo&q={{ filtrar_q|urlencode }}" class="{% if filtro_estado == 'inactivo' %}active{% endif %}">Inactivos <span class="cnt">{{ inactivos_cuenta }}</span></a>
+            <div class="filtros-pills" role="group" aria-label="Filtrar proveedores por estado">
+                <a href="?estado=&q={{ filtrar_q|urlencode }}" class="{% if not filtro_estado %}active{% endif %}" {% if not filtro_estado %}aria-current="page"{% endif %}>Todos <span class="cnt">{{ total_cuenta }}</span></a>
+                <a href="?estado=activo&q={{ filtrar_q|urlencode }}" class="{% if filtro_estado == 'activo' %}active{% endif %}" {% if filtro_estado == 'activo' %}aria-current="page"{% endif %}>Activos <span class="cnt">{{ activos_cuenta }}</span></a>
+                <a href="?estado=inactivo&q={{ filtrar_q|urlencode }}" class="{% if filtro_estado == 'inactivo' %}active{% endif %}" {% if filtro_estado == 'inactivo' %}aria-current="page"{% endif %}>Inactivos <span class="cnt">{{ inactivos_cuenta }}</span></a>
             </div>
         </div>
     </div>
@@ -60,7 +84,8 @@
                                     <span class="badge badge-error">Inactivo</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="table-actions-cell">
+                                <div class="table-actions">
                                 <a href="{% url 'effiadmi:detalle_proveedor' proveedor.id %}" class="btn btn-outline btn-sm">Detalle</a>
                                 {% if request.session.logueado.rol == 'admin' %}
                                 <a href="{% url 'effiadmi:editar_proveedor' proveedor.id %}" class="btn btn-outline btn-sm">Editar</a>
@@ -71,6 +96,7 @@
                                     </button>
                                 </form>
                                 {% endif %}
+                                </div>
                             </td>
                         </tr>
                     {% empty %}

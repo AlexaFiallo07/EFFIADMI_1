@@ -133,14 +133,19 @@ from .models import (
     Notificacion, Conversacion, ChatHistorial, Reporte, CorreoEnviado, FacturaCompra,
     RegistroIngreso, MAX_ASUNTO_CORREO,
 )
-from .servicio_ia import consultar_asistente_effiadmi
+from .servicio_ia import consultar_asistente_effiadmi, generar_borrador_correo
 from base.middleware import ip_real_del_request
 from .utilidades import (
     autorizacion, crear_notificacion, ids_admins, enviar_correo, validar_adjunto,
     _correo_configurado, limite_alcanzado, validar_correo_electronico,
+    notificar_stock_bajo,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _notificar_stock_bajo(inventario):
+    return notificar_stock_bajo(inventario)
 
 
 RESET_SALT = 'effiadmi-password-reset'
@@ -709,6 +714,9 @@ def crear_producto(request):
                         usuario=usuario,
                     )
 
+            if stock_inicial <= stock_minimo:
+                notificar_stock_bajo(inventario)
+
             messages.success(request, "¡Producto creado exitosamente!")
             return redirect("effiadmi:lista_productos")
         except IntegrityError:
@@ -1007,6 +1015,7 @@ def registrar_movimiento(request, id):
                 messages.error(request, "La cantidad debe ser mayor a 0.")
                 return redirect("effiadmi:registrar_movimiento", id=inventario.id)
 
+            cantidad_anterior = inventario.cantidad_disponible
             with transaction.atomic():
                 if tipo == "ENTRADA":
                     inventario.cantidad_disponible += cantidad
@@ -1046,12 +1055,14 @@ def registrar_movimiento(request, id):
                 )
 
             if inventario.cantidad_disponible <= inventario.stock_minimo:
-                _notificar_stock_bajo(inventario)
+                notificar_stock_bajo(inventario, cantidad_anterior)
                 messages.warning(
                     request,
                     f"¡Alerta! Stock bajo para '{inventario.product.nombre}' "
                     f"({inventario.cantidad_disponible}/{inventario.stock_minimo})"
                 )
+            elif cantidad_anterior <= inventario.stock_minimo:
+                notificar_stock_bajo(inventario, cantidad_anterior)
 
             messages.success(request, f"¡{tipo} registrada exitosamente!")
             return redirect("effiadmi:detalle_inventario", id=inventario.id)
@@ -1219,6 +1230,7 @@ def confirmar_pedido(request, id):
             messages.error(request, "No hay sucursales configuradas.")
             return redirect("effiadmi:detalle_pedido", id=pedido.id)
 
+        inventarios_modificados = []
         with transaction.atomic():
             for det in detalles:
                 inv = Inventory.objects.filter(
@@ -1243,8 +1255,10 @@ def confirmar_pedido(request, id):
                 inv = Inventory.objects.select_for_update().get(
                     product=det.producto, branch=branch
                 )
+                cantidad_anterior = inv.cantidad_disponible
                 inv.cantidad_disponible -= det.cantidad
                 inv.save()
+                inventarios_modificados.append((inv, cantidad_anterior))
 
                 InventoryLog.objects.create(
                     inventory=inv,
@@ -1254,11 +1268,12 @@ def confirmar_pedido(request, id):
                     motivo=_motivo_salida_confirmacion(pedido.id),
                     usuario=usuario,
                 )
-                if inv.cantidad_disponible <= inv.stock_minimo:
-                    _notificar_stock_bajo(inv)
 
             pedido.estado = "confirmado"
             pedido.save()
+
+        for inv, cantidad_anterior in inventarios_modificados:
+            notificar_stock_bajo(inv, cantidad_anterior)
 
         crear_notificacion(
             ids_admins(),
@@ -1285,9 +1300,14 @@ def _devolver_stock_pedido(pedido, usuario, branch):
     entre la confirmacion y la cancelacion cambiaba la principal (o hay
     varias marcadas), el stock se iba a otra sucursal. El motivo se compara
     EXACTO (no 'contains') porque "Pedido #1" tambien esta dentro de
-    "Pedido #11". Lo usan cancelar_pedido y anular_factura.
+    "Pedido #11". Lo usan cancelar_pedido, anular_factura y
+    eliminar_factura.
+
+    Devuelve la lista de (inventario, cantidad_anterior) que toco, para que
+    las vistas notifiquen stock bajo con las cifras reales.
     """
     detalles = PedidoDetalle.objects.filter(pedido=pedido).select_related("producto")
+    inventarios_modificados = []
     for det in detalles:
         salida = (
             InventoryLog.objects
@@ -1309,8 +1329,10 @@ def _devolver_stock_pedido(pedido, usuario, branch):
             ).first()
         if not inv:
             continue
+        cantidad_anterior = inv.cantidad_disponible
         inv.cantidad_disponible += det.cantidad
         inv.save()
+        inventarios_modificados.append((inv, cantidad_anterior))
         InventoryLog.objects.create(
             inventory=inv,
             tipo_movimiento="ENTRADA",
@@ -1319,6 +1341,7 @@ def _devolver_stock_pedido(pedido, usuario, branch):
             motivo=f"Devolucion por cancelacion de Pedido #{pedido.id}",
             usuario=usuario,
         )
+    return inventarios_modificados
 
 
 @autorizacion(roles=['admin', 'operador'])
@@ -1347,6 +1370,7 @@ def cancelar_pedido(request, id):
 
         branch = Branch.objects.filter(es_principal=True).first() or Branch.objects.first()
 
+        inventarios_modificados = []
         with transaction.atomic():
             pedido.estado = "cancelado"
             pedido.save()
@@ -1362,7 +1386,12 @@ def cancelar_pedido(request, id):
                     usuario = User.objects.filter(
                         id=request.session["logueado"]["id"]
                     ).first()
-                _devolver_stock_pedido(pedido, usuario, branch)
+                inventarios_modificados.extend(
+                    _devolver_stock_pedido(pedido, usuario, branch)
+                )
+
+        for inv, cantidad_anterior in inventarios_modificados:
+            notificar_stock_bajo(inv, cantidad_anterior)
 
         crear_notificacion(
             ids_admins(),
@@ -1522,12 +1551,13 @@ def _efecto_de_anular_factura(request, factura):
     cancelar pedido / anular factura.
 
     La llaman anular_factura y eliminar_factura para que ambas rutas dejen
-    el mismo estado.
+    el mismo estado. Devuelve (pedido, inventarios_modificados).
     """
     factura.estado = "anulada"
     factura.save()
 
     pedido = factura.pedido
+    inventarios_modificados = []
     if pedido and pedido.estado == "pagado":
         branch = (
             Branch.objects.filter(es_principal=True).first()
@@ -1541,8 +1571,8 @@ def _efecto_de_anular_factura(request, factura):
         pedido.estado = "cancelado"
         pedido.save()
         if branch:
-            _devolver_stock_pedido(pedido, usuario, branch)
-    return pedido
+            inventarios_modificados = _devolver_stock_pedido(pedido, usuario, branch)
+    return pedido, inventarios_modificados
 
 
 @autorizacion(roles=['admin'])
@@ -1558,7 +1588,10 @@ def anular_factura(request, id):
             return redirect("effiadmi:detalle_factura", id=factura.id)
 
         with transaction.atomic():
-            pedido = _efecto_de_anular_factura(request, factura)
+            pedido, inventarios = _efecto_de_anular_factura(request, factura)
+
+        for inv, cantidad_anterior in inventarios:
+            notificar_stock_bajo(inv, cantidad_anterior)
 
         crear_notificacion(
             ids_admins(),
@@ -1583,8 +1616,10 @@ def eliminar_factura(request, id):
             if factura.estado == "emitida":
                 # Antes solo ponia la factura en "anulada" sin tocar el
                 # pedido ni el stock (mismo bug del ciclo cancelar/anular).
-                pedido = _efecto_de_anular_factura(request, factura)
+                pedido, inventarios = _efecto_de_anular_factura(request, factura)
                 messages.success(request, "Factura anulada.")
+                for inv, cantidad_anterior in inventarios:
+                    notificar_stock_bajo(inv, cantidad_anterior)
                 if pedido and pedido.estado == "cancelado":
                     messages.info(request, f"Pedido #{pedido.id} cancelado y stock devuelto al inventario.")
             else:
@@ -1774,6 +1809,11 @@ def lista_proveedores(request):
 
         total_cuenta = Proveedor.objects.count()
         activos_cuenta = Proveedor.objects.filter(activo=True).count()
+        total_compras = (
+            FacturaCompra.objects.filter(proveedor__isnull=False)
+            .aggregate(total=Sum("monto"))["total"]
+            or Decimal("0")
+        )
         return render(request, "proveedores/lista.html", {
             "proveedores": proveedores_registrados,
             "filtro_estado": estado,
@@ -1782,6 +1822,7 @@ def lista_proveedores(request):
             "total_cuenta": total_cuenta,
             "activos_cuenta": activos_cuenta,
             "inactivos_cuenta": total_cuenta - activos_cuenta,
+            "total_compras": total_compras,
         })
     except Exception:
         logger.exception("Error no controlado en la vista")
@@ -1941,25 +1982,6 @@ def eliminar_producto_proveedor(request, id, rel_id):
 
 # ==================== NOTIFICACIONES ====================
 
-def _notificar_stock_bajo(inventario):
-    mensaje = (
-        f"ALERTA: Stock bajo para '{inventario.product.nombre}' "
-        f"({inventario.cantidad_disponible}/{inventario.stock_minimo})."
-    )
-    destinatarios = User.objects.filter(is_active=True).values_list("id", flat=True)
-    ya_notificado = Notificacion.objects.filter(
-        usuario_id__in=destinatarios,
-        mensaje=mensaje,
-        leido=False,
-    ).exists()
-    if ya_notificado:
-        return
-    crear_notificacion(
-        list(destinatarios),
-        mensaje,
-        enlace=f"inventario/{inventario.id}/",
-    )
-
 
 @autorizacion(roles=['admin', 'operador'])
 def lista_notificaciones(request):
@@ -2087,6 +2109,16 @@ def estadisticas_ia(request):
                 "unidades": top_8[0]["total"],
             }
 
+        movimientos_por_tipo = {
+            movimiento["tipo_movimiento"]: movimiento["total"]
+            for movimiento in InventoryLog.objects.values("tipo_movimiento").annotate(
+                total=Count("id")
+            )
+        }
+        entradas = movimientos_por_tipo.get("ENTRADA", 0)
+        salidas = movimientos_por_tipo.get("SALIDA", 0)
+        ajustes = movimientos_por_tipo.get("AJUSTE", 0)
+
         contexto = {
             "total_productos": total_productos,
             "total_proveedores": total_proveedores,
@@ -2103,8 +2135,13 @@ def estadisticas_ia(request):
             # JSON real para Chart.js (el repr con comillas simples rompia JSON.parse).
             "top_productos_labels_json": json.dumps([v["producto__nombre"] for v in top_8]),
             "top_productos_valores_json": json.dumps([v["total"] for v in top_8]),
-            "entradas": InventoryLog.objects.filter(tipo_movimiento="ENTRADA").count(),
-            "salidas": InventoryLog.objects.filter(tipo_movimiento="SALIDA").count(),
+            "entradas": entradas,
+            "salidas": salidas,
+            "ajustes": ajustes,
+            "movimientos_labels_json": json.dumps(
+                ["Entradas", "Salidas", "Ajustes"]
+            ),
+            "movimientos_valores_json": json.dumps([entradas, salidas, ajustes]),
             "es_admin": es_admin,
         }
 
@@ -2301,6 +2338,13 @@ def _contexto_negocio_effiadmi():
         if inv.cantidad_disponible <= inv.stock_minimo:
             productos_bajos.append(inv)
 
+    movimientos_por_tipo = {
+        movimiento["tipo_movimiento"]: movimiento["total"]
+        for movimiento in InventoryLog.objects.values("tipo_movimiento").annotate(
+            total=Count("id")
+        )
+    }
+
     # Solo las facturas emitidas son ventas: las anuladas no se le reportan a la IA.
     ventas_por_producto = list(
         FacturaDetalle.objects
@@ -2342,8 +2386,8 @@ def _contexto_negocio_effiadmi():
         "Unidades totales en inventario": unidades_totales,
         "Ventas por producto": "; ".join(productos_str) if productos_str else "Sin ventas registradas",
         "Productos bajo stock": "; ".join(bajos_str) if bajos_str else "Ninguno",
-        "Entradas de inventario": InventoryLog.objects.filter(tipo_movimiento="ENTRADA").count(),
-        "Salidas de inventario": InventoryLog.objects.filter(tipo_movimiento="SALIDA").count(),
+        "Entradas de inventario": movimientos_por_tipo.get("ENTRADA", 0),
+        "Salidas de inventario": movimientos_por_tipo.get("SALIDA", 0),
     }
 
 
@@ -2539,6 +2583,51 @@ def lista_correos(request):
         enviados = enviados[:50]
 
         if request.method == "POST":
+            accion = request.POST.get("accion", "enviar")
+            if accion == "borrador_ia":
+                instrucciones = (request.POST.get("instrucciones_borrador", "") or "").strip()
+                destinatario = (request.POST.get("destinatario", "") or "").strip()
+                asunto = (request.POST.get("asunto", "") or "").strip()
+                contexto_formulario = {
+                    "enviados": enviados,
+                    "smtp_configurado": smtp_configurado,
+                    "total_filtrados": total_filtrados,
+                    "filtrar_q": q,
+                    "form_destinatario": destinatario,
+                    "form_asunto": asunto,
+                    "form_instrucciones": instrucciones,
+                }
+                if not instrucciones:
+                    messages.error(request, "Describe brevemente el correo que necesitas redactar.")
+                elif len(instrucciones) > 4000:
+                    messages.error(request, "Las instrucciones no pueden superar los 4000 caracteres.")
+                elif limite_alcanzado(
+                    f"correo_borrador:{logueado.get('id') or 'anon'}", 10, 3600
+                ):
+                    messages.error(
+                        request,
+                        "Has generado muchos borradores recientemente. Intenta de nuevo en una hora.",
+                    )
+                else:
+                    try:
+                        contexto_formulario["form_cuerpo"] = generar_borrador_correo(
+                            instrucciones, asunto
+                        )
+                        contexto_formulario["borrador_generado"] = True
+                        messages.success(
+                            request,
+                            "Borrador generado. Revísalo y edítalo antes de enviar.",
+                        )
+                    except RuntimeError as exc:
+                        messages.error(request, str(exc))
+                    except Exception:
+                        logger.exception("Fallo al generar borrador de correo con IA")
+                        messages.error(
+                            request,
+                            "No se pudo generar el borrador. Intenta de nuevo más tarde.",
+                        )
+                return render(request, "correos/lista.html", contexto_formulario)
+
             # Limite por usuario (10 correos/hora): sin esto cualquier cuenta
             # usaba el SMTP corporativo como relay ilimitado de phishing.
             if limite_alcanzado(f"correo_envio:{logueado.get('id') or 'anon'}", 10, 3600):
@@ -2568,6 +2657,9 @@ def lista_correos(request):
                     "smtp_configurado": smtp_configurado,
                     "total_filtrados": total_filtrados,
                     "filtrar_q": q,
+                    "form_destinatario": destinatario,
+                    "form_asunto": asunto,
+                    "form_cuerpo": cuerpo,
                 })
 
             usuario = None
@@ -2595,6 +2687,10 @@ def lista_correos(request):
             "smtp_configurado": smtp_configurado,
             "total_filtrados": total_filtrados,
             "filtrar_q": q,
+            "form_destinatario": "",
+            "form_asunto": "",
+            "form_cuerpo": "",
+            "form_instrucciones": "",
         })
     except Exception:
         logger.exception("Error no controlado en la vista")

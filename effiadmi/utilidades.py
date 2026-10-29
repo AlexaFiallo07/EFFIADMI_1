@@ -1,5 +1,6 @@
 ﻿import re
 from functools import wraps
+import logging
 
 from django.shortcuts import redirect
 from django.contrib import messages
@@ -19,6 +20,62 @@ def crear_notificacion(usuarios, mensaje, enlace=""):
         notif = Notificacion.objects.create(usuario_id=uid, mensaje=mensaje, enlace=enlace)
         creadas.append(notif)
     return creadas
+
+
+def notificar_stock_bajo(inventario, cantidad_anterior=None):
+    """Notifica el cruce al stock minimo y cierra alertas al recuperar existencias."""
+    from django.contrib.auth.models import User
+
+    from .models import Notificacion
+    from .servicio_ia import generar_recomendacion_stock
+
+    enlace = f"inventario/{inventario.id}/"
+    alertas = Notificacion.objects.filter(enlace=enlace)
+
+    if inventario.cantidad_disponible > inventario.stock_minimo:
+        alertas.filter(leido=False).update(leido=True)
+        return
+
+    if (
+        cantidad_anterior is not None
+        and cantidad_anterior <= inventario.stock_minimo
+    ):
+        return
+
+    destinatarios = list(
+        User.objects.filter(is_active=True).values_list("id", flat=True)
+    )
+    if not destinatarios or alertas.filter(
+        usuario_id__in=destinatarios,
+        leido=False,
+    ).exists():
+        return
+
+    try:
+        recomendacion = generar_recomendacion_stock(
+            inventario.product.nombre,
+            inventario.cantidad_disponible,
+            inventario.stock_minimo,
+            inventario.branch.nombre,
+        )
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "No se pudo generar la recomendacion IA para stock bajo (inventario=%s)",
+            inventario.id,
+        )
+        recomendacion = "Revisa las existencias y programa la reposicion si es necesario."
+
+    mensaje = (
+        f"ALERTA: Stock bajo (IA): {inventario.product.nombre} en {inventario.branch.nombre}. "
+        f"Stock actual: {inventario.cantidad_disponible}; "
+        f"stock minimo: {inventario.stock_minimo}. "
+        f"Recomendacion EFFI: {recomendacion}"
+    )
+    crear_notificacion(
+        destinatarios,
+        mensaje,
+        enlace=enlace,
+    )
 
 
 def ids_admins():
@@ -105,7 +162,11 @@ def assets_version(request):
 def _correo_configurado():
     from django.conf import settings
 
-    return bool(getattr(settings, "EMAIL_HOST_USER", ""))
+    return bool(
+        getattr(settings, "EMAIL_HOST_USER", "")
+        and getattr(settings, "EMAIL_HOST_PASSWORD", "")
+        and not _backend_es_consola()
+    )
 
 
 def _backend_es_consola():
@@ -170,7 +231,7 @@ def enviar_correo(destinatario, asunto, cuerpo, **kwargs):
     from django.conf import settings
     from django.template.loader import render_to_string
 
-    if _backend_es_consola() or not _correo_configurado():
+    if not _correo_configurado():
         return (
             False,
             "Modo prueba: el SMTP no esta configurado (falta EMAIL_HOST_USER y "
@@ -216,8 +277,21 @@ def enviar_correo(destinatario, asunto, cuerpo, **kwargs):
             msg.attach(_mime)
         enviados = msg.send(fail_silently=False)
         return (True, "") if enviados else (False, "El servidor de correo no confirmó el envío.")
-    except Exception as e:
-        return False, str(e)
+    except Exception as exc:
+        logging.getLogger(__name__).exception("Fallo al enviar correo por SMTP")
+        detalle = str(exc).strip()
+        for secreto in (
+            getattr(settings, "EMAIL_HOST_USER", ""),
+            getattr(settings, "EMAIL_HOST_PASSWORD", ""),
+        ):
+            if secreto:
+                detalle = detalle.replace(secreto, "[redactado]")
+        return (
+            False,
+            detalle
+            or "No se pudo conectar o autenticar con el servidor de correo. "
+            "Verifica la configuracion SMTP y revisa el registro del servidor.",
+        )
 
 
 # Tipos de archivo admitidos al adjuntar una factura de compra. Un .html o un

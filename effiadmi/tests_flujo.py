@@ -45,7 +45,7 @@ class FlujoNegocioTest(EffiBaseTestCase):
     def _crear_cliente(self):
         self.client.post(
             reverse("effiadmi:crear_cliente"),
-            {"nombre": "Flujo", "correo": "flujo@test.com", "telefono": "3001234567", "direccion": "Calle"},
+            {"nombre": "Flujo", "correo": "flujo@test.com", "telefono": "3000000000", "direccion": "Calle"},
             follow=True,
         )
         return Cliente.objects.get(correo="flujo@test.com")

@@ -43,15 +43,15 @@
     </div>
     {% endif %}
 
-    <div class="card block-lg">
+    <div class="card block-lg filter-card filter-card-pills">
         <div class="card-body">
-            <form method="GET" class="toolbar">
+            <form method="GET" class="toolbar toolbar-filters">
                 <input type="hidden" name="estado" value="{{ filtro_estado|default:'' }}">
                 <div class="form-group">
                     <label class="form-label">Buscar</label>
                     <input type="search" name="q" class="form-control" value="{{ filtrar_q }}" placeholder="Título o contenido del reporte…" autocomplete="off">
                 </div>
-                <div class="hstack gap-sm">
+                <div class="hstack gap-sm filter-actions">
                     <button type="submit" class="btn btn-primary">Filtrar</button>
                     <a href="{% url 'effiadmi:reportes' %}" class="btn btn-outline">Limpiar</a>
                     <span class="badge badge-primary">{{ total_filtrados }} resultado{{ total_filtrados|pluralize }}</span>
@@ -98,8 +98,10 @@
                                 {% endif %}
                             </td>
                             <td>{{ r.fecha_creacion|date:"d/m/Y H:i" }}</td>
-                            <td>
-                                <a href="{% url 'effiadmi:detalle_reporte' r.id %}" class="btn btn-outline btn-sm">Ver</a>
+                            <td class="table-actions-cell">
+                                <div class="table-actions">
+                                    <a href="{% url 'effiadmi:detalle_reporte' r.id %}" class="btn btn-outline btn-sm">Ver</a>
+                                </div>
                             </td>
                         </tr>
                     {% empty %}
